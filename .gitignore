@@ -8,3 +8,5 @@ dist/
 .DS_Store
 *.qgs~
 *.qgz~
+
+NEXT_AGENT_BRIEF.md
