@@ -20,7 +20,7 @@ try:
 except ImportError:
     processing = None
 try:
-    from qgis.PyQt.QtCore import QSettings, Qt
+    from qgis.PyQt.QtCore import QSettings, Qt, QSize
     from qgis.PyQt.QtGui import QColor, QFont, QIcon
     from qgis.PyQt.QtWidgets import (
         QApplication,
@@ -52,7 +52,7 @@ try:
     )
     from qgis.core import Qgis, QgsApplication, QgsProject, QgsMapLayer
 except ImportError:
-    QSettings = Qt = QColor = QFont = QApplication = QCheckBox = QColorDialog = QComboBox = QDialog = QDoubleSpinBox = QFileDialog = QFrame = QGridLayout = QGroupBox = QHBoxLayout = QLabel = QLineEdit = QPushButton = QListWidget = QMessageBox = QAbstractItemView = QScrollArea = QSizePolicy = QSpinBox = QStackedWidget = QListWidgetItem = QTabWidget = QTextBrowser = QVBoxLayout = QWidget = Qgis = QgsApplication = QgsProject = QgsMapLayer = None
+    QSettings = Qt = QSize = QColor = QFont = QApplication = QCheckBox = QColorDialog = QComboBox = QDialog = QDoubleSpinBox = QFileDialog = QFrame = QGridLayout = QGroupBox = QHBoxLayout = QLabel = QLineEdit = QPushButton = QListWidget = QMessageBox = QAbstractItemView = QScrollArea = QSizePolicy = QSpinBox = QStackedWidget = QListWidgetItem = QTabWidget = QTextBrowser = QVBoxLayout = QWidget = Qgis = QgsApplication = QgsProject = QgsMapLayer = None
 
 
 from ..core.qgis_25d_style import (
@@ -74,6 +74,29 @@ from ..core.qgis_25d_style import (
 IS_QGIS4 = int(getattr(Qgis, "QGIS_VERSION_INT", 0)) >= 40000
 DASHBOARD_SIZE = (1160, 760) if IS_QGIS4 else (1220, 800)
 DEFAULT_CARD_COLUMNS = 2 if IS_QGIS4 else 3
+
+
+def _device_pixel_ratio(widget=None) -> float:
+    dpr = 1.0
+    with suppress(Exception):
+        if widget is not None and hasattr(widget, "devicePixelRatioF"):
+            dpr = float(widget.devicePixelRatioF())
+    if dpr <= 1.0 and QApplication is not None:
+        with suppress(Exception):
+            screen = QApplication.primaryScreen()
+            if screen is not None:
+                dpr = float(screen.devicePixelRatio())
+    return max(1.0, dpr)
+
+
+def _hidpi_icon_pixmap(icon: QIcon, width: int, height: int, widget=None):
+    dpr = _device_pixel_ratio(widget)
+    pixel_w = max(1, int(round(width * dpr)))
+    pixel_h = max(1, int(round(height * dpr)))
+    pixmap = icon.pixmap(QSize(pixel_w, pixel_h)) if QSize is not None else icon.pixmap(pixel_w, pixel_h)
+    with suppress(Exception):
+        pixmap.setDevicePixelRatio(dpr)
+    return pixmap
 
 # ── Algorithm catalogue ─────────────────────────────────────────────
 
@@ -579,7 +602,7 @@ class CartoLabDashboard(_QDialogBase):
             
             thdr = QHBoxLayout()
             ic_lbl = QLabel()
-            ic_lbl.setPixmap(_cartolab_icon(ic_name).pixmap(22, 22))
+            ic_lbl.setPixmap(_hidpi_icon_pixmap(_cartolab_icon(ic_name), 22, 22, ic_lbl))
             thdr.addWidget(ic_lbl)
             title = QLabel(f"<b>{name}</b>")
             title.setStyleSheet("color:#0f172a; font-size:12px;")
@@ -1169,7 +1192,7 @@ class CartoLabDashboard(_QDialogBase):
 
                 hdr = QHBoxLayout()
                 ic_lbl = QLabel()
-                ic_lbl.setPixmap(_cartolab_icon(ic_name).pixmap(22, 22))
+                ic_lbl.setPixmap(_hidpi_icon_pixmap(_cartolab_icon(ic_name), 22, 22, ic_lbl))
                 hdr.addWidget(ic_lbl)
                 t = QLabel(title_txt)
                 t.setProperty("classTitle", "true")
@@ -2306,7 +2329,7 @@ class CartoLabDashboard(_QDialogBase):
             # Header row: Icon + Title + Category Chip
             hdr = QHBoxLayout()
             ic_lbl = QLabel()
-            ic_lbl.setPixmap(_cartolab_icon(tmeta.get("icon", "layout.png")).pixmap(24, 24))
+            ic_lbl.setPixmap(_hidpi_icon_pixmap(_cartolab_icon(tmeta.get("icon", "layout.png")), 24, 24, ic_lbl))
             hdr.addWidget(ic_lbl)
 
             t_name = QLabel(f"<b>{tmeta['name']}</b>")

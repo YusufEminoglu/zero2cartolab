@@ -18,10 +18,11 @@ try:
         QgsLayout,
         QgsLayoutExporter,
         QgsLayoutItemMap,
+        QgsMapSettings,
         QgsProject,
     )
 except ImportError:
-    QgsApplication = QgsLayout = QgsLayoutExporter = QgsLayoutItemMap = QgsProject = None
+    QgsApplication = QgsLayout = QgsLayoutExporter = QgsLayoutItemMap = QgsMapSettings = QgsProject = None
 
 from ..core.layout_math import unique_name
 
@@ -53,6 +54,34 @@ def find_map_item(layout: QgsLayout, map_id: str = "") -> Optional[QgsLayoutItem
 def map_items(layout: QgsLayout) -> List[QgsLayoutItemMap]:
     """Return every map item in the layout (draw order not guaranteed)."""
     return [it for it in layout.items() if isinstance(it, QgsLayoutItemMap)]
+
+
+def clear_layout_render_cache(layout: QgsLayout) -> None:
+    """
+    Clear render caches before/after layout export.
+
+    Large atlas exports can retain rasterised layer/map images between pages.
+    QGIS exposes cache invalidation through slightly different methods across
+    versions, so this helper probes supported APIs and silently skips missing
+    ones.
+    """
+    if layout is None:
+        return
+
+    if QgsMapSettings is not None:
+        with suppress(Exception):
+            clear_cache = getattr(QgsMapSettings, "clearCache", None)
+            if callable(clear_cache):
+                clear_cache()
+
+    for item in map_items(layout):
+        for method_name in ("clearCache", "invalidateCache", "clearCachedImage"):
+            with suppress(Exception):
+                method = getattr(item, method_name, None)
+                if callable(method):
+                    method()
+        with suppress(Exception):
+            item.refresh()
 
 
 def north_arrow_svg_path() -> Optional[str]:
@@ -95,22 +124,26 @@ def export_layout(layout: QgsLayout, path: str, dpi: int = 300) -> bool:
         if os.path.exists(path):
             os.remove(path)
 
-    if ext == ".pdf":
-        settings = QgsLayoutExporter.PdfExportSettings()
-        settings.dpi = dpi
-        result = exporter.exportToPdf(path, settings)
-    elif ext == ".svg":
-        settings = QgsLayoutExporter.SvgExportSettings()
-        settings.dpi = dpi
-        result = exporter.exportToSvg(path, settings)
-    elif ext in (".tif", ".tiff"):
-        settings = QgsLayoutExporter.ImageExportSettings()
-        settings.dpi = dpi
-        result = exporter.exportToImage(path, settings)
-    else:
-        settings = QgsLayoutExporter.ImageExportSettings()
-        settings.dpi = dpi
-        result = exporter.exportToImage(path, settings)
+    clear_layout_render_cache(layout)
+    try:
+        if ext == ".pdf":
+            settings = QgsLayoutExporter.PdfExportSettings()
+            settings.dpi = dpi
+            result = exporter.exportToPdf(path, settings)
+        elif ext == ".svg":
+            settings = QgsLayoutExporter.SvgExportSettings()
+            settings.dpi = dpi
+            result = exporter.exportToSvg(path, settings)
+        elif ext in (".tif", ".tiff"):
+            settings = QgsLayoutExporter.ImageExportSettings()
+            settings.dpi = dpi
+            result = exporter.exportToImage(path, settings)
+        else:
+            settings = QgsLayoutExporter.ImageExportSettings()
+            settings.dpi = dpi
+            result = exporter.exportToImage(path, settings)
+    finally:
+        clear_layout_render_cache(layout)
     return result == QgsLayoutExporter.ExportResult.Success
 
 
@@ -125,13 +158,16 @@ def copy_layout_to_clipboard(layout: QgsLayout, dpi: int = 300) -> bool:
         exporter = QgsLayoutExporter(layout)
         settings = QgsLayoutExporter.ImageExportSettings()
         settings.dpi = dpi
-        img = exporter.renderPageToImage(0, settings)
-        if not img.isNull():
-            cb = QApplication.clipboard()
-            if cb:
-                cb.setImage(img)
-                return True
+        clear_layout_render_cache(layout)
+        try:
+            img = exporter.renderPageToImage(0, settings)
+            if not img.isNull():
+                cb = QApplication.clipboard()
+                if cb:
+                    cb.setImage(img)
+                    return True
+        finally:
+            clear_layout_render_cache(layout)
     except Exception:
         return False
     return False
-

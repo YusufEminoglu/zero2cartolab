@@ -113,3 +113,21 @@ def nice_scalebar_segments(map_w_km: float, target_segments: int = 3) -> Tuple[f
         seg_km = nice_number(raw_seg, round_down=True)
     return (seg_km, max(3, target_segments), 0)
 
+
+def map_width_to_km(map_width_units: float, unit_to_km: float = 0.001) -> float:
+    """
+    Convert a map-frame width to kilometres using a caller-supplied unit factor.
+
+    ``layout_math`` intentionally stays QGIS-free. QGIS-facing callers should
+    provide either the CRS map-unit conversion factor or a geodesic measured
+    width for geographic CRS. Invalid inputs return ``0.0`` so callers can
+    use a safe fallback.
+    """
+    if (
+        map_width_units <= 0
+        or unit_to_km <= 0
+        or not math.isfinite(map_width_units)
+        or not math.isfinite(unit_to_km)
+    ):
+        return 0.0
+    return map_width_units * unit_to_km

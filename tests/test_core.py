@@ -698,6 +698,10 @@ check("page A4 landscape swaps axes", lm.page_size_mm("A4", landscape=True) == (
 check("page unknown falls back to A4",
       lm.page_size_mm("ZZ", landscape=False) == (210.0, 297.0))
 check("page A3 landscape", lm.page_size_mm("A3", landscape=True) == (420.0, 297.0))
+check("map_width_to_km metres", lm.map_width_to_km(12500.0, 0.001) == 12.5)
+check("map_width_to_km kilometres factor", lm.map_width_to_km(12.5, 1.0) == 12.5)
+check("map_width_to_km rejects invalid",
+      lm.map_width_to_km(-1.0, 0.001) == 0.0 and lm.map_width_to_km(10.0, 0.0) == 0.0)
 
 # ===================================================================
 # 14. PALETTES — ColorBrewer + scientific colour ramps

@@ -10,6 +10,7 @@ Layout Designer.
 """
 from __future__ import annotations
 
+import math
 from contextlib import suppress
 from typing import List, Optional
 
@@ -31,15 +32,18 @@ try:
         QgsUnitTypes,
         QgsRectangle,
         QgsFillSymbol,
+        QgsDistanceArea,
+        QgsPointXY,
     )
     _MM = QgsUnitTypes.LayoutUnit.LayoutMillimeters
 except ImportError:
     QColor = QFont = QPolygonF = QPointF = None
     QgsProject = QgsPrintLayout = QgsLayoutItemMap = QgsLayoutItemLabel = QgsLayoutItemLegend = None
     QgsLayoutItemScaleBar = QgsLayoutItemPicture = QgsLayoutItemPolygon = QgsLayoutPoint = QgsLayoutSize = None
+    QgsDistanceArea = QgsPointXY = None
     _MM = 0
 
-from ..core.layout_math import page_size_mm, nice_scalebar_segments
+from ..core.layout_math import map_width_to_km, page_size_mm, nice_scalebar_segments
 from .layout_utils import unique_layout_name, north_arrow_svg_path
 
 # A real font fallback chain with standard installed Windows/Unix fonts
@@ -92,6 +96,76 @@ def _resolve_extent(iface, layers) -> Optional[QgsRectangle]:
             else:
                 extent.combineExtentWith(le)
     return extent
+
+
+def _distance_kilometres_unit():
+    return getattr(
+        QgsUnitTypes,
+        "DistanceKilometers",
+        getattr(getattr(QgsUnitTypes, "DistanceUnit", None), "DistanceKilometers", 1),
+    )
+
+
+def _crs_is_geographic(crs) -> bool:
+    is_geographic = False
+    with suppress(Exception):
+        is_geographic = bool(crs is not None and crs.isValid() and crs.isGeographic())
+    return is_geographic
+
+
+def _crs_unit_to_km(crs) -> float:
+    factor = 0.001
+    with suppress(Exception):
+        factor = float(QgsUnitTypes.fromUnitToUnitFactor(crs.mapUnits(), _distance_kilometres_unit()))
+    return factor if factor > 0 else 0.001
+
+
+def _fallback_geographic_width_km(extent: QgsRectangle) -> float:
+    """Approximate longitude span in kilometres when QgsDistanceArea is unavailable."""
+    lat = (float(extent.yMinimum()) + float(extent.yMaximum())) * 0.5
+    km_per_degree_lon = 111.320 * max(0.01, abs(math.cos(math.radians(lat))))
+    return map_width_to_km(float(extent.width()), km_per_degree_lon)
+
+
+def _geodesic_extent_width_km(extent: QgsRectangle, crs, project: QgsProject) -> float:
+    if QgsDistanceArea is None or QgsPointXY is None:
+        return 0.0
+
+    width_km = 0.0
+    with suppress(Exception):
+        distance = QgsDistanceArea()
+        if project is not None and hasattr(project, "transformContext"):
+            distance.setSourceCrs(crs, project.transformContext())
+        if project is not None and hasattr(project, "ellipsoid"):
+            ellipsoid = project.ellipsoid()
+            if ellipsoid:
+                distance.setEllipsoid(ellipsoid)
+        mid_y = (float(extent.yMinimum()) + float(extent.yMaximum())) * 0.5
+        width_m = distance.measureLine(
+            QgsPointXY(float(extent.xMinimum()), mid_y),
+            QgsPointXY(float(extent.xMaximum()), mid_y),
+        )
+        width_km = map_width_to_km(float(width_m), 0.001)
+    return width_km
+
+
+def _map_extent_width_km(map_item: QgsLayoutItemMap, project: QgsProject) -> float:
+    """Return the linked map frame's real-world width in kilometres."""
+    extent = map_item.extent()
+    if extent is None or extent.isEmpty():
+        return 0.0
+
+    crs = None
+    with suppress(Exception):
+        crs = map_item.crs()
+
+    if _crs_is_geographic(crs):
+        width_km = _geodesic_extent_width_km(extent, crs, project)
+        if width_km > 0:
+            return width_km
+        return _fallback_geographic_width_km(extent)
+
+    return map_width_to_km(float(extent.width()), _crs_unit_to_km(crs))
 
 
 def create_map_sheet(
@@ -265,7 +339,7 @@ def create_map_sheet(
         bar.setStyle("Line Ticks Up" if preset == "swiss_modern" else "Single Box")
         bar.applyDefaultSize()
 
-        unit_km = getattr(QgsUnitTypes, "DistanceKilometers", getattr(getattr(QgsUnitTypes, "DistanceUnit", None), "DistanceKilometers", 1))
+        unit_km = _distance_kilometres_unit()
         bar.setUnits(unit_km)
         bar.setUnitLabel("km")
         bar.setNumberOfSegments(3)
@@ -274,7 +348,9 @@ def create_map_sheet(
         bar.setFrameEnabled(False)
         ext = map_item.extent()
         if ext and not ext.isEmpty():
-            map_w_km = ext.width() / 1000.0 if (hasattr(map_item, "crs") and map_item.crs().isValid() and not map_item.crs().isGeographic()) else 10.0
+            map_w_km = _map_extent_width_km(map_item, project)
+            if map_w_km <= 0:
+                map_w_km = 10.0
             seg_km, n_right, n_left = nice_scalebar_segments(map_w_km, target_segments=3)
             bar.setNumberOfSegments(n_right)
             bar.setNumberOfSegmentsLeft(n_left)

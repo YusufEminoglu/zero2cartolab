@@ -8,6 +8,7 @@ using Heckbert nice numbers, auto-detecting CRS units and applying clean Swiss/a
 from __future__ import annotations
 
 import math
+from contextlib import suppress
 from typing import Optional
 
 try:
@@ -71,8 +72,14 @@ def apply_coordinate_grid_decorator(
         if interval_y <= 0:
             interval_y = (h / float(target_divisions_y)) if h > 0 else 1000.0
 
-    # Check if geographic (degrees) vs projected (meters/feet)
-    is_geographic = (w > 0 and w < 360.0 and h > 0 and h < 180.0)
+    # Check if geographic (degrees) vs projected (meters/feet) from the map CRS.
+    # Fall back to the old extent heuristic only when the CRS API is unavailable.
+    is_geographic = False
+    with suppress(Exception):
+        crs = main_map.crs()
+        is_geographic = bool(crs is not None and crs.isValid() and crs.isGeographic())
+    if not is_geographic:
+        is_geographic = (w > 0 and w < 360.0 and h > 0 and h < 180.0)
 
     # 2. Get or create PlanX grid on map item
     grid = None
