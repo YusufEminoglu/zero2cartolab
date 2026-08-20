@@ -10,3 +10,4 @@ dist/
 *.qgz~
 
 NEXT_AGENT_BRIEF.md
+ENHANCEMENT_PLAN_*.md
