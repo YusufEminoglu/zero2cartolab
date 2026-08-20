@@ -232,7 +232,76 @@ def _cartolab_icon(name: str = "icon.png") -> QIcon:
     return QIcon(fallback) if os.path.exists(fallback) else QIcon()
 
 
+_QWidgetBase = QWidget if QWidget is not None else object
 _QDialogBase = QDialog if QDialog is not None else object
+
+
+class CartoLabSubTabs(_QWidgetBase):
+    """High-DPI immune horizontal segmented sub-tab switcher.
+    Completely avoids Windows Vista/11 native QTabBar DrawThemeText clipping.
+    """
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._buttons: list[QPushButton] = []
+        self._widgets: list[QWidget] = []
+
+        main_lyt = QVBoxLayout(self)
+        main_lyt.setContentsMargins(0, 0, 0, 0)
+        main_lyt.setSpacing(0)
+
+        # Tab Bar Header Row
+        self._header_frame = QFrame()
+        self._header_frame.setObjectName("subTabHeader")
+        self._header_lyt = QHBoxLayout(self._header_frame)
+        self._header_lyt.setContentsMargins(2, 0, 2, 0)
+        self._header_lyt.setSpacing(4)
+        self._header_lyt.addStretch()
+
+        main_lyt.addWidget(self._header_frame)
+
+        # Content Stack
+        self._stack = QStackedWidget()
+        self._stack.setObjectName("subTabStack")
+        main_lyt.addWidget(self._stack)
+
+    def addTab(self, widget: QWidget, text: str) -> int:
+        idx = len(self._buttons)
+        clean_text = text.strip()
+        btn = QPushButton(clean_text)
+        btn.setCheckable(True)
+        btn.setObjectName("subTabBtn")
+        btn.setCursor(Qt.PointingHandCursor if hasattr(Qt, "PointingHandCursor") else Qt.ArrowCursor)
+        btn.clicked.connect(lambda checked, i=idx: self.setCurrentIndex(i))
+
+        self._header_lyt.insertWidget(idx, btn)
+        self._buttons.append(btn)
+
+        self._stack.addWidget(widget)
+        self._widgets.append(widget)
+
+        if idx == 0:
+            btn.setChecked(True)
+            self._stack.setCurrentIndex(0)
+
+        return idx
+
+    def setTabToolTip(self, index: int, tooltip: str) -> None:
+        if 0 <= index < len(self._buttons):
+            self._buttons[index].setToolTip(tooltip)
+
+    def setCurrentIndex(self, index: int) -> None:
+        if 0 <= index < len(self._buttons):
+            for i, b in enumerate(self._buttons):
+                b.setChecked(i == index)
+            self._stack.setCurrentIndex(index)
+
+    def currentIndex(self) -> int:
+        return self._stack.currentIndex()
+
+    def count(self) -> int:
+        return len(self._buttons)
+
 
 class CartoLabDashboard(_QDialogBase):
 
@@ -298,6 +367,41 @@ class CartoLabDashboard(_QDialogBase):
             QLabel#statusChip {{
                 color: #065f46; background: #ecfdf5; border: 1px solid #a7f3d0;
                 border-radius: 6px; padding: 4px 10px; font-weight: 600; font-size: 11px;
+            }}
+            QFrame#subTabHeader {{
+                background: transparent;
+                border-bottom: 1px solid #cbd5e1;
+            }}
+            QPushButton#subTabBtn {{
+                background: #f1f5f9;
+                color: #475569;
+                border: 1px solid #cbd5e1;
+                border-bottom: none;
+                border-top-left-radius: 6px;
+                border-top-right-radius: 6px;
+                padding: 8px 18px;
+                font-size: 12px;
+                font-weight: 600;
+                margin-bottom: -1px;
+                margin-right: 4px;
+            }}
+            QPushButton#subTabBtn:hover:!checked {{
+                background: #e2e8f0;
+                color: #0f172a;
+            }}
+            QPushButton#subTabBtn:checked {{
+                background: #ffffff;
+                color: #1d4ed8;
+                font-weight: 700;
+                border: 1px solid #94a3b8;
+                border-bottom: 2px solid #2563eb;
+            }}
+            QStackedWidget#subTabStack {{
+                background: #ffffff;
+                border: 1px solid #e2e8f0;
+                border-top: none;
+                border-bottom-left-radius: {r}px;
+                border-bottom-right-radius: {r}px;
             }}
             QTabWidget::pane {{ border: 1px solid #e2e8f0; border-radius: {r}px; background: #ffffff; margin-top: -1px; }}
             QTabBar::tab {{
@@ -464,15 +568,14 @@ class CartoLabDashboard(_QDialogBase):
         layout = QVBoxLayout(studio_widget)
         layout.setContentsMargins(6, 6, 6, 6)
 
-        self.symbology_sub_tabs = QTabWidget()
-        self.symbology_sub_tabs.setUsesScrollButtons(True)
+        self.symbology_sub_tabs = CartoLabSubTabs()
 
         # Sub-tab 1: Quick Style
         qs_widget = QWidget()
         qs_layout = QVBoxLayout(qs_widget)
         qs_layout.setContentsMargins(12, 16, 12, 12)
         self._build_quick_style_contents(qs_layout)
-        self.symbology_sub_tabs.addTab(qs_widget, "  Quick Style  ")
+        self.symbology_sub_tabs.addTab(qs_widget, "Quick Style")
         self.symbology_sub_tabs.setTabToolTip(0, "Quick Style: One-click graduated & categorized thematic styling")
 
         # Sub-tab 2: 2.5D Building Extrusion
@@ -482,17 +585,17 @@ class CartoLabDashboard(_QDialogBase):
         tab_body = QWidget()
         self.tab_25d.setWidget(tab_body)
         self._build_25d_contents(tab_body)
-        self.symbology_sub_tabs.addTab(self.tab_25d, "  2.5D Buildings  ")
+        self.symbology_sub_tabs.addTab(self.tab_25d, "2.5D Buildings")
         self.symbology_sub_tabs.setTabToolTip(1, "2.5D Building Extrusion: Native height extrusion, lighting & floor bands")
 
         # Sub-tab 3: Advanced Thematic Suite
         thematic_widget = self._build_thematic_suite_subwidget()
-        self.symbology_sub_tabs.addTab(thematic_widget, "  Thematic Maps  ")
+        self.symbology_sub_tabs.addTab(thematic_widget, "Thematic Maps")
         self.symbology_sub_tabs.setTabToolTip(2, "Thematic Maps: Bivariate choropleth, Value-by-Alpha, Cartogram, Ridge maps")
 
         # Sub-tab 4: Palette & Accessibility Inspector
         palette_widget = self._build_palette_inspector_subwidget()
-        self.symbology_sub_tabs.addTab(palette_widget, "  Palette & Accessibility  ")
+        self.symbology_sub_tabs.addTab(palette_widget, "Palette & Accessibility")
         self.symbology_sub_tabs.setTabToolTip(3, "Palette & Accessibility Inspector: CVD simulation & WCAG 2.1 contrast scoring")
 
         layout.addWidget(self.symbology_sub_tabs)
@@ -2260,22 +2363,21 @@ class CartoLabDashboard(_QDialogBase):
         layout = QVBoxLayout(studio_widget)
         layout.setContentsMargins(6, 6, 6, 6)
 
-        self.layout_sub_tabs = QTabWidget()
-        self.layout_sub_tabs.setUsesScrollButtons(True)
+        self.layout_sub_tabs = CartoLabSubTabs()
 
         # Sub-tab 1: Layout Templates Gallery
         templates_widget = self._build_template_gallery_subwidget()
-        self.layout_sub_tabs.addTab(templates_widget, "  Template Gallery  ")
+        self.layout_sub_tabs.addTab(templates_widget, "Template Gallery")
         self.layout_sub_tabs.setTabToolTip(0, "Publication Layout Templates: Report Figure, Academic Journal, Poster, Fact Sheet, Diptych")
 
         # Sub-tab 2: Custom Map Sheet & Manager
         mapsheet_widget = self._build_custom_mapsheet_subwidget()
-        self.layout_sub_tabs.addTab(mapsheet_widget, "  Map Sheet Studio  ")
+        self.layout_sub_tabs.addTab(mapsheet_widget, "Map Sheet Studio")
         self.layout_sub_tabs.setTabToolTip(1, "Auto Map Sheet Builder, Layout Manager & Decorators")
 
         # Sub-tab 3: Isometric 3D Stacker
         iso_widget = self._build_isometric_stacker_subwidget()
-        self.layout_sub_tabs.addTab(iso_widget, "  3D Isometric Stacker  ")
+        self.layout_sub_tabs.addTab(iso_widget, "3D Isometric Stacker")
         self.layout_sub_tabs.setTabToolTip(2, "3D Isometric Layer Stacker: Multi-layer perspective assembly")
 
         layout.addWidget(self.layout_sub_tabs)
