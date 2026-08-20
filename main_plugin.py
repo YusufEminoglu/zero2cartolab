@@ -88,7 +88,11 @@ class O2CartoLabPlugin:
         self.welcome.activateWindow()
 
     def open_dashboard(self) -> None:
-        if self.dialog is None:
+        if self.dialog is None or not self.dialog.isVisible():
+            if self.dialog is not None:
+                with suppress(Exception):
+                    self.dialog.close()
+                    self.dialog.deleteLater()
             from .ui.cartolab_dashboard import CartoLabDashboard
             self.dialog = CartoLabDashboard(self.iface, self.iface.mainWindow())
         self.dialog.show()
