@@ -1,2076 +1,668 @@
 <!DOCTYPE html>
-<html lang="en" class="scroll-smooth">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>02CartoLab — Unified Cartographic Studio & Print Layout Automation for QGIS</title>
-  <meta name="description" content="Comprehensive cartography suite and academic reference for QGIS: bivariate maps, 2.5D building extrusion, publication template gallery, colorblind accessibility inspector, and 14 Processing algorithms with mathematical formulations and literature citations.">
-  <meta name="author" content="Yusuf Eminoglu">
-  <link rel="icon" type="image/png" href="img/icon.png">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>02CartoLab — Publication-Grade Cartography Studio for QGIS</title>
+  <meta name="description" content="Unified thematic mapping and print layout automation studio for QGIS. Bivariate choropleths, cartograms, ridge maps, dot-density, 2.5D buildings, automated layouts. No pip dependencies." />
+  <meta property="og:title" content="02CartoLab QGIS Plugin" />
+  <meta property="og:description" content="Publication-grade cartography without leaving QGIS. 16 algorithms, 5 layout templates, CVD accessibility inspector." />
+  <meta property="og:type" content="website" />
 
-  <!-- Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-
-  <!-- MathJax 3 for LaTeX Rendering -->
-  <script>
-    window.MathJax = {
-      tex: {
-        inlineMath: [['$', '$'], ['\\(', '\\)']],
-        displayMath: [['$$', '$$'], ['\\[', '\\]']],
-        processEscapes: true
-      },
-      options: {
-        skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
-      }
-    };
-  </script>
-  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" id="MathJax-script" async></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet" />
 
   <style>
     :root {
-      --bg-canvas: #f8fafc;
-      --bg-card: #ffffff;
-      --bg-card-subtle: #f1f5f9;
-      --border-color: #e2e8f0;
-      --border-focus: #0284c7;
-      --accent-cyan: #0284c7;
-      --accent-blue: #2563eb;
-      --accent-indigo: #4f46e5;
-      --accent-teal: #0d9488;
-      --accent-amber: #d97706;
-      --accent-rose: #e11d48;
-      --text-main: #0f172a;
-      --text-muted: #475569;
-      --text-light: #64748b;
-      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-      --shadow-md: 0 4px 14px rgba(0,0,0,0.07);
-      --shadow-lg: 0 12px 30px rgba(0,0,0,0.09);
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-      background-color: var(--bg-canvas);
-      color: var(--text-main);
-      line-height: 1.65;
-      overflow-x: hidden;
-    }
-    code, pre {
-      font-family: 'JetBrains Mono', monospace;
-    }
-    
-    /* Background subtle pattern */
-    .bg-grid {
-      background-image: 
-        linear-gradient(to right, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
-      background-size: 32px 32px;
+      --purple: #7c3aed;
+      --purple-light: #a78bfa;
+      --indigo: #4f46e5;
+      --gold: #f59e0b;
+      --gold-light: #fcd34d;
+      --navy: #0d0f1e;
+      --navy-mid: #131527;
+      --navy-light: #1c1f3a;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --border: rgba(124,58,237,0.18);
+      --card-bg: rgba(19,21,39,0.75);
+      --radius-sm: 8px;
+      --radius-md: 16px;
+      --radius-lg: 24px;
+      --shadow-purple: 0 0 40px rgba(124,58,237,0.18);
+      --shadow-card: 0 4px 32px rgba(0,0,0,0.5);
+      --font-sans: 'Inter', system-ui, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
     }
 
-    /* Navigation */
-    header {
-      position: sticky;
-      top: 0;
-      z-index: 50;
-      backdrop-filter: blur(16px);
-      background: rgba(255, 255, 255, 0.92);
-      border-bottom: 1px solid var(--border-color);
-      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
-    }
-    .nav-container {
-      max-width: 1320px;
-      margin: 0 auto;
-      padding: 0.85rem 1.5rem;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      text-decoration: none;
-      color: var(--text-main);
-      font-weight: 800;
-      font-size: 1.28rem;
-      letter-spacing: -0.5px;
-    }
-    .brand img {
-      width: 36px;
-      height: 36px;
-      border-radius: 8px;
-    }
-    .nav-links {
-      display: flex;
-      align-items: center;
-      gap: 1.6rem;
-      list-style: none;
-    }
-    @media (max-width: 1024px) {
-      .nav-links { display: none; }
-    }
-    .nav-links a {
-      color: var(--text-muted);
-      text-decoration: none;
-      font-size: 0.92rem;
-      font-weight: 600;
-      transition: color 0.2s ease;
-    }
-    .nav-links a:hover {
-      color: var(--accent-cyan);
-    }
-    .nav-actions {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
-    .btn-nav-manual {
-      background: #e0f2fe;
-      border: 1px solid #bae6fd;
-      color: #0369a1;
-      padding: 0.45rem 0.9rem;
-      border-radius: 8px;
-      font-size: 0.85rem;
-      font-weight: 700;
-      text-decoration: none;
-      transition: all 0.2s ease;
-    }
-    .btn-nav-manual:hover {
-      background: #bae6fd;
-      box-shadow: var(--shadow-sm);
-    }
-    .btn-github {
-      background: #0f172a;
-      border: 1px solid #0f172a;
-      color: #fff;
-      padding: 0.45rem 0.9rem;
-      border-radius: 8px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      text-decoration: none;
-      transition: all 0.2s ease;
-    }
-    .btn-github:hover {
-      background: #1e293b;
-      box-shadow: var(--shadow-sm);
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font-sans); background-color: var(--navy); color: var(--text-primary); line-height: 1.6; overflow-x: hidden; }
+    img { max-width: 100%; height: auto; display: block; }
+    a { color: var(--purple-light); text-decoration: none; }
+    a:hover { color: var(--gold-light); }
+
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(124,58,237,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(124,58,237,0.04) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none; z-index: 0;
     }
 
-    /* Container */
-    .container {
-      max-width: 1320px;
-      margin: 0 auto;
-      padding: 0 1.5rem;
-      position: relative;
-      z-index: 1;
-    }
+    /* NAV */
+    nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(13,15,30,0.88); backdrop-filter: blur(16px); border-bottom: 1px solid var(--border); }
+    .nav-inner { max-width: 1280px; margin: 0 auto; padding: 0 2rem; height: 64px; display: flex; align-items: center; justify-content: space-between; }
+    .nav-logo { display: flex; align-items: center; gap: 0.75rem; font-weight: 700; font-size: 1.1rem; color: var(--text-primary); }
+    .logo-badge { background: linear-gradient(135deg, var(--purple), var(--gold)); color: #fff; font-weight: 800; font-size: 0.7rem; padding: 3px 8px; border-radius: 4px; letter-spacing: 0.05em; }
+    .nav-links { display: flex; gap: 2rem; list-style: none; }
+    .nav-links a { color: var(--text-secondary); font-size: 0.9rem; font-weight: 500; transition: color 0.2s; }
+    .nav-links a:hover { color: var(--purple-light); }
+    .nav-cta { background: linear-gradient(135deg, var(--purple), var(--indigo)) !important; color: #fff !important; font-weight: 700 !important; padding: 0.45rem 1.25rem; border-radius: 6px; }
 
-    /* Hero Section */
-    .hero {
-      padding: 4.5rem 0 3rem;
-      text-align: center;
-      position: relative;
-    }
-    .hero-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      background: #e0f2fe;
-      border: 1px solid #bae6fd;
-      color: #0369a1;
-      padding: 0.35rem 1.1rem;
-      border-radius: 9999px;
-      font-size: 0.85rem;
-      font-weight: 700;
-      margin-bottom: 1.5rem;
-    }
-    .hero-title {
-      font-size: 3.4rem;
-      font-weight: 800;
-      line-height: 1.18;
-      letter-spacing: -1.5px;
-      margin-bottom: 1.25rem;
-      color: #0f172a;
-    }
-    @media (max-width: 768px) {
-      .hero-title { font-size: 2.2rem; }
-    }
-    .hero-subtitle {
-      max-width: 840px;
-      margin: 0 auto 2.25rem;
-      font-size: 1.2rem;
-      color: var(--text-muted);
-      font-weight: 400;
-    }
-    .hero-actions {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 1rem;
-      flex-wrap: wrap;
-      margin-bottom: 3.5rem;
-    }
-    .btn-primary {
-      background: #0284c7;
-      color: #fff;
-      padding: 0.85rem 1.85rem;
-      border-radius: 10px;
-      font-weight: 700;
-      font-size: 1rem;
-      text-decoration: none;
-      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
-      transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
-    }
-    .btn-primary:hover {
-      background: #0369a1;
-      transform: translateY(-2px);
-      box-shadow: 0 8px 22px rgba(2, 132, 199, 0.45);
-    }
-    .btn-secondary {
-      background: #ffffff;
-      border: 1px solid var(--border-color);
-      color: var(--text-main);
-      padding: 0.85rem 1.75rem;
-      border-radius: 10px;
-      font-weight: 600;
-      font-size: 1rem;
-      text-decoration: none;
-      box-shadow: var(--shadow-sm);
-      transition: background 0.2s, border-color 0.2s;
-    }
-    .btn-secondary:hover {
-      background: #f8fafc;
-      border-color: #cbd5e1;
-    }
+    /* HERO */
+    .hero { position: relative; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; padding: 8rem 2rem 4rem; overflow: hidden; }
+    .hero-bg { position: absolute; inset: 0; z-index: 0; }
+    .hero-bg img { width: 100%; height: 100%; object-fit: cover; opacity: 0.3; }
+    .hero-bg::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(13,15,30,0.4) 0%, rgba(13,15,30,0.6) 50%, rgba(13,15,30,1) 100%); }
+    .hero-content { position: relative; z-index: 1; max-width: 1280px; margin: 0 auto; width: 100%; }
+    .hero-eyebrow { display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(124,58,237,0.1); border: 1px solid rgba(124,58,237,0.3); color: var(--purple-light); font-size: 0.8rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.4rem 1rem; border-radius: 100px; margin-bottom: 1.5rem; }
+    .hero-title { font-size: clamp(2.8rem, 6vw, 5.5rem); font-weight: 900; line-height: 1.05; letter-spacing: -0.03em; margin-bottom: 1.5rem; }
+    .gradient-text { background: linear-gradient(135deg, var(--purple-light) 0%, var(--gold-light) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .hero-subtitle { font-size: clamp(1rem, 2vw, 1.3rem); color: var(--text-secondary); max-width: 640px; margin-bottom: 2.5rem; line-height: 1.7; }
+    .hero-actions { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 4rem; }
 
-    /* Stats Grid */
-    .stats-row {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1.25rem;
-      margin-bottom: 4.5rem;
-    }
-    .stat-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: 14px;
-      padding: 1.5rem;
-      text-align: center;
-      box-shadow: var(--shadow-sm);
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .stat-card:hover {
-      transform: translateY(-3px);
-      box-shadow: var(--shadow-md);
-    }
-    .stat-num {
-      font-size: 2.3rem;
-      font-weight: 800;
-      color: #0284c7;
-      margin-bottom: 0.25rem;
-    }
-    .stat-label {
-      color: var(--text-muted);
-      font-size: 0.88rem;
-      font-weight: 600;
-    }
+    .btn-primary { display: inline-flex; align-items: center; gap: 0.5rem; background: linear-gradient(135deg, var(--purple), var(--indigo)); color: #fff; font-weight: 700; font-size: 1rem; padding: 0.9rem 2rem; border-radius: var(--radius-sm); transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 4px 20px rgba(124,58,237,0.35); }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(124,58,237,0.5); color: #fff; }
+    .btn-secondary { display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(255,255,255,0.06); color: var(--text-primary); font-weight: 600; font-size: 1rem; padding: 0.9rem 2rem; border-radius: var(--radius-sm); border: 1px solid rgba(255,255,255,0.1); transition: background 0.2s; }
+    .btn-secondary:hover { background: rgba(255,255,255,0.1); color: var(--text-primary); }
 
-    /* Section Headers */
-    .section-header {
-      text-align: center;
-      margin-bottom: 3rem;
-    }
-    .section-tag {
-      color: #0284c7;
-      font-size: 0.85rem;
-      font-weight: 700;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      margin-bottom: 0.5rem;
-    }
-    .section-title {
-      font-size: 2.3rem;
-      font-weight: 800;
-      letter-spacing: -1px;
-      margin-bottom: 0.85rem;
-      color: #0f172a;
-    }
-    .section-desc {
-      color: var(--text-muted);
-      font-size: 1.08rem;
-      max-width: 740px;
-      margin: 0 auto;
-    }
+    .hero-stats { display: flex; gap: 3rem; flex-wrap: wrap; }
+    .hero-stat .value { font-size: 2.5rem; font-weight: 800; background: linear-gradient(135deg, var(--purple-light), var(--gold-light)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; line-height: 1; }
+    .hero-stat .label { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem; font-weight: 500; }
 
-    /* Video Walkthrough Box */
-    .video-section {
-      margin-bottom: 5rem;
-    }
-    .video-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: 20px;
-      padding: 1.25rem;
-      box-shadow: var(--shadow-md);
-    }
-    .video-wrap {
-      position: relative;
-      width: 100%;
-      padding-top: 56.25%;
-      border-radius: 12px;
-      overflow: hidden;
-      background: #000;
-    }
-    .video-wrap iframe {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      border: 0;
-    }
+    /* SECTIONS */
+    section { position: relative; z-index: 1; padding: 6rem 2rem; }
+    .container { max-width: 1280px; margin: 0 auto; }
+    .section-eyebrow { display: inline-flex; align-items: center; gap: 0.5rem; color: var(--purple-light); font-size: 0.78rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 1rem; }
+    .section-eyebrow::before { content: ''; width: 24px; height: 2px; background: var(--purple-light); display: inline-block; }
+    .section-title { font-size: clamp(2rem, 4vw, 3rem); font-weight: 800; line-height: 1.15; letter-spacing: -0.02em; margin-bottom: 1rem; }
+    .section-subtitle { font-size: 1.1rem; color: var(--text-secondary); max-width: 620px; line-height: 1.7; }
+    .section-header { margin-bottom: 3.5rem; }
+    .bg-alt { background: var(--navy-mid); }
 
-    /* Gallery Section */
-    .gallery-filter {
-      display: flex;
-      justify-content: center;
-      gap: 0.6rem;
-      flex-wrap: wrap;
-      margin-bottom: 2.5rem;
-    }
-    .filter-btn {
-      background: #ffffff;
-      border: 1px solid var(--border-color);
-      color: var(--text-muted);
-      padding: 0.55rem 1.25rem;
-      border-radius: 9999px;
-      font-size: 0.9rem;
-      font-weight: 600;
-      cursor: pointer;
-      box-shadow: var(--shadow-sm);
-      transition: all 0.2s ease;
-    }
-    .filter-btn.active, .filter-btn:hover {
-      background: #0284c7;
-      color: #fff;
-      border-color: #0284c7;
-      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
-    }
-    .gallery-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-      gap: 1.75rem;
-      margin-bottom: 5rem;
-    }
-    .gallery-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: 16px;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      box-shadow: var(--shadow-sm);
-      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s;
-      cursor: pointer;
-    }
-    .gallery-card:hover {
-      transform: translateY(-5px);
-      box-shadow: var(--shadow-lg);
-      border-color: #cbd5e1;
-    }
-    .gallery-img-wrap {
-      position: relative;
-      width: 100%;
-      height: 240px;
-      background: #f1f5f9;
-      overflow: hidden;
-    }
-    .gallery-img-wrap img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      object-position: top center;
-      transition: transform 0.4s ease;
-    }
-    .gallery-card:hover .gallery-img-wrap img {
-      transform: scale(1.04);
-    }
-    .gallery-badge {
-      position: absolute;
-      top: 12px;
-      right: 12px;
-      background: rgba(15, 23, 42, 0.88);
-      backdrop-filter: blur(8px);
-      color: #fff;
-      padding: 0.25rem 0.65rem;
-      border-radius: 6px;
-      font-size: 0.75rem;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-    }
-    .gallery-content {
-      padding: 1.4rem;
-      display: flex;
-      flex-direction: column;
-      flex-grow: 1;
-    }
-    .gallery-title {
-      font-size: 1.15rem;
-      font-weight: 700;
-      margin-bottom: 0.4rem;
-      color: #0f172a;
-    }
-    .gallery-desc {
-      color: var(--text-muted);
-      font-size: 0.88rem;
-      line-height: 1.55;
-      margin-bottom: 1rem;
-      flex-grow: 1;
-    }
-    .gallery-meta {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-top: 1px solid var(--border-color);
-      padding-top: 0.9rem;
-      font-size: 0.82rem;
-      color: var(--text-light);
-    }
-    .gallery-meta span {
-      display: flex;
-      align-items: center;
-      gap: 0.35rem;
-    }
+    /* BADGES */
+    .badges { background: var(--navy-mid); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 1.5rem 2rem; position: relative; z-index: 1; }
+    .badges-inner { max-width: 1280px; margin: 0 auto; display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; }
+    .badge { display: inline-flex; align-items: center; gap: 0.4rem; background: rgba(124,58,237,0.08); border: 1px solid rgba(124,58,237,0.22); color: var(--purple-light); font-size: 0.8rem; font-weight: 600; padding: 0.35rem 0.85rem; border-radius: 100px; white-space: nowrap; }
 
-    /* Simulator Section */
-    .simulator-section {
-      background: #ffffff;
-      border: 1px solid var(--border-color);
-      border-radius: 24px;
-      padding: 3rem;
-      margin-bottom: 5rem;
-      box-shadow: var(--shadow-md);
-    }
-    .sim-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 3rem;
-      align-items: center;
-    }
+    /* FEATURE GRID */
+    .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; }
+    .feature-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1.75rem; backdrop-filter: blur(8px); transition: transform 0.25s, box-shadow 0.25s, border-color 0.25s; }
+    .feature-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-purple); border-color: rgba(124,58,237,0.4); }
+    .feature-icon { width: 48px; height: 48px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; margin-bottom: 1rem; }
+    .fi-p { background: rgba(124,58,237,0.15); }
+    .fi-g { background: rgba(245,158,11,0.15); }
+    .fi-b { background: rgba(96,165,250,0.15); }
+    .fi-r { background: rgba(52,211,153,0.15); }
+    .feature-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .feature-card p { font-size: 0.875rem; color: var(--text-secondary); line-height: 1.65; }
+
+    /* IMAGE */
+    .image-full { border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-card); border: 1px solid var(--border); }
+    .image-full img { width: 100%; transition: transform 0.4s ease; }
+    .image-full:hover img { transform: scale(1.01); }
+    .image-caption { background: rgba(19,21,39,0.95); padding: 1rem 1.5rem; font-size: 0.85rem; color: var(--text-secondary); border-top: 1px solid var(--border); display: flex; align-items: center; gap: 0.5rem; }
+    .image-caption::before { content: '&#8593;'; color: var(--purple-light); font-weight: 700; }
+
+    /* SPLIT */
+    .split { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: center; }
+    .split.reverse { direction: rtl; }
+    .split.reverse > * { direction: ltr; }
+
+    /* MODULE TABLE */
+    .module-table { width: 100%; border-collapse: collapse; }
+    .module-table th { text-align: left; font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; padding: 0.6rem 1rem; border-bottom: 1px solid var(--border); }
+    .module-table td { padding: 0.75rem 1rem; font-size: 0.875rem; border-bottom: 1px solid rgba(124,58,237,0.07); vertical-align: top; }
+    .module-table tr:hover td { background: rgba(124,58,237,0.04); }
+    .module-table td:first-child { font-weight: 700; color: var(--text-primary); white-space: nowrap; }
+    .module-table td:nth-child(2) { color: var(--text-secondary); }
+    .mtag { display: inline-flex; background: rgba(124,58,237,0.1); border: 1px solid rgba(124,58,237,0.2); color: var(--purple-light); font-size: 0.68rem; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 4px; font-family: var(--font-mono); white-space: nowrap; }
+    .mtag.gold { background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.2); color: var(--gold); }
+
+    /* CODE */
+    .code-block { background: rgba(0,0,0,0.55); border: 1px solid rgba(124,58,237,0.2); border-radius: var(--radius-md); padding: 1.75rem; font-family: var(--font-mono); font-size: 0.875rem; overflow-x: auto; position: relative; }
+    .lang-tag { position: absolute; top: 0.75rem; right: 0.75rem; background: rgba(124,58,237,0.15); color: var(--purple-light); font-size: 0.7rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 4px; letter-spacing: 0.1em; text-transform: uppercase; }
+    .code-line { line-height: 1.8; }
+    .code-kw { color: #c084fc; }
+    .code-str { color: #86efac; }
+    .code-val { color: var(--gold-light); }
+    .mono { font-family: var(--font-mono); font-size: 0.82rem; color: var(--purple-light); }
+
+    /* COMPAT */
+    .compat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.25rem; }
+    .compat-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1.5rem; text-align: center; }
+    .compat-icon { font-size: 2rem; margin-bottom: 0.75rem; }
+    .compat-title { font-weight: 700; margin-bottom: 0.35rem; font-size: 0.95rem; }
+    .compat-desc { font-size: 0.82rem; color: var(--text-secondary); }
+    .compat-check { display: inline-block; background: rgba(124,58,237,0.15); color: var(--purple-light); font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 100px; margin-top: 0.5rem; }
+
+    /* INSTALL */
+    .install-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; }
+    .install-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 2rem; transition: transform 0.25s, border-color 0.25s; }
+    .install-card:hover { transform: translateY(-4px); border-color: rgba(124,58,237,0.4); }
+    .install-num { font-family: var(--font-mono); font-size: 2.5rem; font-weight: 900; color: rgba(124,58,237,0.12); line-height: 1; margin-bottom: 0.5rem; }
+    .install-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .install-card p { font-size: 0.88rem; color: var(--text-secondary); line-height: 1.65; }
+    .plugin-id { margin-top: 0.75rem; background: rgba(0,0,0,0.4); border: 1px solid rgba(124,58,237,0.15); border-radius: 6px; padding: 0.5rem 0.75rem; font-family: var(--font-mono); font-size: 0.78rem; color: var(--purple-light); }
+
+    /* CHANGELOG */
+    .changelog-wrapper { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 2.5rem; }
+    .changelog-version { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
+    .version-badge { background: linear-gradient(135deg, var(--purple), var(--indigo)); color: #fff; font-family: var(--font-mono); font-weight: 800; font-size: 1rem; padding: 0.4rem 1rem; border-radius: 6px; }
+    .version-date { color: var(--text-muted); font-size: 0.875rem; font-family: var(--font-mono); }
+    .changelog-entries { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 0.75rem; }
+    .changelog-entry { display: flex; align-items: flex-start; gap: 0.6rem; font-size: 0.875rem; color: var(--text-secondary); line-height: 1.5; }
+    .changelog-entry::before { content: '\2736'; color: var(--purple-light); font-size: 0.6rem; margin-top: 4px; flex-shrink: 0; }
+
+    /* TAG */
+    .rtag { background: rgba(124,58,237,0.1); border: 1px solid rgba(124,58,237,0.22); color: var(--purple-light); font-size: 0.72rem; font-weight: 600; padding: 0.2rem 0.6rem; border-radius: 4px; font-family: var(--font-mono); display: inline-flex; }
+
+    /* FOOTER */
+    footer { background: var(--navy-mid); border-top: 1px solid var(--border); padding: 3rem 2rem; position: relative; z-index: 1; }
+    .footer-inner { max-width: 1280px; margin: 0 auto; display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 3rem; }
+    .footer-brand h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.75rem; }
+    .footer-brand p { font-size: 0.875rem; color: var(--text-muted); line-height: 1.65; }
+    .footer-col h4 { font-size: 0.8rem; font-weight: 700; color: var(--text-muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 1rem; }
+    .footer-links { list-style: none; }
+    .footer-links li { margin-bottom: 0.5rem; }
+    .footer-links a { color: var(--text-secondary); font-size: 0.875rem; transition: color 0.2s; }
+    .footer-links a:hover { color: var(--purple-light); }
+    .footer-bottom { max-width: 1280px; margin: 2rem auto 0; padding-top: 1.5rem; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+    .footer-bottom p { font-size: 0.82rem; color: var(--text-muted); }
+    .license { display: inline-flex; align-items: center; background: rgba(124,58,237,0.08); border: 1px solid rgba(124,58,237,0.2); color: var(--purple-light); font-size: 0.78rem; font-weight: 600; padding: 0.25rem 0.75rem; border-radius: 100px; }
+
+    /* DIVIDER */
+    .divider { height: 1px; background: linear-gradient(90deg, transparent, var(--purple-light), transparent); opacity: 0.25; margin: 0 2rem; }
+
+    /* GLOW */
+    .glow { position: absolute; width: 700px; height: 700px; border-radius: 50%; background: radial-gradient(circle, rgba(124,58,237,0.07) 0%, transparent 70%); pointer-events: none; }
+
+    /* ANIMATIONS */
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+    .hero-content > * { animation: fadeUp 0.7s ease both; }
+    .hero-content > *:nth-child(1) { animation-delay: 0.1s; }
+    .hero-content > *:nth-child(2) { animation-delay: 0.2s; }
+    .hero-content > *:nth-child(3) { animation-delay: 0.3s; }
+    .hero-content > *:nth-child(4) { animation-delay: 0.4s; }
+    .hero-content > *:nth-child(5) { animation-delay: 0.5s; }
+
+    /* RESPONSIVE */
     @media (max-width: 900px) {
-      .sim-grid { grid-template-columns: 1fr; }
-    }
-    .matrix-display {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-      width: 280px;
-      height: 280px;
-      margin: 0 auto;
-      padding: 12px;
-      background: #f8fafc;
-      border-radius: 16px;
-      border: 1px solid var(--border-color);
-    }
-    .matrix-cell {
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.75rem;
-      font-weight: 700;
-      color: rgba(255, 255, 255, 0.95);
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
-      transition: all 0.2s ease;
-      cursor: pointer;
-    }
-    .matrix-cell:hover {
-      transform: scale(1.08);
-      z-index: 10;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    }
-
-    /* Feature Cards */
-    .feature-cards {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-      gap: 1.5rem;
-      margin-bottom: 5rem;
-    }
-    .feature-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: 16px;
-      padding: 2rem;
-      box-shadow: var(--shadow-sm);
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .feature-card:hover {
-      transform: translateY(-3px);
-      box-shadow: var(--shadow-md);
-      border-color: #cbd5e1;
-    }
-    .feature-icon {
-      width: 48px;
-      height: 48px;
-      border-radius: 12px;
-      background: #e0f2fe;
-      color: #0369a1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.5rem;
-      margin-bottom: 1.25rem;
-      border: 1px solid #bae6fd;
-    }
-    .feature-title {
-      font-size: 1.22rem;
-      font-weight: 700;
-      margin-bottom: 0.65rem;
-      color: #0f172a;
-    }
-    .feature-desc {
-      color: var(--text-muted);
-      font-size: 0.92rem;
-      line-height: 1.6;
-    }
-
-    /* ── ALGORITHM CATALOG & ACADEMIC HUB ── */
-    .algo-explorer {
-      margin-bottom: 5rem;
-    }
-    .algo-search-bar {
-      display: flex;
-      gap: 1rem;
-      margin-bottom: 2rem;
-      flex-wrap: wrap;
-    }
-    .algo-search-input {
-      flex: 1;
-      min-width: 280px;
-      padding: 0.85rem 1.25rem;
-      border-radius: 12px;
-      background: #ffffff;
-      border: 1px solid var(--border-color);
-      color: #0f172a;
-      font-size: 0.95rem;
-      outline: none;
-      box-shadow: var(--shadow-sm);
-      transition: border-color 0.2s, box-shadow 0.2s;
-    }
-    .algo-search-input:focus {
-      border-color: #0284c7;
-      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
-    }
-    .algo-filter-pills {
-      display: flex;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-    }
-    .algo-pill {
-      background: #ffffff;
-      border: 1px solid var(--border-color);
-      color: var(--text-muted);
-      padding: 0.5rem 1rem;
-      border-radius: 9999px;
-      font-size: 0.84rem;
-      font-weight: 600;
-      cursor: pointer;
-      box-shadow: var(--shadow-sm);
-      transition: all 0.2s ease;
-    }
-    .algo-pill.active, .algo-pill:hover {
-      background: #0284c7;
-      color: #fff;
-      border-color: #0284c7;
-    }
-
-    /* Algorithm Card (Open by default) */
-    .algo-item {
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: 16px;
-      margin-bottom: 1.5rem;
-      overflow: hidden;
-      box-shadow: var(--shadow-sm);
-      transition: border-color 0.2s, box-shadow 0.2s;
-    }
-    .algo-item:hover {
-      border-color: #cbd5e1;
-      box-shadow: var(--shadow-md);
-    }
-    .algo-header {
-      padding: 1.25rem 1.75rem;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      cursor: pointer;
-      user-select: none;
-      background: #f8fafc;
-      border-bottom: 1px solid var(--border-color);
-      transition: background 0.2s;
-    }
-    .algo-header:hover {
-      background: #f1f5f9;
-    }
-    .algo-header-left {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      flex-wrap: wrap;
-    }
-    .algo-tag {
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      font-weight: 700;
-      padding: 0.25rem 0.65rem;
-      border-radius: 6px;
-      background: #fef3c7;
-      color: #b45309;
-      border: 1px solid #fde68a;
-    }
-    .algo-title-text {
-      font-size: 1.18rem;
-      font-weight: 700;
-      color: #0f172a;
-    }
-    .algo-id-badge {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.8rem;
-      color: #0369a1;
-      background: #e0f2fe;
-      padding: 0.2rem 0.6rem;
-      border-radius: 6px;
-      border: 1px solid #bae6fd;
-    }
-    .algo-arrow {
-      font-size: 1.2rem;
-      color: var(--text-light);
-      transition: transform 0.3s ease;
-    }
-    .algo-item.collapsed .algo-arrow {
-      transform: rotate(-90deg);
-    }
-    .algo-item.collapsed .algo-body {
-      display: none;
-    }
-
-    .algo-body {
-      display: block;
-      padding: 1.75rem;
-      background: #ffffff;
-    }
-
-    .algo-subheading {
-      font-size: 0.95rem;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      font-weight: 700;
-      color: #0284c7;
-      margin: 1.4rem 0 0.6rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    .algo-subheading:first-child { margin-top: 0; }
-
-    .algo-math-box {
-      background: #f8fafc;
-      border: 1px solid var(--border-color);
-      border-radius: 10px;
-      padding: 1.25rem 1.5rem;
-      margin: 0.75rem 0 1.25rem;
-      overflow-x: auto;
-      font-size: 1.05rem;
-      color: #0f172a;
-    }
-    .algo-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 0.75rem 0 1.25rem;
-      font-size: 0.88rem;
-    }
-    .algo-table th, .algo-table td {
-      border: 1px solid var(--border-color);
-      padding: 0.65rem 0.9rem;
-      text-align: left;
-      vertical-align: top;
-    }
-    .algo-table th {
-      background: #f1f5f9;
-      color: #0f172a;
-      font-weight: 700;
-    }
-    .algo-table td code {
-      color: #0369a1;
-      background: #e0f2fe;
-      padding: 0.15rem 0.4rem;
-      border-radius: 4px;
-      font-size: 0.8rem;
-    }
-
-    .code-container {
-      position: relative;
-      margin: 0.75rem 0 1.25rem;
-    }
-    .code-block {
-      background: #0f172a;
-      border: 1px solid #1e293b;
-      border-radius: 10px;
-      padding: 1.25rem;
-      font-size: 0.85rem;
-      color: #38bdf8;
-      overflow-x: auto;
-      line-height: 1.5;
-    }
-    .btn-copy {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      background: rgba(255, 255, 255, 0.15);
-      border: 1px solid rgba(255, 255, 255, 0.25);
-      color: #fff;
-      padding: 0.3rem 0.65rem;
-      border-radius: 6px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .btn-copy:hover {
-      background: #0284c7;
-      color: #fff;
-      border-color: #0284c7;
-    }
-
-    .citation-list {
-      list-style: none;
-      margin-top: 0.5rem;
-    }
-    .citation-item {
-      font-size: 0.88rem;
-      color: var(--text-muted);
-      padding: 0.4rem 0 0.4rem 1.5rem;
-      position: relative;
-      line-height: 1.55;
-    }
-    .citation-item::before {
-      content: "📖";
-      position: absolute;
-      left: 0;
-      font-size: 0.85rem;
-    }
-    .citation-item a {
-      color: #0284c7;
-      text-decoration: none;
-      font-weight: 600;
-    }
-    .citation-item a:hover {
-      text-decoration: underline;
-    }
-
-    /* Architecture & Testing Section */
-    .arch-section {
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: 20px;
-      padding: 2.5rem;
-      margin-bottom: 5rem;
-      box-shadow: var(--shadow-sm);
-    }
-    .arch-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 1.5rem;
-      margin-top: 2rem;
-    }
-    .arch-card {
-      background: #f8fafc;
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 1.5rem;
-    }
-    .arch-card h4 {
-      color: #0369a1;
-      font-size: 1.05rem;
-      font-weight: 700;
-      margin-bottom: 0.5rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    .arch-card p {
-      font-size: 0.88rem;
-      color: var(--text-muted);
-      line-height: 1.55;
-    }
-
-    /* Academic BibTeX Section */
-    .bibtex-card {
-      background: #0f172a;
-      border: 1px solid #1e293b;
-      border-radius: 14px;
-      padding: 1.5rem;
-      position: relative;
-      margin-bottom: 5rem;
-      box-shadow: var(--shadow-md);
-    }
-
-    /* Modal Lightbox */
-    .modal {
-      display: none;
-      position: fixed;
-      inset: 0;
-      z-index: 100;
-      background: rgba(15, 23, 42, 0.85);
-      backdrop-filter: blur(12px);
-      align-items: center;
-      justify-content: center;
-      padding: 2rem;
-    }
-    .modal.active { display: flex; }
-    .modal-content {
-      max-width: 1000px;
-      width: 100%;
-      background: #ffffff;
-      border: 1px solid var(--border-color);
-      border-radius: 20px;
-      overflow: hidden;
-      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.25);
-      position: relative;
-    }
-    .modal-img-wrap {
-      max-height: 65vh;
-      background: #0f172a;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-    }
-    .modal-img-wrap img {
-      max-width: 100%;
-      max-height: 65vh;
-      object-fit: contain;
-    }
-    .modal-body {
-      padding: 1.5rem 2rem;
-    }
-    .modal-close {
-      position: absolute;
-      top: 16px;
-      right: 16px;
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      background: rgba(15, 23, 42, 0.7);
-      color: #fff;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.2rem;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    .modal-close:hover { background: #e11d48; }
-
-    /* Footer */
-    footer {
-      border-top: 1px solid var(--border-color);
-      background: #ffffff;
-      padding: 4rem 0 2.5rem;
-    }
-    .footer-grid {
-      display: grid;
-      grid-template-columns: 2fr 1fr 1fr 1fr;
-      gap: 2.5rem;
-      margin-bottom: 3rem;
+      .split { grid-template-columns: 1fr; gap: 2rem; }
+      .split.reverse { direction: ltr; }
+      .footer-inner { grid-template-columns: 1fr; gap: 2rem; }
     }
     @media (max-width: 768px) {
-      .footer-grid { grid-template-columns: 1fr; }
-    }
-    .footer-col h4 {
-      color: #0f172a;
-      font-size: 0.95rem;
-      font-weight: 700;
-      margin-bottom: 1rem;
-    }
-    .footer-col ul {
-      list-style: none;
-    }
-    .footer-col ul li {
-      margin-bottom: 0.6rem;
-    }
-    .footer-col ul li a {
-      color: var(--text-muted);
-      text-decoration: none;
-      font-size: 0.88rem;
-      transition: color 0.2s;
-    }
-    .footer-col ul li a:hover {
-      color: var(--accent-cyan);
-    }
-    .footer-bottom {
-      border-top: 1px solid var(--border-color);
-      padding-top: 1.5rem;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      color: var(--text-light);
-      font-size: 0.85rem;
+      .nav-links { display: none; }
+      section { padding: 4rem 1.25rem; }
+      .hero { padding: 6rem 1.25rem 3rem; }
     }
   </style>
 </head>
-<body class="bg-grid">
+<body>
 
-  <!-- Header Navigation -->
-  <header>
-    <div class="nav-container">
-      <a href="#" class="brand">
-        <img src="img/icon.png" alt="02CartoLab Icon">
-        <span>02CartoLab</span>
-      </a>
-      <ul class="nav-links">
-        <li><a href="#gallery">Layout Templates</a></li>
-        <li><a href="#simulator">Bivariate & CVD Lab</a></li>
-        <li><a href="#video">Walkthrough</a></li>
-        <li><a href="#algorithms">14 Algorithms</a></li>
-        <li><a href="#architecture">Architecture</a></li>
-        <li><a href="#citation">Citation</a></li>
-      </ul>
-      <div class="nav-actions">
-        <a href="CARTOLAB_REFERENCE_MANUAL.html" class="btn-nav-manual">📖 Full Manual</a>
-        <a href="https://github.com/YusufEminoglu/zero2cartolab" target="_blank" class="btn-github">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-          <span>Star</span>
-        </a>
-      </div>
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <div class="nav-logo">
+      <span>02CartoLab</span>
+      <span class="logo-badge">v1.0.0</span>
     </div>
-  </header>
+    <ul class="nav-links">
+      <li><a href="#about">About</a></li>
+      <li><a href="#features">Features</a></li>
+      <li><a href="#modules">Modules</a></li>
+      <li><a href="#bivariate">Bivariate</a></li>
+      <li><a href="#layouts">Layouts</a></li>
+      <li><a href="#install">Install</a></li>
+      <li><a href="https://github.com/YusufEminoglu/zero2cartolab" class="nav-cta">GitHub &#x2197;</a></li>
+    </ul>
+  </div>
+</nav>
 
-  <!-- Hero Section -->
-  <section class="hero container">
-    <div class="hero-badge">
-      <span>🚀 v1.0.0</span>
-      <span>•</span>
-      <span>QGIS 3.28+ LTR & QGIS 4.x Ready</span>
-      <span>•</span>
-      <span>Zero External Dependencies</span>
-    </div>
-    <h1 class="hero-title">Unified Cartographic Studio &<br>Print Layout Automation</h1>
+<!-- HERO -->
+<section class="hero" id="top">
+  <div class="hero-bg">
+    <img src="assets/hero.jpg" alt="02CartoLab cartography showcase" onerror="this.style.display='none'" />
+  </div>
+  <div class="hero-content">
+    <div class="hero-eyebrow">QGIS Plugin &middot; Publication Cartography</div>
+    <h1 class="hero-title">
+      Maps journals &amp; studios<br />
+      <span class="gradient-text">actually ask for</span>
+    </h1>
     <p class="hero-subtitle">
-      Bridge analytical thematic symbology and publication-grade print layouts in one seamless QGIS workflow.
-      From 2.5D building extrusion and bivariate choropleths to automated map book series and 14 scriptable Processing algorithms.
+      Bivariate choropleths, cartograms, ridge maps, dot-density, 2.5D buildings,
+      Value-by-Alpha, and automated print layouts &mdash; as native QGIS styling,
+      not fragile pasted QML. No pip dependencies.
     </p>
     <div class="hero-actions">
-      <a href="https://github.com/YusufEminoglu/zero2cartolab/releases" class="btn-primary">Download Plugin (ZIP)</a>
-      <a href="#gallery" class="btn-secondary">Explore Real Outputs</a>
-      <a href="#algorithms" class="btn-secondary">14 Algorithm Guides</a>
-      <a href="CARTOLAB_REFERENCE_MANUAL.html" class="btn-secondary">Deep Academic Manual</a>
+      <a href="https://plugins.qgis.org/plugins/zero2cartolab/" class="btn-primary">&#8659; Install from Plugin Hub</a>
+      <a href="https://github.com/YusufEminoglu/zero2cartolab" class="btn-secondary">&#9733; View on GitHub</a>
     </div>
-
-    <!-- Stats -->
-    <div class="stats-row">
-      <div class="stat-card">
-        <div class="stat-num">14</div>
-        <div class="stat-label">Processing Algorithms</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-num">5</div>
-        <div class="stat-label">Publication Archetypes</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-num">6</div>
-        <div class="stat-label">Tactile Paper Themes</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-num">68 / 68</div>
-        <div class="stat-label">Verified Passing CI Tests</div>
-      </div>
+    <div class="hero-stats">
+      <div class="hero-stat"><div class="value">14</div><div class="label">Processing Algorithms</div></div>
+      <div class="hero-stat"><div class="value">5</div><div class="label">Layout Templates</div></div>
+      <div class="hero-stat"><div class="value">5</div><div class="label">CVD Modes</div></div>
+      <div class="hero-stat"><div class="value">0</div><div class="label">pip dependencies</div></div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- Video Walkthrough Section -->
-  <section id="video" class="container video-section">
-    <div class="section-header">
-      <div class="section-tag">Video Walkthrough</div>
-      <h2 class="section-title">See 02CartoLab in Action</h2>
-      <p class="section-desc">Watch an end-to-end walkthrough of building extrusion, bivariate mapping, and automated layout generation.</p>
+<!-- BADGES -->
+<div class="badges">
+  <div class="badges-inner">
+    <span class="badge">&#10004; QGIS 3.28+</span>
+    <span class="badge">&#10004; QGIS 4.x</span>
+    <span class="badge" style="background:rgba(245,158,11,0.08);border-color:rgba(245,158,11,0.22);color:#f59e0b;">&#10004; Bivariate Maps</span>
+    <span class="badge" style="background:rgba(245,158,11,0.08);border-color:rgba(245,158,11,0.22);color:#f59e0b;">&#10004; Print Layout Automation</span>
+    <span class="badge" style="background:rgba(148,163,184,0.08);border-color:rgba(148,163,184,0.2);color:#94a3b8;">&#10004; CVD Accessibility</span>
+    <span class="badge" style="background:rgba(148,163,184,0.08);border-color:rgba(148,163,184,0.2);color:#94a3b8;">&#10004; GPL-3.0</span>
+    <span class="badge" style="background:rgba(148,163,184,0.08);border-color:rgba(148,163,184,0.2);color:#94a3b8;">&#128100; Yusuf Emino&#287;lu</span>
+  </div>
+</div>
+
+<!-- HERO FULL IMAGE -->
+<div style="padding:0 2rem;position:relative;z-index:1;">
+  <div style="max-width:1280px;margin:2rem auto;">
+    <div class="image-full">
+      <img src="assets/hero.jpg" alt="Bivariate choropleth, cartogram and ridge map showcase" style="width:100%;max-height:560px;object-fit:cover;" onerror="this.parentElement.parentElement.style.display='none'" />
+      <div class="image-caption">Three flagship map types side by side: bivariate choropleth (income &times; density), population cartogram, and joy-division ridge map from a single QGIS project</div>
     </div>
-    <div class="video-card">
-      <div class="video-wrap">
-        <iframe src="https://www.youtube-nocookie.com/embed/Y_DgVejcm8A" title="02CartoLab Video Walkthrough" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
-      </div>
-    </div>
-  </section>
+  </div>
+</div>
 
-  <!-- Real Layout Gallery -->
-  <section id="gallery" class="container">
-    <div class="section-header">
-      <div class="section-tag">Visual Showcase</div>
-      <h2 class="section-title">Publication-Grade Map Layouts</h2>
-      <p class="section-desc">
-        Explore genuine layouts rendered by 02CartoLab using urban planning vector datasets. Click any card to inspect pixel-by-pixel.
-      </p>
-    </div>
-
-    <!-- Filters -->
-    <div class="gallery-filter">
-      <button class="filter-btn active" data-filter="all">All Outputs</button>
-      <button class="filter-btn" data-filter="template">Publication Templates</button>
-      <button class="filter-btn" data-filter="theme">Paper Themes</button>
-      <button class="filter-btn" data-filter="thematic">Thematic Maps</button>
-      <button class="filter-btn" data-filter="atlas">Atlas Series</button>
-    </div>
-
-    <!-- Cards Grid -->
-    <div class="gallery-grid" id="galleryGrid">
-
-      <!-- 1. Report Figure 16:9 -->
-      <div class="gallery-card" data-category="template" onclick="openModal('img/02_template_report_figure_16x9.png', 'Report & Slide Figure (16:9 Landscape)', 'Optimized for executive presentations, slide decks, and widescreen reports with a prominent figure title, hero map frame, takeaway metric cards, and a compact right HUD.')">
-        <div class="gallery-img-wrap">
-          <img src="img/02_template_report_figure_16x9.png" alt="Report Figure 16:9">
-          <div class="gallery-badge">16:9 Landscape</div>
-        </div>
-        <div class="gallery-content">
-          <h3 class="gallery-title">Report & Slide Figure</h3>
-          <p class="gallery-desc">High-impact 16:9 widescreen format designed for executive slides, policy decks, and digital displays with right HUD sidebar.</p>
-          <div class="gallery-meta">
-            <span>📐 297 × 167 mm</span>
-            <span>✨ Heckbert Scalebar</span>
-          </div>
+<!-- ABOUT + TAGS -->
+<section id="about" style="padding:4rem 2rem 2rem;">
+  <div class="container">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:3rem;align-items:start;">
+      <div>
+        <div class="section-eyebrow">About</div>
+        <h2 class="section-title" style="font-size:clamp(1.6rem,3vw,2.2rem);">Publication-grade cartography<br/>without leaving QGIS.</h2>
+        <p style="font-size:0.95rem;color:var(--text-secondary);line-height:1.75;margin-top:1rem;">
+          <strong style="color:var(--text-primary);">02CartoLab</strong> is a unified thematic mapping and print layout
+          automation studio for QGIS. It bridges map symbology and publication print
+          layouts in one cohesive workflow: builds publication-ready choropleths
+          (including bivariate and Value-by-Alpha), continuous-area cartograms,
+          ridge-line relief maps, dot-density, proportional-symbol maps, and hexbin
+          aggregation &mdash; then assembles complete print layouts in one click.
+        </p>
+        <p style="font-size:0.95rem;color:var(--text-secondary);line-height:1.75;margin-top:0.75rem;">
+          Built for planners, urban researchers, studios and academic cartography
+          workflows. Includes a CVD accessibility inspector, Layout Designer studio
+          dock, and 14 headless Processing algorithms. No external dependencies &mdash;
+          pure QGIS.
+        </p>
+        <div style="margin-top:1.5rem;display:flex;gap:1rem;flex-wrap:wrap;">
+          <a href="https://github.com/YusufEminoglu" class="btn-secondary" style="font-size:0.85rem;padding:0.5rem 1.25rem;">&#128100; Yusuf Emino&#287;lu</a>
+          <a href="mailto:yusuf.eminoglu@deu.edu.tr" class="btn-secondary" style="font-size:0.85rem;padding:0.5rem 1.25rem;">&#9993; yusuf.eminoglu@deu.edu.tr</a>
         </div>
       </div>
-
-      <!-- 2. Academic Journal A4 -->
-      <div class="gallery-card" data-category="template" onclick="openModal('img/03_template_academic_journal_a4.png', 'Academic Journal Figure (A4 Portrait)', '2-column scientific format with formal figure numbering, methodology note, stepped line scalebar, and standardized citation block.')">
-        <div class="gallery-img-wrap">
-          <img src="img/03_template_academic_journal_a4.png" alt="Academic Journal A4">
-          <div class="gallery-badge">A4 Portrait</div>
+      <div>
+        <div class="section-eyebrow">Keywords &amp; Tags</div>
+        <p style="font-size:0.875rem;color:var(--text-secondary);margin-bottom:1.25rem;">Search terms on the QGIS Plugin Hub:</p>
+        <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">
+          <span class="rtag" style="font-size:0.8rem;padding:0.3rem 0.75rem;">cartography</span>
+          <span class="rtag" style="font-size:0.8rem;padding:0.3rem 0.75rem;">thematic map</span>
+          <span class="rtag" style="font-size:0.8rem;padding:0.3rem 0.75rem;">choropleth</span>
+          <span class="rtag" style="font-size:0.8rem;padding:0.3rem 0.75rem;">layout</span>
+          <span class="rtag" style="font-size:0.8rem;padding:0.3rem 0.75rem;">print layout</span>
+          <span class="rtag" style="font-size:0.8rem;padding:0.3rem 0.75rem;">atlas</span>
+          <span class="rtag" style="font-size:0.8rem;padding:0.3rem 0.75rem;">map book</span>
+          <span class="rtag" style="font-size:0.8rem;padding:0.3rem 0.75rem;">bivariate</span>
+          <span class="rtag" style="font-size:0.8rem;padding:0.3rem 0.75rem;">2.5d</span>
+          <span class="rtag" style="font-size:0.8rem;padding:0.3rem 0.75rem;">buildings</span>
+          <span class="rtag" style="font-size:0.8rem;padding:0.3rem 0.75rem;">cartogram</span>
+          <span class="rtag" style="font-size:0.8rem;padding:0.3rem 0.75rem;">dot-density</span>
+          <span class="rtag" style="font-size:0.8rem;padding:0.3rem 0.75rem;">hexbin</span>
+          <span class="rtag" style="font-size:0.8rem;padding:0.3rem 0.75rem;background:rgba(245,158,11,0.1);border-color:rgba(245,158,11,0.25);color:#f59e0b;">value-by-alpha</span>
+          <span class="rtag" style="font-size:0.8rem;padding:0.3rem 0.75rem;background:rgba(245,158,11,0.1);border-color:rgba(245,158,11,0.25);color:#f59e0b;">ridge-maps</span>
+          <span class="rtag" style="font-size:0.8rem;padding:0.3rem 0.75rem;background:rgba(245,158,11,0.1);border-color:rgba(245,158,11,0.25);color:#f59e0b;">legend</span>
+          <span class="rtag" style="font-size:0.8rem;padding:0.3rem 0.75rem;background:rgba(245,158,11,0.1);border-color:rgba(245,158,11,0.25);color:#f59e0b;">north arrow</span>
+          <span class="rtag" style="font-size:0.8rem;padding:0.3rem 0.75rem;background:rgba(245,158,11,0.1);border-color:rgba(245,158,11,0.25);color:#f59e0b;">graticule</span>
+          <span class="rtag" style="font-size:0.8rem;padding:0.3rem 0.75rem;background:rgba(52,211,153,0.1);border-color:rgba(52,211,153,0.25);color:#34d399;">palettes</span>
+          <span class="rtag" style="font-size:0.8rem;padding:0.3rem 0.75rem;background:rgba(52,211,153,0.1);border-color:rgba(52,211,153,0.25);color:#34d399;">accessibility</span>
+          <span class="rtag" style="font-size:0.8rem;padding:0.3rem 0.75rem;background:rgba(52,211,153,0.1);border-color:rgba(52,211,153,0.25);color:#34d399;">cvd</span>
+          <span class="rtag" style="font-size:0.8rem;padding:0.3rem 0.75rem;background:rgba(52,211,153,0.1);border-color:rgba(52,211,153,0.25);color:#34d399;">colorbrewer</span>
+          <span class="rtag" style="font-size:0.8rem;padding:0.3rem 0.75rem;background:rgba(52,211,153,0.1);border-color:rgba(52,211,153,0.25);color:#34d399;">export</span>
+          <span class="rtag" style="font-size:0.8rem;padding:0.3rem 0.75rem;background:rgba(52,211,153,0.1);border-color:rgba(52,211,153,0.25);color:#34d399;">zero2</span>
         </div>
-        <div class="gallery-content">
-          <h3 class="gallery-title">Academic Journal Figure</h3>
-          <p class="gallery-desc">Formal scientific paper layout with figure captions, analytical methodology notes, and academic citation blocks.</p>
-          <div class="gallery-meta">
-            <span>📐 A4 210 × 297 mm</span>
-            <span>🏛️ Formal Citation</span>
+        <div style="margin-top:1.75rem;background:var(--card-bg);border:1px solid var(--border);border-radius:var(--radius-md);padding:1.25rem;">
+          <div style="font-size:0.78rem;color:var(--text-muted);font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.75rem;">Quick Info</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;font-size:0.85rem;">
+            <div style="color:var(--text-muted);">Version</div><div style="color:var(--text-primary);font-weight:600;">1.0.0</div>
+            <div style="color:var(--text-muted);">Category</div><div style="color:var(--text-primary);">Vector</div>
+            <div style="color:var(--text-muted);">License</div><div style="color:var(--purple-light);">GPL-3.0</div>
+            <div style="color:var(--text-muted);">QGIS Min</div><div style="color:var(--text-primary);">3.28</div>
+            <div style="color:var(--text-muted);">QGIS Max</div><div style="color:var(--text-primary);">4.99</div>
+            <div style="color:var(--text-muted);">pip deps</div><div style="color:var(--purple-light);">None</div>
           </div>
         </div>
-      </div>
-
-      <!-- 3. Exhibition Poster A2 -->
-      <div class="gallery-card" data-category="template" onclick="openModal('img/04_template_poster_exhibition_a2.png', 'Exhibition Poster (A2 Landscape)', 'High-impact presentation poster with bold architectural header banner, dominant hero map, regional locator inset map, and thematic legend cards.')">
-        <div class="gallery-img-wrap">
-          <img src="img/04_template_poster_exhibition_a2.png" alt="Exhibition Poster A2">
-          <div class="gallery-badge">A2 Landscape</div>
-        </div>
-        <div class="gallery-content">
-          <h3 class="gallery-title">Exhibition & Competition Poster</h3>
-          <p class="gallery-desc">Large-format presentation board featuring bold architectural banner, regional locator map, and dual legend cards.</p>
-          <div class="gallery-meta">
-            <span>📐 A2 594 × 420 mm</span>
-            <span>🗺️ Locator Inset</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 4. Executive Fact Sheet A4 -->
-      <div class="gallery-card" data-category="template" onclick="openModal('img/05_template_fact_sheet_a4.png', 'Executive Fact Sheet (A4 Portrait)', 'Executive 1-pager with top 4 KPI metric cards, central thematic map, and bottom analytical narrative & policy recommendation block.')">
-        <div class="gallery-img-wrap">
-          <img src="img/05_template_fact_sheet_a4.png" alt="Fact Sheet A4">
-          <div class="gallery-badge">A4 Fact Sheet</div>
-        </div>
-        <div class="gallery-content">
-          <h3 class="gallery-title">Executive Fact Sheet</h3>
-          <p class="gallery-desc">One-page briefing document combining KPI stat cards, central thematic map, and structured policy narrative.</p>
-          <div class="gallery-meta">
-            <span>📐 A4 210 × 297 mm</span>
-            <span>📊 4 KPI Stat Cards</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 5. Comparative Diptych -->
-      <div class="gallery-card" data-category="template" onclick="openModal('img/06_template_comparative_diptych.png', 'Side-by-Side Diptych (A4 Landscape)', 'Comparative dual-map layout with paired synchronized map frames, scenario A/B badges, shared extent & CRS, and comparative synthesis bar.')">
-        <div class="gallery-img-wrap">
-          <img src="img/06_template_comparative_diptych.png" alt="Comparative Diptych">
-          <div class="gallery-badge">Dual Map Diptych</div>
-        </div>
-        <div class="gallery-content">
-          <h3 class="gallery-title">Comparative Diptych</h3>
-          <p class="gallery-desc">Dual synchronized map canvases for scenario A vs B analysis, temporal change detection, or multi-criteria evaluation.</p>
-          <div class="gallery-meta">
-            <span>📐 A4 297 × 210 mm</span>
-            <span>🔄 Paired Extents</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 6. Dark Matter Paper Theme -->
-      <div class="gallery-card" data-category="theme" onclick="openModal('img/01_map_sheet_dark_matter.png', 'Paper Theme: Dark Matter', 'Deep midnight navy background (#0b101b) with glowing neon turquoise and amber accents. Ideal for high-contrast command centers.')">
-        <div class="gallery-img-wrap">
-          <img src="img/01_map_sheet_dark_matter.png" alt="Dark Matter Theme">
-          <div class="gallery-badge">Dark Matter</div>
-        </div>
-        <div class="gallery-content">
-          <h3 class="gallery-title">Theme: Dark Matter</h3>
-          <p class="gallery-desc">Midnight blue background with luminous neon vectors for command center displays and dark-mode dashboards.</p>
-          <div class="gallery-meta">
-            <span>🎨 #0b101b Base</span>
-            <span>💡 High Contrast</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 7. Swiss Modern Paper Theme -->
-      <div class="gallery-card" data-category="theme" onclick="openModal('img/01_map_sheet_swiss_modern.png', 'Paper Theme: Swiss Modern', 'Clean Helvetica/Inter minimalist styling with neutral gray tones, hairline grid, and structured typographic hierarchy.')">
-        <div class="gallery-img-wrap">
-          <img src="img/01_map_sheet_swiss_modern.png" alt="Swiss Modern Theme">
-          <div class="gallery-badge">Swiss Modern</div>
-        </div>
-        <div class="gallery-content">
-          <h3 class="gallery-title">Theme: Swiss Modern</h3>
-          <p class="gallery-desc">Minimalist white canvas with crisp typography, hairline borders, and international typographic style.</p>
-          <div class="gallery-meta">
-            <span>🎨 Clean White</span>
-            <span>📐 Hairline Grid</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 8. Japanese Washi Paper Theme -->
-      <div class="gallery-card" data-category="theme" onclick="openModal('img/01_map_sheet_japanese_washi.png', 'Paper Theme: Japanese Washi', 'Warm organic off-white textured feel (#faf8f5) with delicate earthy accents and harmonious balanced margins.')">
-        <div class="gallery-img-wrap">
-          <img src="img/01_map_sheet_japanese_washi.png" alt="Japanese Washi Theme">
-          <div class="gallery-badge">Japanese Washi</div>
-        </div>
-        <div class="gallery-content">
-          <h3 class="gallery-title">Theme: Japanese Washi</h3>
-          <p class="gallery-desc">Warm organic paper tone with subtle warm gray borders and harmonious, tranquil map framing.</p>
-          <div class="gallery-meta">
-            <span>🎨 #faf8f5 Washi</span>
-            <span>🌿 Organic Warmth</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 9. Bivariate Choropleth -->
-      <div class="gallery-card" data-category="thematic" onclick="openModal('img/07_bivariate_choropleth_layout.png', 'Bivariate Choropleth Map & Native Legend', 'Two-variable choropleth with 3x3 interpolated color matrix, automatic quantile/geometric interval breaks, and native editable legend item.')">
-        <div class="gallery-img-wrap">
-          <img src="img/07_bivariate_choropleth_layout.png" alt="Bivariate Choropleth">
-          <div class="gallery-badge">Bivariate 3×3</div>
-        </div>
-        <div class="gallery-content">
-          <h3 class="gallery-title">Bivariate Choropleth Engine</h3>
-          <p class="gallery-desc">Visualizes two interacting numeric attributes simultaneously using a 2D color matrix with bilinear interpolation.</p>
-          <div class="gallery-meta">
-            <span>📊 3×3 / 4×4 Matrix</span>
-            <span>🎯 Native QGIS Legend</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 10. Value by Alpha -->
-      <div class="gallery-card" data-category="thematic" onclick="openModal('img/08_value_by_alpha_layout.png', 'Value-by-Alpha Uncertainty Map', 'Encodes statistical reliability or population density as opacity, allowing uncertain or low-weight data to fade gracefully into the background.')">
-        <div class="gallery-img-wrap">
-          <img src="img/08_value_by_alpha_layout.png" alt="Value-by-Alpha">
-          <div class="gallery-badge">Value-by-Alpha</div>
-        </div>
-        <div class="gallery-content">
-          <h3 class="gallery-title">Value-by-Alpha (VbA)</h3>
-          <p class="gallery-desc">Encodes statistical confidence or density as opacity, ensuring unreliable estimates do not dominate visual attention.</p>
-          <div class="gallery-meta">
-            <span>🛡️ Uncertainty Safe</span>
-            <span>📉 Alpha Modulated</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 11. Automated Atlas Series -->
-      <div class="gallery-card" data-category="atlas" onclick="openModal('img/12_atlas_map_series_page1.png', 'Automated Map Series / Atlas Exporter', 'Automated multi-page atlas book generator with dynamic page headers, coverage layer filtering, overview inset locator map, and batch export.')">
-        <div class="gallery-img-wrap">
-          <img src="img/12_atlas_map_series_page1.png" alt="Atlas Series">
-          <div class="gallery-badge">Atlas Engine</div>
-        </div>
-        <div class="gallery-content">
-          <h3 class="gallery-title">Automated Map Book Atlas</h3>
-          <p class="gallery-desc">Produces coherent multi-page map books across districts or administrative units with dynamic headers and locator maps.</p>
-          <div class="gallery-meta">
-            <span>📖 Multi-Page PDF</span>
-            <span>🗺️ Dynamic Locator</span>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </section>
-
-  <!-- Interactive Bivariate & CVD Simulator -->
-  <section id="simulator" class="container">
-    <div class="simulator-section">
-      <div class="section-header" style="margin-bottom: 2rem;">
-        <div class="section-tag">Interactive Laboratory</div>
-        <h2 class="section-title" style="font-size: 2rem;">Live Bivariate & CVD Inspector</h2>
-        <p class="section-desc">Test 2D color schemes and evaluate Color Vision Deficiency (CVD) safety with real-time WCAG contrast scoring.</p>
-      </div>
-
-      <div class="sim-grid">
-        <!-- Matrix Visualizer -->
-        <div>
-          <div class="matrix-display" id="matrixDisplay">
-            <!-- 9 Cells generated by JS -->
-          </div>
-          <div style="text-align: center; margin-top: 1rem; color: var(--text-light); font-size: 0.85rem; font-weight: 600;">
-            Interactive 3×3 Matrix • Click any swatch to inspect color hex
-          </div>
-        </div>
-
-        <!-- Controls -->
-        <div>
-          <div style="margin-bottom: 1.5rem;">
-            <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; font-size: 0.95rem; color: #0f172a;">Select Cartographic Palette:</label>
-            <select id="paletteSelect" style="width: 100%; padding: 0.75rem; border-radius: 8px; background: #ffffff; border: 1px solid var(--border-color); color: #0f172a; font-size: 0.95rem; font-weight: 600; box-shadow: var(--shadow-sm);">
-              <option value="pink_blue">Pink — Blue (High Contrast Bivariate)</option>
-              <option value="purple_green">Purple — Green (CVD Friendly)</option>
-              <option value="orange_cyan">Orange — Cyan (Thermal vs Hydro)</option>
-              <option value="teal_gold">Teal — Gold (Planning Economic)</option>
-            </select>
-          </div>
-
-          <div style="margin-bottom: 1.5rem;">
-            <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; font-size: 0.95rem; color: #0f172a;">Colorblind Vision Simulation (CVD):</label>
-            <select id="cvdSelect" style="width: 100%; padding: 0.75rem; border-radius: 8px; background: #ffffff; border: 1px solid var(--border-color); color: #0f172a; font-size: 0.95rem; font-weight: 600; box-shadow: var(--shadow-sm);">
-              <option value="normal">Normal Vision (Trifocal)</option>
-              <option value="deuteranopia">Deuteranopia (Green-Blind ~6% Males)</option>
-              <option value="protanopia">Protanopia (Red-Blind ~2% Males)</option>
-              <option value="tritanopia">Tritanopia (Blue-Blind ~0.1%)</option>
-              <option value="achromatopsia">Achromatopsia (Monochrome / Grayscale)</option>
-            </select>
-          </div>
-
-          <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-              <span style="color: var(--text-muted); font-size: 0.88rem; font-weight: 600;">Corner Contrast Ratio (Luminance):</span>
-              <span id="contrastScore" style="color: #16a34a; font-weight: 800; font-size: 1rem;">14.2 : 1</span>
-            </div>
-            <div style="display: flex; justify-content: space-between;">
-              <span style="color: var(--text-muted); font-size: 0.88rem; font-weight: 600;">WCAG 2.1 Compliance:</span>
-              <span id="wcagBadge" style="background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; padding: 0.2rem 0.65rem; border-radius: 6px; font-size: 0.75rem; font-weight: 800;">AAA PASS</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Features / Modules Grid -->
-  <section id="features" class="container">
-    <div class="section-header">
-      <div class="section-tag">Modular Architecture</div>
-      <h2 class="section-title">Built for Urban Planners & Cartographers</h2>
-      <p class="section-desc">Six specialized studios integrated seamlessly inside QGIS.</p>
-    </div>
-
-    <div class="feature-cards">
-      <div class="feature-card">
-        <div class="feature-icon">📐</div>
-        <h3 class="feature-title">Print Layout Designer Studio</h3>
-        <p class="feature-desc">Hooks directly into QGIS layout windows with an embedded dock. Features multi-segment Heckbert scalebars, modern north needles, and automated coordinate graticules.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">🏙️</div>
-        <h3 class="feature-title">2.5D Building Extrusions</h3>
-        <p class="feature-desc">Transforms 2D building footprints into architectural 2.5D massing with solar angle lighting presets, soft drop shadows, and per-floor color bands.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">🎨</div>
-        <h3 class="feature-title">Thematic Symbology Studio</h3>
-        <p class="feature-desc">Generates Bivariate Choropleths, Value-by-Alpha maps, Continuous-Area Cartograms, Joyplot Ridge Maps, and Flannery Proportional Symbols.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">🖼️</div>
-        <h3 class="feature-title">Publication Template Gallery</h3>
-        <p class="feature-desc">One-click assembly of executive reports (16:9), academic journal figures (A4), exhibition posters (A2), fact sheets, and comparative diptychs.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">♿</div>
-        <h3 class="feature-title">Accessibility & CVD Inspector</h3>
-        <p class="feature-desc">Live Color Vision Deficiency (CVD) simulation matrix (Brettel/Machado) and real-time WCAG 2.1 AA/AAA contrast ratio evaluation.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">⚡</div>
-        <h3 class="feature-title">14 Processing Algorithms</h3>
-        <p class="feature-desc">Headless, scriptable, modeler-ready algorithms for automated spatial pipelines, batch processing, and Python scripts.</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- ═══════════════ 14 HEADLESS PROCESSING ALGORITHMS EXPLORER ═══════════════ -->
-  <section id="algorithms" class="container algo-explorer">
-    <div class="section-header">
-      <div class="section-tag">Interactive Academic & Technical Reference</div>
-      <h2 class="section-title">14 Processing Algorithms</h2>
-      <p class="section-desc">
-        All algorithms are open and expanded by default. Includes complete mathematical derivations, parameter definitions, copyable PyQGIS code, and peer-reviewed literature citations.
-      </p>
-    </div>
-
-    <!-- Search & Filter Controls -->
-    <div class="algo-search-bar">
-      <input type="text" id="algoSearchInput" class="algo-search-input" placeholder="🔍 Search algorithms by name, keyword, ID, or mathematical concept...">
-      <div class="algo-filter-pills">
-        <button class="algo-pill active" data-filter="all">All (14)</button>
-        <button class="algo-pill" data-filter="Classification">Classification (2)</button>
-        <button class="algo-pill" data-filter="Thematic">Thematic (4)</button>
-        <button class="algo-pill" data-filter="Cartogram">Cartogram & Aggregation (2)</button>
-        <button class="algo-pill" data-filter="3D">2.5D Massing (1)</button>
-        <button class="algo-pill" data-filter="Layout">Layout & Reference (5)</button>
-      </div>
-    </div>
-
-    <!-- Algorithm Accordion List (ALL OPEN BY DEFAULT) -->
-    <div id="algoAccordionList">
-
-      <!-- 1. Geometric Interval Classification -->
-      <div class="algo-item" data-category="Classification" data-search="geometric interval classification gic head tail breaks fisher jenks natural breaks skew power law log normal">
-        <div class="algo-header" onclick="toggleAlgo(this)">
-          <div class="algo-header-left">
-            <span class="algo-tag">Classification</span>
-            <span class="algo-title-text">1. Advanced Classification (GIC / Head-Tail / Fisher-Jenks)</span>
-            <span class="algo-id-badge">zero2cartolab:geometric_interval_classification</span>
-          </div>
-          <div class="algo-arrow">▲</div>
-        </div>
-        <div class="algo-body">
-          <div class="algo-subheading">📐 Theoretical Formulation</div>
-          <p>
-            Implements three complementary partition algorithms for skewed and non-normal urban data distributions. 
-            The <strong>Adaptive Geometric Interval Classification (GIC)</strong> fits a geometric progression to class breaks:
-          </p>
-          <div class="algo-math-box">
-            $$C_k = a \cdot r^k, \quad k \in \{0, 1, \dots, K\}$$
-            $$\text{Objective:} \quad \min_{r} \sum_{k=1}^{K} \left( f_k - \frac{n}{K} \right)^2$$
-          </div>
-          <p>
-            <strong>Head/Tail Breaks</strong> (Jiang, 2013) recursively partitions heavy-tailed data at the arithmetic mean $\mu$, retaining values where $x > \mu$ until the head proportion $\ge 40\%$. 
-            <strong>Fisher-Jenks</strong> minimizes the total within-class variance (Sum of Squared Deviations, $SSDW$).
-          </p>
-
-          <div class="algo-subheading">⚙️ Algorithm Parameters</div>
-          <table class="algo-table">
-            <thead>
-              <tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
-            </thead>
-            <tbody>
-              <tr><td><code>INPUT</code></td><td>Vector Layer</td><td>&mdash;</td><td>Source polygon, line, or point layer.</td></tr>
-              <tr><td><code>FIELD</code></td><td>Field</td><td>&mdash;</td><td>Numeric field to classify.</td></tr>
-              <tr><td><code>METHOD</code></td><td>Enum (0=GIC, 1=Head/Tail, 2=Fisher-Jenks)</td><td>0</td><td>Classification strategy.</td></tr>
-              <tr><td><code>CLASSES</code></td><td>Integer</td><td>5</td><td>Target number of classes (for GIC and Fisher-Jenks).</td></tr>
-              <tr><td><code>OUTPUT</code></td><td>Vector Layer</td><td>[Create Temporary]</td><td>Output layer with <code>gic_class</code> and <code>gic_label</code> fields.</td></tr>
-            </tbody>
-          </table>
-
-          <div class="algo-subheading">💻 PyQGIS Execution Example</div>
-          <div class="code-container">
-            <button class="btn-copy" onclick="copyCode(this)">Copy Code</button>
-            <pre class="code-block">import processing
-
-params = {
-    'INPUT': 'path/to/land_values.gpkg|layername=parcels',
-    'FIELD': 'unit_price_sqm',
-    'METHOD': 0, # 0 = Adaptive GIC
-    'CLASSES': 6,
-    'OUTPUT': 'memory:classified_land_values'
-}
-result = processing.run('zero2cartolab:geometric_interval_classification', params)
-QgsProject.instance().addMapLayer(result['OUTPUT'])</pre>
-          </div>
-
-          <div class="algo-subheading">📚 Academic References</div>
-          <ul class="citation-list">
-            <li class="citation-item">Jiang, B. (2013). <em>Head/tail breaks: A new classification scheme for data with a heavy-tailed distribution</em>. The Professional Geographer, 65(3), 482–494. <a href="https://doi.org/10.1080/00330124.2012.700499" target="_blank">doi:10.1080/00330124.2012.700499</a></li>
-            <li class="citation-item">Jenks, G. F. (1967). <em>The data model concept in statistical mapping</em>. International Yearbook of Cartography, 7, 186–190.</li>
-          </ul>
-        </div>
-      </div>
-
-      <!-- 2. Bivariate Choropleth -->
-      <div class="algo-item" data-category="Thematic" data-search="bivariate choropleth 2d matrix color correlation interaction quantile bilinear interpolation">
-        <div class="algo-header" onclick="toggleAlgo(this)">
-          <div class="algo-header-left">
-            <span class="algo-tag">Thematic</span>
-            <span class="algo-title-text">2. Bivariate Choropleth Mapping</span>
-            <span class="algo-id-badge">zero2cartolab:bivariate_choropleth</span>
-          </div>
-          <div class="algo-arrow">▲</div>
-        </div>
-        <div class="algo-body">
-          <div class="algo-subheading">📐 Theoretical Formulation</div>
-          <p>
-            Encodes two continuous spatial variables into an $N \times N$ matrix ($N \in \{3, 4\}$) by classifying each variable independently and mapping class coordinates $(i, j)$ to an interpolated RGB color:
-          </p>
-          <div class="algo-math-box">
-            $$\mathbf{C}(u, v) = (1-u)(1-v)\mathbf{C}_{00} + u(1-v)\mathbf{C}_{10} + (1-u)v\mathbf{C}_{01} + uv\mathbf{C}_{11}$$
-            $$\text{where } u = \frac{i-1}{N-1}, \quad v = \frac{j-1}{N-1}, \quad i,j \in \{1, \dots, N\}$$
-          </div>
-
-          <div class="algo-subheading">⚙️ Algorithm Parameters</div>
-          <table class="algo-table">
-            <thead>
-              <tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
-            </thead>
-            <tbody>
-              <tr><td><code>INPUT</code></td><td>Vector Layer</td><td>&mdash;</td><td>Source polygon layer.</td></tr>
-              <tr><td><code>FIELD_X</code></td><td>Field</td><td>&mdash;</td><td>First numeric variable (horizontal axis).</td></tr>
-              <tr><td><code>FIELD_Y</code></td><td>Field</td><td>&mdash;</td><td>Second numeric variable (vertical axis).</td></tr>
-              <tr><td><code>MATRIX_SIZE</code></td><td>Integer (3 or 4)</td><td>3</td><td>Matrix dimension ($3\times3$ or $4\times4$).</td></tr>
-              <tr><td><code>PALETTE_PRESET</code></td><td>Enum</td><td>0</td><td>Color scheme (Pink-Blue, Purple-Green, Orange-Cyan, etc.).</td></tr>
-              <tr><td><code>OUTPUT</code></td><td>Vector Layer</td><td>[Create Temporary]</td><td>Output layer with <code>bivar_x</code>, <code>bivar_y</code>, <code>bivar_class</code>.</td></tr>
-            </tbody>
-          </table>
-
-          <div class="algo-subheading">💻 PyQGIS Execution Example</div>
-          <div class="code-container">
-            <button class="btn-copy" onclick="copyCode(this)">Copy Code</button>
-            <pre class="code-block">import processing
-
-params = {
-    'INPUT': 'path/to/neighborhoods.gpkg',
-    'FIELD_X': 'median_income',
-    'FIELD_Y': 'tree_canopy_pct',
-    'MATRIX_SIZE': 3,
-    'PALETTE_PRESET': 0, # Pink - Blue
-    'METHOD': 0, # 0 = Quantiles
-    'OUTPUT': 'memory:bivariate_income_canopy'
-}
-res = processing.run('zero2cartolab:bivariate_choropleth', params)
-QgsProject.instance().addMapLayer(res['OUTPUT'])</pre>
-          </div>
-
-          <div class="algo-subheading">📚 Academic References</div>
-          <ul class="citation-list">
-            <li class="citation-item">Brewer, C. A. (1994). <em>Color use guidelines for mapping and visualization</em>. Visualization in Modern Cartography, 123–147.</li>
-            <li class="citation-item">Elmqvist, N., et al. (2008). <em>Z-ordering for scatterplot matrices</em>. IEEE TVCG, 14(6), 1532–1539.</li>
-          </ul>
-        </div>
-      </div>
-
-      <!-- 3. Bivariate Matrix Export -->
-      <div class="algo-item" data-category="Thematic" data-search="bivariate matrix export legend standalone svg png graphic generator">
-        <div class="algo-header" onclick="toggleAlgo(this)">
-          <div class="algo-header-left">
-            <span class="algo-tag">Thematic</span>
-            <span class="algo-title-text">3. Standalone Bivariate Matrix Generator</span>
-            <span class="algo-id-badge">zero2cartolab:bivariate_matrix_export</span>
-          </div>
-          <div class="algo-arrow">▲</div>
-        </div>
-        <div class="algo-body">
-          <div class="algo-subheading">📐 Theoretical Formulation</div>
-          <p>
-            Generates high-resolution raster (PNG) or scalable vector (SVG) diamond/square 2D legend matrices with rotated axis labels and customizable corner swatches for academic layout insertion.
-          </p>
-
-          <div class="algo-subheading">⚙️ Algorithm Parameters</div>
-          <table class="algo-table">
-            <thead>
-              <tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
-            </thead>
-            <tbody>
-              <tr><td><code>PALETTE_PRESET</code></td><td>Enum</td><td>0</td><td>Color ramp preset or custom 4-corner interpolation.</td></tr>
-              <tr><td><code>MATRIX_SIZE</code></td><td>Integer (3 or 4)</td><td>3</td><td>Grid dimension.</td></tr>
-              <tr><td><code>LABEL_X</code></td><td>String</td><td>"Variable X →"</td><td>Horizontal axis label.</td></tr>
-              <tr><td><code>LABEL_Y</code></td><td>String</td><td>"Variable Y ↑"</td><td>Vertical axis label.</td></tr>
-              <tr><td><code>OUTPUT_IMAGE</code></td><td>File (PNG/SVG)</td><td>&mdash;</td><td>Export path for the generated matrix graphic.</td></tr>
-            </tbody>
-          </table>
-
-          <div class="algo-subheading">💻 PyQGIS Execution Example</div>
-          <div class="code-container">
-            <button class="btn-copy" onclick="copyCode(this)">Copy Code</button>
-            <pre class="code-block">import processing
-
-params = {
-    'PALETTE_PRESET': 1, # Purple-Green
-    'MATRIX_SIZE': 3,
-    'LABEL_X': 'Social Vulnerability →',
-    'LABEL_Y': 'Flood Inundation Risk ↑',
-    'OUTPUT_IMAGE': 'C:/reports/bivariate_legend.png'
-}
-processing.run('zero2cartolab:bivariate_matrix_export', params)</pre>
-          </div>
-        </div>
-      </div>
-
-      <!-- 4. Continuous-Area Cartogram -->
-      <div class="algo-item" data-category="Cartogram" data-search="cartogram gastner newman diffusion continuous area distortion density equalizing">
-        <div class="algo-header" onclick="toggleAlgo(this)">
-          <div class="algo-header-left">
-            <span class="algo-tag">Cartogram</span>
-            <span class="algo-title-text">4. Continuous-Area Diffusion Cartogram</span>
-            <span class="algo-id-badge">zero2cartolab:compute_cartogram</span>
-          </div>
-          <div class="algo-arrow">▲</div>
-        </div>
-        <div class="algo-body">
-          <div class="algo-subheading">📐 Theoretical Formulation</div>
-          <p>
-            Implements the Gastner & Newman (2004) diffusion-based density-equalizing algorithm. Polygons deform following the continuous velocity field $\mathbf{v}(\mathbf{r}, t)$ generated by spatial density gradients:
-          </p>
-          <div class="algo-math-box">
-            $$\nabla^2 \rho - \frac{\partial \rho}{\partial t} = 0, \qquad \mathbf{v}(\mathbf{r}, t) = -\frac{\nabla \rho}{\rho}$$
-            $$\frac{d\mathbf{r}}{dt} = \mathbf{v}(\mathbf{r}, t), \qquad \mathbf{r}(0) = \mathbf{r}_0$$
-          </div>
-
-          <div class="algo-subheading">⚙️ Algorithm Parameters</div>
-          <table class="algo-table">
-            <thead>
-              <tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
-            </thead>
-            <tbody>
-              <tr><td><code>INPUT</code></td><td>Polygon Layer</td><td>&mdash;</td><td>Contiguous polygon layer.</td></tr>
-              <tr><td><code>FIELD</code></td><td>Field</td><td>&mdash;</td><td>Positive numeric variable to scale area to.</td></tr>
-              <tr><td><code>ITERATIONS</code></td><td>Integer</td><td>10</td><td>Number of diffusion integration steps.</td></tr>
-              <tr><td><code>GRID_SIZE</code></td><td>Integer</td><td>128</td><td>Underlying FFT / finite-difference resolution.</td></tr>
-              <tr><td><code>OUTPUT</code></td><td>Polygon Layer</td><td>[Create Temporary]</td><td>Equalized cartogram layer.</td></tr>
-            </tbody>
-          </table>
-
-          <div class="algo-subheading">📚 Academic References</div>
-          <ul class="citation-list">
-            <li class="citation-item">Gastner, M. T., & Newman, M. E. (2004). <em>Diffusion-based method for producing density-equalizing maps</em>. PNAS, 101(20), 7499–7504. <a href="https://doi.org/10.1073/pnas.0400280101" target="_blank">doi:10.1073/pnas.0400280101</a></li>
-          </ul>
-        </div>
-      </div>
-
-      <!-- 5. Dot-Density Map -->
-      <div class="algo-item" data-category="Thematic" data-search="dot density stochastic hole aware polygon scattering count population">
-        <div class="algo-header" onclick="toggleAlgo(this)">
-          <div class="algo-header-left">
-            <span class="algo-tag">Thematic</span>
-            <span class="algo-title-text">5. Hole-Aware Dot-Density Symbology</span>
-            <span class="algo-id-badge">zero2cartolab:dot_density</span>
-          </div>
-          <div class="algo-arrow">▲</div>
-        </div>
-        <div class="algo-body">
-          <div class="algo-subheading">📐 Theoretical Formulation</div>
-          <p>
-            Scatters $N = \lfloor V_i / \text{DotValue} \rfloor$ discrete point features inside each polygon $P_i$. 
-            Uses seeded rejection sampling within bounding boxes while respecting interior holes and multi-polygon boundaries.
-          </p>
-          <div class="algo-math-box">
-            $$N_i = \mathrm{round}\left(\frac{V_i}{\text{DOT\_VALUE}}\right), \qquad p_k \in P_i \setminus \bigcup_{j} H_{i,j}$$
-          </div>
-
-          <div class="algo-subheading">⚙️ Algorithm Parameters</div>
-          <table class="algo-table">
-            <thead>
-              <tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
-            </thead>
-            <tbody>
-              <tr><td><code>INPUT</code></td><td>Polygon Layer</td><td>&mdash;</td><td>Source boundary layer.</td></tr>
-              <tr><td><code>FIELD</code></td><td>Field</td><td>&mdash;</td><td>Count field (e.g. population, households).</td></tr>
-              <tr><td><code>DOT_VALUE</code></td><td>Double</td><td>100.0</td><td>Value represented by 1 dot.</td></tr>
-              <tr><td><code>SEED</code></td><td>Integer</td><td>42</td><td>Random seed for reproducible placements.</td></tr>
-              <tr><td><code>OUTPUT</code></td><td>Point Layer</td><td>[Create Temporary]</td><td>Output scattered point layer.</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- 6. Hexbin Aggregation -->
-      <div class="algo-item" data-category="Cartogram" data-search="hexbin aggregation pointy top hexagon grid binning spatial index">
-        <div class="algo-header" onclick="toggleAlgo(this)">
-          <div class="algo-header-left">
-            <span class="algo-tag">Cartogram & Aggregation</span>
-            <span class="algo-title-text">6. Hexagonal Binning & Spatial Aggregation</span>
-            <span class="algo-id-badge">zero2cartolab:hexbin_aggregate</span>
-          </div>
-          <div class="algo-arrow">▲</div>
-        </div>
-        <div class="algo-body">
-          <div class="algo-subheading">📐 Theoretical Formulation</div>
-          <p>
-            Constructs a regular pointy-top hexagonal tessellation over the point extent and aggregates counts, sums, and averages using axial coordinate hashing $(q, r)$:
-          </p>
-          <div class="algo-math-box">
-            $$q = \frac{\sqrt{3}/3 \cdot x - 1/3 \cdot y}{R}, \qquad r = \frac{2/3 \cdot y}{R}$$
-            $$\text{Area}_{\text{hex}} = \frac{3\sqrt{3}}{2} R^2$$
-          </div>
-        </div>
-      </div>
-
-      <!-- 7. Graticule Reference Grid -->
-      <div class="algo-item" data-category="Layout" data-search="graticule reference grid meridians parallels coordinates neatline">
-        <div class="algo-header" onclick="toggleAlgo(this)">
-          <div class="algo-header-left">
-            <span class="algo-tag">Layout & Reference</span>
-            <span class="algo-title-text">7. Reference Graticule & Grid Generation</span>
-            <span class="algo-id-badge">zero2cartolab:graticule_grid</span>
-          </div>
-          <div class="algo-arrow">▲</div>
-        </div>
-        <div class="algo-body">
-          <div class="algo-subheading">📐 Theoretical Formulation</div>
-          <p>
-            Generates clean projected or geographic grid lines across the extent with Heckbert nice-number intervals and formatted coordinate labels (e.g. $38^\circ 25' \text{N}$).
-          </p>
-        </div>
-      </div>
-
-      <!-- 8. Visual-Center Label Points -->
-      <div class="algo-item" data-category="Layout" data-search="label points polylabel pole of inaccessibility quadtree inscribed circle center">
-        <div class="algo-header" onclick="toggleAlgo(this)">
-          <div class="algo-header-left">
-            <span class="algo-tag">Layout & Reference</span>
-            <span class="algo-title-text">8. Visual-Center Label Points (Polylabel)</span>
-            <span class="algo-id-badge">zero2cartolab:label_points</span>
-          </div>
-          <div class="algo-arrow">▲</div>
-        </div>
-        <div class="algo-body">
-          <div class="algo-subheading">📐 Theoretical Formulation</div>
-          <p>
-            Calculates the Pole of Inaccessibility&mdash;the interior point furthest from any polygon boundary&mdash;using an iterative quadtree spatial search (Garcia-Castellanos & Lombardo, 2007):
-          </p>
-          <div class="algo-math-box">
-            $$p^* = \arg\max_{p \in P} \min_{e \in \partial P} \|p - e\|$$
-          </div>
-        </div>
-      </div>
-
-      <!-- 9. Normalization & Location Quotient -->
-      <div class="algo-item" data-category="Classification" data-search="normalize field zscore robust mad location quotient lq min max percentile rank">
-        <div class="algo-header" onclick="toggleAlgo(this)">
-          <div class="algo-header-left">
-            <span class="algo-tag">Classification</span>
-            <span class="algo-title-text">9. Statistical Normalization & Location Quotient</span>
-            <span class="algo-id-badge">zero2cartolab:normalize_field</span>
-          </div>
-          <div class="algo-arrow">▲</div>
-        </div>
-        <div class="algo-body">
-          <div class="algo-subheading">📐 Theoretical Formulation</div>
-          <p>
-            Provides 6 standard statistical transformations for comparative mapping:
-          </p>
-          <div class="algo-math-box">
-            $$z = \frac{x - \mu}{\sigma}, \qquad z_{\text{robust}} = \frac{x - \text{median}}{1.4826 \cdot \text{MAD}}, \qquad \text{LQ} = \frac{e_i / e_{\text{total}}}{E_i / E_{\text{total}}}$$
-          </div>
-        </div>
-      </div>
-
-      <!-- 10. Proportional Symbols (Flannery) -->
-      <div class="algo-item" data-category="Thematic" data-search="proportional symbols flannery perceptual area underestimation compensation scaling">
-        <div class="algo-header" onclick="toggleAlgo(this)">
-          <div class="algo-header-left">
-            <span class="algo-tag">Thematic</span>
-            <span class="algo-title-text">10. Flannery Perceptual Proportional Symbols</span>
-            <span class="algo-id-badge">zero2cartolab:proportional_symbols</span>
-          </div>
-          <div class="algo-arrow">▲</div>
-        </div>
-        <div class="algo-body">
-          <div class="algo-subheading">📐 Theoretical Formulation</div>
-          <p>
-            Compensates for human underestimation of circular visual areas using Flannery's psychophysical exponent ($0.57$ instead of geometric $0.50$):
-          </p>
-          <div class="algo-math-box">
-            $$R_i = R_0 \cdot \left( \frac{V_i}{V_0} \right)^{0.5716}$$
-          </div>
-          <ul class="citation-list">
-            <li class="citation-item">Flannery, J. J. (1971). <em>The relative effectiveness of standard and modified graduated circles in statistical distribution maps</em>. The Canadian Cartographer, 8(2), 96–109.</li>
-          </ul>
-        </div>
-      </div>
-
-      <!-- 11. Quick Style -->
-      <div class="algo-item" data-category="Thematic" data-search="quick style graduated categorized publication presets colorbrewer viridis magma">
-        <div class="algo-header" onclick="toggleAlgo(this)">
-          <div class="algo-header-left">
-            <span class="algo-tag">Thematic</span>
-            <span class="algo-title-text">11. Quick Style Thematic Symbology</span>
-            <span class="algo-id-badge">zero2cartolab:quick_style</span>
-          </div>
-          <div class="algo-arrow">▲</div>
-        </div>
-        <div class="algo-body">
-          <div class="algo-subheading">📐 Theoretical Formulation</div>
-          <p>
-            Applies instant, publication-tested graduated and categorized styling rules with 40+ embedded ColorBrewer, Viridis, and scientific colormaps.
-          </p>
-        </div>
-      </div>
-
-      <!-- 12. Joyplot Ridge Map -->
-      <div class="algo-item" data-category="Thematic" data-search="ridge map joyplot joy division scanlines dem elevation terrain raster profiles">
-        <div class="algo-header" onclick="toggleAlgo(this)">
-          <div class="algo-header-left">
-            <span class="algo-tag">Thematic</span>
-            <span class="algo-title-text">12. Joyplot Ridge-Line Elevation Profiles</span>
-            <span class="algo-id-badge">zero2cartolab:ridge_map</span>
-          </div>
-          <div class="algo-arrow">▲</div>
-        </div>
-        <div class="algo-body">
-          <div class="algo-subheading">📐 Theoretical Formulation</div>
-          <p>
-            Samples a single-band DEM / raster along horizontal scanlines, modulating elevation into vertical polygon waves with solid backfill to create striking physical terrain silhouettes.
-          </p>
-        </div>
-      </div>
-
-      <!-- 13. Value-by-Alpha -->
-      <div class="algo-item" data-category="Thematic" data-search="value by alpha vba uncertainty reliability opacity transparency dual variable">
-        <div class="algo-header" onclick="toggleAlgo(this)">
-          <div class="algo-header-left">
-            <span class="algo-tag">Thematic</span>
-            <span class="algo-title-text">13. Value-by-Alpha (VbA) Uncertainty Symbology</span>
-            <span class="algo-id-badge">zero2cartolab:value_by_alpha</span>
-          </div>
-          <div class="algo-arrow">▲</div>
-        </div>
-        <div class="algo-body">
-          <div class="algo-subheading">📐 Theoretical Formulation</div>
-          <p>
-            Modulates the alpha (transparency) channel based on statistical uncertainty or sample size, preventing low-confidence estimates from dominating map visual hierarchy:
-          </p>
-          <div class="algo-math-box">
-            $$\alpha_i = \alpha_{\min} + (255 - \alpha_{\min}) \cdot \left(\frac{R_i - R_{\min}}{R_{\max} - R_{\min}}\right)^\gamma$$
-          </div>
-        </div>
-      </div>
-
-      <!-- 14. Architectural 2.5D Building Extrusion -->
-      <div class="algo-item" data-category="3D" data-search="2.5d building extrusion solar angle azimuth sun lighting floor bands qml massing">
-        <div class="algo-header" onclick="toggleAlgo(this)">
-          <div class="algo-header-left">
-            <span class="algo-tag">2.5D Massing</span>
-            <span class="algo-title-text">14. Architectural 2.5D Building Extrusion</span>
-            <span class="algo-id-badge">zero2cartolab:building_25d_style</span>
-          </div>
-          <div class="algo-arrow">▲</div>
-        </div>
-        <div class="algo-body">
-          <div class="algo-subheading">📐 Theoretical Formulation</div>
-          <p>
-            Calculates oblique roof offsets, stepped floor bands, and trigonometric wall shading based on solar azimuth $\theta_{\text{sun}}$ and elevation angle $\phi$:
-          </p>
-          <div class="algo-math-box">
-            $$\Delta x = H_i \cdot \cos(\theta_{\text{view}}), \qquad \Delta y = H_i \cdot \sin(\theta_{\text{view}})$$
-            $$I_{\text{wall}} = I_{\text{ambient}} + I_{\text{direct}} \cdot \max\left(0, \cos(\theta_{\text{wall}} - \theta_{\text{sun}})\right)$$
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </section>
-
-  <!-- ═══════════════ ARCHITECTURE & TESTING ═══════════════ -->
-  <section id="architecture" class="container arch-section">
-    <div class="section-header" style="margin-bottom: 2rem;">
-      <div class="section-tag">System Design</div>
-      <h2 class="section-title" style="font-size: 2.1rem;">Architectural Principles & Robustness</h2>
-      <p class="section-desc">Engineered for stability across both QGIS 3.x LTR and QGIS 4.x next-generation releases.</p>
-    </div>
-
-    <div class="arch-grid">
-      <div class="arch-card">
-        <h4>📦 Pure Python Core Math</h4>
-        <p>All core computational engines (classification, bivariate interpolation, geometry math, CVD matrices) are written in pure Python/NumPy with zero external binary or C-extension requirements.</p>
-      </div>
-      <div class="arch-card">
-        <h4>⚡ Headless Processing Provider</h4>
-        <p>Every algorithm runs headlessly inside the QGIS Processing framework, enabling full integration with Graphical Modeler workflows, Python CLI scripts, and automated batch processing.</p>
-      </div>
-      <div class="arch-card">
-        <h4>🧪 Dual-Runtime Verification</h4>
-        <p>68 comprehensive end-to-end unit and integration tests run continuously across both QGIS 3.44 LTR and QGIS 4.2 runtimes, ensuring zero regressions on Qt5 and Qt6.</p>
-      </div>
-      <div class="arch-card">
-        <h4>🛡️ Color Accessibility Guard</h4>
-        <p>Embedded Machado/Brettel colorblindness simulation engine and automated WCAG 2.1 contrast ratio calculators prevent illegible or inaccessible cartographic outputs.</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- ═══════════════ ACADEMIC CITATION & BIBTEX ═══════════════ -->
-  <section id="citation" class="container">
-    <div class="section-header">
-      <div class="section-tag">Academic Attribution</div>
-      <h2 class="section-title">Citation & Bibliography</h2>
-      <p class="section-desc">If you use 02CartoLab in academic research, planning reports, or publications, please cite the software.</p>
-    </div>
-
-    <div class="bibtex-card">
-      <button class="btn-copy" onclick="copyCode(this)">Copy BibTeX</button>
-      <pre class="code-block" style="background: transparent; border: none; padding: 0; margin: 0;">@software{Eminoglu_02CartoLab_2026,
-  author       = {Eminoğlu, Yusuf},
-  title        = {{02CartoLab: Unified Cartographic Studio & Print Layout Automation for QGIS}},
-  year         = {2026},
-  version      = {1.0.0},
-  publisher    = {QGIS Plugin Repository},
-  url          = {https://github.com/YusufEminoglu/zero2cartolab},
-  institution  = {Dokuz Eylül University, Department of City and Regional Planning}
-}</pre>
-    </div>
-  </section>
-
-  <!-- Modal Lightbox -->
-  <div class="modal" id="imageModal" onclick="closeModal(event)">
-    <div class="modal-content" onclick="event.stopPropagation()">
-      <button class="modal-close" onclick="closeModalDirect()">&times;</button>
-      <div class="modal-img-wrap">
-        <img id="modalImg" src="" alt="Enlarged Layout">
-      </div>
-      <div class="modal-body">
-        <h3 id="modalTitle" style="font-size: 1.3rem; font-weight: 700; margin-bottom: 0.4rem; color: #0f172a;"></h3>
-        <p id="modalDesc" style="color: var(--text-muted); font-size: 0.92rem;"></p>
       </div>
     </div>
   </div>
+</section>
 
-  <!-- Footer -->
-  <footer>
-    <div class="container">
-      <div class="footer-grid">
-        <div class="footer-col">
-          <div class="brand" style="margin-bottom: 1rem;">
-            <img src="img/icon.png" alt="02CartoLab">
-            <span>02CartoLab</span>
-          </div>
-          <p style="color: var(--text-muted); font-size: 0.88rem; max-width: 320px;">
-            A unified cartographic studio for map symbology, analytical classification, and publication print layout automation in QGIS.
-          </p>
-        </div>
-        <div class="footer-col">
-          <h4>Navigation</h4>
-          <ul>
-            <li><a href="#gallery">Layout Templates</a></li>
-            <li><a href="#simulator">Bivariate Lab</a></li>
-            <li><a href="#algorithms">14 Algorithms</a></li>
-            <li><a href="CARTOLAB_REFERENCE_MANUAL.html">Academic Manual</a></li>
-            <li><a href="COMMAND_GUIDE.html">Command Guide</a></li>
-          </ul>
-        </div>
-        <div class="footer-col">
-          <h4>Repository & Hub</h4>
-          <ul>
-            <li><a href="https://github.com/YusufEminoglu/zero2cartolab" target="_blank">GitHub Repository</a></li>
-            <li><a href="https://github.com/YusufEminoglu/zero2cartolab/releases" target="_blank">Releases (ZIP)</a></li>
-            <li><a href="https://plugins.qgis.org/plugins/zero2cartolab/" target="_blank">QGIS Plugin Hub</a></li>
-            <li><a href="https://github.com/YusufEminoglu/zero2cartolab/issues" target="_blank">Issue Tracker</a></li>
-          </ul>
-        </div>
-        <div class="footer-col">
-          <h4>Author & Lab</h4>
-          <p style="color: var(--text-muted); font-size: 0.85rem; line-height: 1.6;">
-            Developed by <strong>Yusuf Eminoğlu</strong><br>
-            Dokuz Eylül University<br>
-            City & Regional Planning Department
-          </p>
-        </div>
+<div class="divider"></div>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="glow" style="top:-200px;right:-200px;"></div>
+  <div class="container">
+    <div class="section-header">
+      <div class="section-eyebrow">Features</div>
+      <h2 class="section-title">One studio, every map type<br/>journals actually publish</h2>
+      <p class="section-subtitle">A complete cartographic toolbox — from advanced thematic styling to one-click print layout generation, all within native QGIS.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon fi-p">&#127912;</div>
+        <h3>Bivariate &amp; Value-by-Alpha</h3>
+        <p>3&times;3 and 4&times;4 color matrices encoding two simultaneous variables. Value-by-Alpha fades unreliable values instead of hiding them. Diamond/square legend decorators included.</p>
       </div>
-
-      <div class="footer-bottom">
-        <span>&copy; 2026 Yusuf Eminoğlu. Released under GPL-3.0 License.</span>
-        <span>PlanX QGIS Plugin Ecosystem</span>
+      <div class="feature-card">
+        <div class="feature-icon fi-g">&#128200;</div>
+        <h3>Continuous-Area Cartograms</h3>
+        <p>Gastner-Newman topology-preserving cartograms that distort polygon shapes proportionally to a value field. Maintains contiguous boundaries and neighbor relationships.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon fi-b">&#127956;</div>
+        <h3>Ridge-Line Relief Maps</h3>
+        <p>Transform any raster (DEM, heat maps, density, accessibility) into stacked Joy-Division-style ridge-line profiles. Dramatic topographic storytelling from any grid surface.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon fi-r">&#128229;</div>
+        <h3>One-Click Print Layouts</h3>
+        <p>Auto Map Sheet builds a complete publication layout from the current view: titled frame, filtered legend, scale bar, north arrow, coordinate graticule, and credits &mdash; in one click.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon fi-p">&#128065;</div>
+        <h3>CVD Accessibility Inspector</h3>
+        <p>5-mode Color Vision Deficiency simulation: Normal, Deuteranopia, Protanopia, Tritanopia, Achromatopsia. Real-time WCAG 2.1 AAA contrast scoring for accessible maps.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon fi-g">&#11042;</div>
+        <h3>Dot-Density &amp; Hexbin</h3>
+        <p>Seeded, hole-aware dot placement inside polygons (one dot = N units). Pointy-top hexbin aggregation with count/sum/mean &mdash; overplot-free density cartography at any scale.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon fi-b">&#127963;</div>
+        <h3>2.5D Building Extrusion</h3>
+        <p>Native QGIS 2.5D renderer with height/floor-field extrusion, 10 material presets, shadows, directional shading, stepped floor bands, per-floor colors and QML export.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon fi-r">&#128218;</div>
+        <h3>5 Layout Templates</h3>
+        <p>Report Figure (16:9), Academic Journal (A4 2-col), Exhibition Poster (A1/A2), Fact Sheet, and Comparative Diptych &mdash; each with calibrated margins, typography and grid.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon fi-p">&#128202;</div>
+        <h3>Adaptive Classification</h3>
+        <p>Geometric Interval, Fisher-Jenks and Head/Tail Breaks for skewed urban data. One-step normalization: rates per capita, z-score, robust MAD-z, percentile rank, log.</p>
       </div>
     </div>
-  </footer>
+  </div>
+</section>
 
-  <!-- Interactive JavaScript -->
-  <script>
-    // Gallery Filtering
-    const filterBtns = document.querySelectorAll('.filter-btn');
-    const cards = document.querySelectorAll('.gallery-card');
+<div class="divider"></div>
 
-    filterBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        filterBtns.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        const filter = btn.getAttribute('data-filter');
+<!-- MODULE TABLE -->
+<section id="modules" class="bg-alt">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-eyebrow">Module Catalog</div>
+      <h2 class="section-title">16 modules, one dashboard</h2>
+      <p class="section-subtitle">Every module is reachable from the 02CartoLab Dashboard and the Processing Toolbox &mdash; scriptable, composable, modeler-ready.</p>
+    </div>
 
-        cards.forEach(card => {
-          if (filter === 'all' || card.getAttribute('data-category') === filter) {
-            card.style.display = 'flex';
-          } else {
-            card.style.display = 'none';
-          }
-        });
-      });
-    });
+    <div class="image-full" style="margin-bottom:2.5rem;">
+      <img src="assets/modules.jpg" alt="02CartoLab module showcase grid" style="width:100%;max-height:480px;object-fit:cover;" onerror="this.parentElement.style.display='none'" />
+      <div class="image-caption">8 of the 16 modules visualized: dot-density, proportional symbols, hexbin, ridge map, cartogram, Value-by-Alpha, CVD simulation, automated layout</div>
+    </div>
 
-    // Lightbox Modal
-    const modal = document.getElementById('imageModal');
-    const modalImg = document.getElementById('modalImg');
-    const modalTitle = document.getElementById('modalTitle');
-    const modalDesc = document.getElementById('modalDesc');
+    <div style="overflow-x:auto;">
+      <table class="module-table">
+        <thead>
+          <tr>
+            <th>Module</th>
+            <th>What it does</th>
+            <th>Surface</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Quick Style</td><td>One-click graduated or categorized renderer with ColorBrewer + viridis palettes and live preview</td><td><span class="mtag">Dashboard</span> <span class="mtag">Processing</span></td></tr>
+          <tr><td>Colour Palettes &amp; CVD</td><td>24+ ramps with 5-mode CVD simulation and WCAG 2.1 AAA contrast scoring</td><td><span class="mtag">Dashboard</span></td></tr>
+          <tr><td>2.5D Building Styling</td><td>Floor extrusion, presets, shadows, per-floor bands, QML export</td><td><span class="mtag">Dashboard</span> <span class="mtag">Processing</span></td></tr>
+          <tr><td>Bivariate Choropleth</td><td>3&times;3 / 4&times;4 color matrices, custom corners, diamond/square legends</td><td><span class="mtag">Processing</span> <span class="mtag gold">Layout</span></td></tr>
+          <tr><td>Value-by-Alpha</td><td>Value &rarr; hue, reliability &rarr; opacity — reliability-aware visualization</td><td><span class="mtag">Processing</span></td></tr>
+          <tr><td>Cartogram</td><td>Continuous-area distortion (Gastner-Newman) proportional to a value field</td><td><span class="mtag">Processing</span></td></tr>
+          <tr><td>Ridge Map</td><td>Raster surface &rarr; stacked joy-division ridge lines</td><td><span class="mtag">Processing</span></td></tr>
+          <tr><td>Adaptive Classification</td><td>Geometric Interval, Fisher-Jenks, Head/Tail Breaks</td><td><span class="mtag">Processing</span></td></tr>
+          <tr><td>Dot-Density Map</td><td>Seeded, hole-aware dots inside polygons — one dot per N units</td><td><span class="mtag">Processing</span></td></tr>
+          <tr><td>Proportional Symbols</td><td>Flannery-compensated graduated point symbols with nested-legend values</td><td><span class="mtag">Processing</span></td></tr>
+          <tr><td>Hexbin Aggregation</td><td>Pointy-top hex grid — count / sum / mean, overplot-free</td><td><span class="mtag">Processing</span></td></tr>
+          <tr><td>Visual-Center Labels</td><td>Pole-of-inaccessibility (polylabel) anchors always inside the polygon</td><td><span class="mtag">Processing</span></td></tr>
+          <tr><td>Graticule / Reference Grid</td><td>Meridians &amp; parallels on nice intervals with coordinate labels</td><td><span class="mtag">Processing</span></td></tr>
+          <tr><td>Normalization &amp; Rates</td><td>Rate, z-score, robust z, min-max, percentile rank, log — prep before classifying</td><td><span class="mtag">Processing</span></td></tr>
+          <tr><td>Layout Template Gallery</td><td>5 publication archetypes: Report Figure, Academic Journal, Exhibition Poster, Fact Sheet, Diptych</td><td><span class="mtag gold">Layout Studio</span></td></tr>
+          <tr><td>Auto Map Sheet</td><td>Complete print layout from current view — map, legend, scalebar, north arrow, grid, credits</td><td><span class="mtag gold">Layout Studio</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
 
-    function openModal(src, title, desc) {
-      modalImg.src = src;
-      modalTitle.innerText = title;
-      modalDesc.innerText = desc;
-      modal.classList.add('active');
-      document.body.style.overflow = 'hidden';
-    }
+<div class="divider"></div>
 
-    function closeModal(e) {
-      if (e.target === modal) {
-        closeModalDirect();
-      }
-    }
+<!-- BIVARIATE -->
+<section id="bivariate">
+  <div class="container">
+    <div class="split">
+      <div>
+        <div class="section-eyebrow">Bivariate Choropleth</div>
+        <h2 class="section-title">Two variables,<br/>one honest map</h2>
+        <p class="section-subtitle">Encode income &amp; density, vulnerability &amp; exposure, or any two urban indicators simultaneously &mdash; with a 3&times;3 color matrix legend that tells both stories at once.</p>
+        <div style="margin-top:1.5rem;display:flex;flex-direction:column;gap:0.75rem;">
+          <div style="display:flex;align-items:center;gap:0.75rem;font-size:0.875rem;color:var(--text-secondary);">
+            <span style="width:14px;height:14px;border-radius:3px;background:linear-gradient(135deg,#2d3561,#c05c7e);flex-shrink:0;display:inline-block;"></span>
+            3&times;3 and 4&times;4 color matrices
+          </div>
+          <div style="display:flex;align-items:center;gap:0.75rem;font-size:0.875rem;color:var(--text-secondary);">
+            <span style="width:14px;height:14px;border-radius:3px;background:linear-gradient(135deg,#f5f0bb,#a48111);flex-shrink:0;display:inline-block;"></span>
+            Custom corner colors for full palette control
+          </div>
+          <div style="display:flex;align-items:center;gap:0.75rem;font-size:0.875rem;color:var(--text-secondary);">
+            <span style="width:14px;height:14px;border-radius:3px;background:linear-gradient(135deg,#005f73,#ee9b00);flex-shrink:0;display:inline-block;"></span>
+            Diamond and square legend formats
+          </div>
+          <div style="display:flex;align-items:center;gap:0.75rem;font-size:0.875rem;color:var(--text-secondary);">
+            <span style="width:14px;height:14px;border-radius:3px;background:rgba(124,58,237,0.5);flex-shrink:0;display:inline-block;"></span>
+            Value-by-Alpha: reliability drives opacity
+          </div>
+        </div>
+      </div>
+      <div class="image-full">
+        <img src="assets/bivariate.jpg" alt="Bivariate choropleth map with 3x3 color matrix legend" onerror="this.parentElement.style.display='none'" />
+        <div class="image-caption">Urban district bivariate map: income (blue-purple axis) &times; population density (orange-red axis) &mdash; with diamond 3&times;3 legend</div>
+      </div>
+    </div>
+  </div>
+</section>
 
-    function closeModalDirect() {
-      modal.classList.remove('active');
-      document.body.style.overflow = 'auto';
-    }
+<div class="divider"></div>
 
-    // Algorithm Explorer Search & Filtering
-    const algoSearchInput = document.getElementById('algoSearchInput');
-    const algoPills = document.querySelectorAll('.algo-pill');
-    const algoItems = document.querySelectorAll('.algo-item');
+<!-- LAYOUTS -->
+<section id="layouts" class="bg-alt">
+  <div class="container">
+    <div class="split reverse">
+      <div>
+        <div class="section-eyebrow">Print Layout Automation</div>
+        <h2 class="section-title">From map view to<br/>publication in one click</h2>
+        <p class="section-subtitle">Auto Map Sheet builds a finished layout from the current QGIS view. Five publication archetypes cover every output format from academic journals to exhibition posters.</p>
+        <div style="margin-top:1.5rem;display:flex;flex-direction:column;gap:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.75rem;font-size:0.875rem;color:var(--text-secondary);"><span style="color:var(--purple-light);font-weight:700;">01</span> Report Figure &mdash; 16:9 landscape</div>
+          <div style="display:flex;align-items:center;gap:0.75rem;font-size:0.875rem;color:var(--text-secondary);"><span style="color:var(--purple-light);font-weight:700;">02</span> Academic Journal &mdash; A4 2-column</div>
+          <div style="display:flex;align-items:center;gap:0.75rem;font-size:0.875rem;color:var(--text-secondary);"><span style="color:var(--purple-light);font-weight:700;">03</span> Exhibition Poster &mdash; A1 / A2</div>
+          <div style="display:flex;align-items:center;gap:0.75rem;font-size:0.875rem;color:var(--text-secondary);"><span style="color:var(--purple-light);font-weight:700;">04</span> Fact Sheet &mdash; A4 portrait</div>
+          <div style="display:flex;align-items:center;gap:0.75rem;font-size:0.875rem;color:var(--text-secondary);"><span style="color:var(--purple-light);font-weight:700;">05</span> Comparative Diptych &mdash; side-by-side</div>
+          <div style="margin-top:0.5rem;font-size:0.82rem;color:var(--text-muted);">+ Layout Manager: list, open, duplicate, delete, export PNG/PDF/SVG at 96&ndash;600 dpi</div>
+        </div>
+      </div>
+      <div class="image-full">
+        <img src="assets/layout.jpg" alt="Publication-ready print layout with legend, scale bar, north arrow" onerror="this.parentElement.style.display='none'" />
+        <div class="image-caption">Auto Map Sheet output &mdash; complete academic-style layout with filtered legend, coordinate graticule, scale bar, north arrow, and source credits</div>
+      </div>
+    </div>
+  </div>
+</section>
 
-    function filterAlgos() {
-      const query = (algoSearchInput.value || '').toLowerCase().trim();
-      const activePill = document.querySelector('.algo-pill.active');
-      const category = activePill ? activePill.getAttribute('data-filter') : 'all';
+<div class="divider"></div>
 
-      algoItems.forEach(item => {
-        const itemCat = item.getAttribute('data-category') || '';
-        const itemSearch = (item.getAttribute('data-search') || '').toLowerCase();
-        const itemText = item.innerText.toLowerCase();
+<!-- COMPATIBILITY -->
+<section>
+  <div class="container">
+    <div class="section-header">
+      <div class="section-eyebrow">Compatibility</div>
+      <h2 class="section-title">Tested on every runtime</h2>
+      <p class="section-subtitle">Release verification runs on both QGIS LTR and the current stable release. Zero external dependencies means zero install friction.</p>
+    </div>
+    <div class="compat-grid">
+      <div class="compat-card"><div class="compat-icon">&#128994;</div><div class="compat-title">QGIS 3.28+</div><div class="compat-desc">Minimum requirement. Full feature support on all 3.x releases.</div><div><span class="compat-check">&#10004; Verified</span></div></div>
+      <div class="compat-card"><div class="compat-icon">&#128309;</div><div class="compat-title">QGIS 3.44 LTR</div><div class="compat-desc">Primary release target. Verified before every publish.</div><div><span class="compat-check">&#10004; Release Runtime</span></div></div>
+      <div class="compat-card"><div class="compat-icon">&#9889;</div><div class="compat-title">QGIS 4.2</div><div class="compat-desc">Qt6 / QGIS 4 verified. No deprecated API usage.</div><div><span class="compat-check">&#10004; Release Runtime</span></div></div>
+      <div class="compat-card"><div class="compat-icon">&#128230;</div><div class="compat-title">Zero pip deps</div><div class="compat-desc">Pure QGIS API + NumPy (bundled). No external installs.</div><div><span class="compat-check">&#10004; No Install</span></div></div>
+      <div class="compat-card"><div class="compat-icon">&#128203;</div><div class="compat-title">14 Processing Algorithms</div><div class="compat-desc">All algorithms run headlessly in Model Builder and Python scripts.</div><div><span class="compat-check">&#10004; Modeler-Ready</span></div></div>
+      <div class="compat-card"><div class="compat-icon">&#128187;</div><div class="compat-title">Win &middot; Linux &middot; macOS</div><div class="compat-desc">Platform-agnostic Python. Tested primarily on Windows (OSGeo4W).</div><div><span class="compat-check">&#10004; Cross-platform</span></div></div>
+    </div>
+  </div>
+</section>
 
-        const matchesCat = (category === 'all' || itemCat.includes(category));
-        const matchesQuery = !query || itemSearch.includes(query) || itemText.includes(query);
+<div class="divider"></div>
 
-        if (matchesCat && matchesQuery) {
-          item.style.display = 'block';
-        } else {
-          item.style.display = 'none';
-        }
-      });
-    }
+<!-- INSTALL -->
+<section id="install" class="bg-alt">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-eyebrow">Installation</div>
+      <h2 class="section-title">Up and running<br/>in 30 seconds</h2>
+    </div>
+    <div class="install-grid">
+      <div class="install-card">
+        <div class="install-num">01</div>
+        <h3>Plugin Manager (Recommended)</h3>
+        <p>Open QGIS &rarr; <strong>Plugins &rarr; Manage and Install Plugins</strong> &rarr; Search <em>0202CartoLab</em> &rarr; Install.</p>
+        <div class="plugin-id">zero2cartolab</div>
+      </div>
+      <div class="install-card">
+        <div class="install-num">02</div>
+        <h3>Install from ZIP</h3>
+        <p>Download the latest release ZIP from GitHub &rarr; <strong>Plugins &rarr; Install from ZIP</strong> &rarr; select the file.</p>
+        <div class="plugin-id">zero2cartolab.zip</div>
+      </div>
+      <div class="install-card">
+        <div class="install-num">03</div>
+        <h3>Development Install</h3>
+        <p>Clone the repository and set <span class="mono">QGIS_PLUGINPATH</span> to the parent directory. Access via <em>Plugins &rarr; 02CartoLab Dashboard</em>.</p>
+        <div class="plugin-id">QGIS_PLUGINPATH=.../qgis_plugins</div>
+      </div>
+    </div>
+    <div style="margin-top:2rem;text-align:center;">
+      <a href="https://plugins.qgis.org/plugins/zero2cartolab/" class="btn-primary" style="display:inline-flex;">&#8659; Open in QGIS Plugin Hub</a>
+    </div>
+  </div>
+</section>
 
-    algoSearchInput.addEventListener('input', filterAlgos);
-    algoPills.forEach(pill => {
-      pill.addEventListener('click', () => {
-        algoPills.forEach(p => p.classList.remove('active'));
-        pill.classList.add('active');
-        filterAlgos();
-      });
-    });
+<div class="divider"></div>
 
-    // Toggle collapse on click
-    function toggleAlgo(header) {
-      const item = header.closest('.algo-item');
-      item.classList.toggle('collapsed');
-      const arrow = item.querySelector('.algo-arrow');
-      if (arrow) {
-        arrow.innerText = item.classList.contains('collapsed') ? '▼' : '▲';
-      }
-    }
+<!-- CHANGELOG -->
+<section id="changelog">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-eyebrow">Changelog</div>
+      <h2 class="section-title">Release history</h2>
+    </div>
+    <div class="changelog-wrapper">
+      <div class="changelog-version">
+        <span class="version-badge">v1.0.0</span>
+        <span class="version-date">2026-08-20</span>
+        <span class="badge" style="font-size:0.72rem;padding:0.2rem 0.6rem;">Initial Release</span>
+      </div>
+      <div class="changelog-entries">
+        <div class="changelog-entry">Publication Layout Template Gallery: 5 distinct archetypes (Report Figure, Academic Journal, Exhibition Poster, Fact Sheet, Comparative Diptych)</div>
+        <div class="changelog-entry">Thematic Symbology Studio: bivariate choropleths (3&times;3 and 4&times;4 matrices)</div>
+        <div class="changelog-entry">Value-by-Alpha uncertainty maps for reliability-aware visualization</div>
+        <div class="changelog-entry">Continuous-area cartograms (Gastner-Newman topology-preserving)</div>
+        <div class="changelog-entry">Joy-division ridge maps from any raster (DEM, heat, density)</div>
+        <div class="changelog-entry">Hole-aware dot-density and Flannery proportional-symbol maps</div>
+        <div class="changelog-entry">Hexbin aggregation: count, sum, mean &mdash; pointy-top hex grid</div>
+        <div class="changelog-entry">Architectural 2.5D building extrusion with solar angle and floor bands</div>
+        <div class="changelog-entry">Layout Designer Studio Dock with Heckbert scalebars and north needles</div>
+        <div class="changelog-entry">Multi-page Map Book Atlas engine</div>
+        <div class="changelog-entry">Palette &amp; Accessibility Inspector: 5-mode CVD simulation</div>
+        <div class="changelog-entry">WCAG 2.1 AAA real-time contrast evaluation</div>
+        <div class="changelog-entry">14 headless Processing Algorithms &mdash; modeler and script ready</div>
+        <div class="changelog-entry">Automated coordinate graticules with labeled meridians &amp; parallels</div>
+        <div class="changelog-entry">Visual-center label points (polylabel) always inside polygons</div>
+        <div class="changelog-entry">Zero external dependencies &mdash; pure QGIS 3.28+ and 4.x</div>
+      </div>
+    </div>
+  </div>
+</section>
 
-    function copyCode(btn) {
-      const container = btn.closest('.code-container') || btn.closest('.bibtex-card');
-      const codeEl = container.querySelector('pre');
-      if (codeEl) {
-        navigator.clipboard.writeText(codeEl.innerText).then(() => {
-          const orig = btn.innerText;
-          btn.innerText = '✓ Copied!';
-          setTimeout(() => { btn.innerText = orig; }, 2000);
-        });
-      }
-    }
+<div class="divider"></div>
 
-    // Bivariate & CVD Simulator
-    const palettes = {
-      pink_blue: [
-        ["#e8e8e8", "#b0d5df", "#64acbe"],
-        ["#e4acac", "#ad9ea5", "#627f94"],
-        ["#c85a5a", "#985356", "#56424e"]
-      ],
-      purple_green: [
-        ["#f3f3f3", "#c2e699", "#78c679"],
-        ["#d4b9da", "#9ebcda", "#41b6c4"],
-        ["#8c6bb1", "#88419d", "#253494"]
-      ],
-      orange_cyan: [
-        ["#edf8fb", "#b2e2e2", "#66c2a4"],
-        ["#fecc5c", "#bd925a", "#41b6c4"],
-        ["#bd0026", "#800026", "#08589e"]
-      ],
-      teal_gold: [
-        ["#e0f3f8", "#fee090", "#fdae61"],
-        ["#91bfdb", "#e08214", "#f46d43"],
-        ["#4575b4", "#b2182b", "#d73027"]
-      ]
-    };
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <h3>02CartoLab</h3>
+      <p>Unified thematic mapping and print layout automation studio for QGIS. Part of the PlanX urban analytics ecosystem.</p>
+      <div style="margin-top:1rem;">
+        <a href="https://github.com/YusufEminoglu/zero2cartolab" class="btn-secondary" style="display:inline-flex;font-size:0.85rem;padding:0.5rem 1.25rem;">GitHub &#x2197;</a>
+      </div>
+    </div>
+    <div class="footer-col">
+      <h4>Resources</h4>
+      <ul class="footer-links">
+        <li><a href="https://plugins.qgis.org/plugins/zero2cartolab/">QGIS Plugin Hub</a></li>
+        <li><a href="https://github.com/YusufEminoglu/zero2cartolab/releases">Releases</a></li>
+        <li><a href="https://github.com/YusufEminoglu/zero2cartolab/blob/main/CHANGELOG.md">Changelog</a></li>
+        <li><a href="https://github.com/YusufEminoglu/zero2cartolab/issues">Bug Reports</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Ecosystem</h4>
+      <ul class="footer-links">
+        <li><a href="https://github.com/YusufEminoglu/PlanX">PlanX</a></li>
+        <li><a href="https://github.com/YusufEminoglu/qgis_25d_styling">QGIS 2.5D Styling</a></li>
+        <li><a href="https://github.com/YusufEminoglu/planx_geostats">PlanX GeoStats</a></li>
+        <li><a href="https://github.com/YusufEminoglu/planx_datacube">DataCube Lab</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>&copy; 2026 Yusuf Emino&#287;lu &middot; Dokuz Eyl&uuml;l University</p>
+    <div style="display:flex;gap:0.75rem;align-items:center;">
+      <span class="license">GPL-3.0</span>
+      <span class="badge" style="background:rgba(148,163,184,0.08);border-color:rgba(148,163,184,0.2);color:#94a3b8;font-size:0.72rem;">QGIS 3.28 &ndash; 4.99</span>
+    </div>
+  </div>
+</footer>
 
-    function simulateCVD(hex, type) {
-      if (type === 'normal') return hex;
-      let r = parseInt(hex.slice(1, 3), 16);
-      let g = parseInt(hex.slice(3, 5), 16);
-      let b = parseInt(hex.slice(5, 7), 16);
-
-      if (type === 'deuteranopia') {
-        let nr = 0.625 * r + 0.375 * g;
-        let ng = 0.70 * r + 0.30 * g;
-        let nb = 0.30 * g + 0.70 * b;
-        return rgbToHex(nr, ng, nb);
-      } else if (type === 'protanopia') {
-        let nr = 0.56667 * r + 0.43333 * g;
-        let ng = 0.55833 * r + 0.44167 * g;
-        let nb = 0.24167 * g + 0.75833 * b;
-        return rgbToHex(nr, ng, nb);
-      } else if (type === 'tritanopia') {
-        let nr = 0.95 * r + 0.05 * g;
-        let ng = 0.43333 * g + 0.56667 * b;
-        let nb = 0.475 * g + 0.525 * b;
-        return rgbToHex(nr, ng, nb);
-      } else if (type === 'achromatopsia') {
-        let lum = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
-        return rgbToHex(lum, lum, lum);
-      }
-      return hex;
-    }
-
-    function rgbToHex(r, g, b) {
-      r = Math.min(255, Math.max(0, Math.round(r)));
-      g = Math.min(255, Math.max(0, Math.round(g)));
-      b = Math.min(255, Math.max(0, Math.round(b)));
-      return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
-    }
-
-    function renderMatrix() {
-      const pKey = document.getElementById('paletteSelect').value;
-      const cvdKey = document.getElementById('cvdSelect').value;
-      const matrix = palettes[pKey];
-      const display = document.getElementById('matrixDisplay');
-      display.innerHTML = '';
-
-      for (let r = 2; r >= 0; r--) {
-        for (let c = 0; c < 3; c++) {
-          const originalHex = matrix[r][c];
-          const finalHex = simulateCVD(originalHex, cvdKey);
-          const cell = document.createElement('div');
-          cell.className = 'matrix-cell';
-          cell.style.backgroundColor = finalHex;
-          cell.innerText = `${c+1},${r+1}`;
-          cell.title = `Swatch (${c+1}, ${r+1}): ${finalHex}`;
-          cell.onclick = () => alert(`Color (${c+1}, ${r+1}): ${finalHex} (Original: ${originalHex})`);
-          display.appendChild(cell);
-        }
-      }
-    }
-
-    document.getElementById('paletteSelect').addEventListener('change', renderMatrix);
-    document.getElementById('cvdSelect').addEventListener('change', renderMatrix);
-    renderMatrix();
-  </script>
 </body>
 </html>
