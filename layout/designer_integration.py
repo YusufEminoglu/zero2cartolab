@@ -327,7 +327,7 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
     lyt_tpl.addWidget(gb_quick_tpl)
     lyt_tpl.addStretch()
 
-    tabs.addTab(tab_tpl, _get_cartolab_icon("layout.png"), "Templates")
+    tabs.addTab(tab_tpl, "Templates")
 
     # -----------------------------------------------------------------
     # TAB 1: Canvas & Grid
@@ -791,7 +791,7 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
 
     lyt_dec.addStretch()
 
-    tabs.addTab(tab_dec, _get_cartolab_icon("bivariate.png"), "Decorators")
+    tabs.addTab(tab_dec, "Decorators")
 
     # -----------------------------------------------------------------
     # TAB 3: 3D Perspective & Quick Export
@@ -958,7 +958,7 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
     lyt_exp.addWidget(gb_exp)
     lyt_exp.addStretch()
 
-    tabs.addTab(tab_exp, _get_cartolab_icon("isometric.png"), "3D && Export")
+    tabs.addTab(tab_exp, "3D && Export")
 
     main_lyt.addWidget(tabs)
     dock.setWidget(container)
