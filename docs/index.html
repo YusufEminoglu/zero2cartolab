@@ -14,37 +14,44 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 
   <!-- MathJax 3 for LaTeX Rendering -->
-  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
   <script>
     window.MathJax = {
       tex: {
         inlineMath: [['$', '$'], ['\\(', '\\)']],
         displayMath: [['$$', '$$'], ['\\[', '\\]']],
-        tags: 'ams'
+        processEscapes: true
+      },
+      options: {
+        skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
       }
     };
   </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" id="MathJax-script" async></script>
 
   <style>
     :root {
-      --bg-dark: #090d16;
-      --bg-card: rgba(15, 23, 42, 0.75);
-      --bg-card-hover: rgba(30, 41, 59, 0.85);
-      --border-glow: rgba(56, 189, 248, 0.25);
-      --accent-cyan: #00f2fe;
-      --accent-blue: #4facfe;
-      --accent-purple: #8a2be2;
-      --accent-gold: #f59e0b;
-      --accent-rose: #f43f5e;
-      --accent-teal: #14b8a6;
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
-      --line: rgba(255, 255, 255, 0.08);
+      --bg-canvas: #f8fafc;
+      --bg-card: #ffffff;
+      --bg-card-subtle: #f1f5f9;
+      --border-color: #e2e8f0;
+      --border-focus: #0284c7;
+      --accent-cyan: #0284c7;
+      --accent-blue: #2563eb;
+      --accent-indigo: #4f46e5;
+      --accent-teal: #0d9488;
+      --accent-amber: #d97706;
+      --accent-rose: #e11d48;
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --text-light: #64748b;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 14px rgba(0,0,0,0.07);
+      --shadow-lg: 0 12px 30px rgba(0,0,0,0.09);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-      background-color: var(--bg-dark);
+      background-color: var(--bg-canvas);
       color: var(--text-main);
       line-height: 1.65;
       overflow-x: hidden;
@@ -53,38 +60,28 @@
       font-family: 'JetBrains Mono', monospace;
     }
     
-    /* Background grid & ambient glows */
+    /* Background subtle pattern */
     .bg-grid {
       background-image: 
-        linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-      background-size: 40px 40px;
+        linear-gradient(to right, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+      background-size: 32px 32px;
     }
-    .glow-orb {
-      position: absolute;
-      border-radius: 50%;
-      filter: blur(140px);
-      pointer-events: none;
-      z-index: 0;
-    }
-    .glow-1 { top: -120px; left: 8%; width: 520px; height: 520px; background: rgba(0, 242, 254, 0.14); }
-    .glow-2 { top: 600px; right: 4%; width: 480px; height: 480px; background: rgba(138, 43, 226, 0.16); }
-    .glow-3 { top: 2200px; left: 15%; width: 620px; height: 620px; background: rgba(244, 63, 94, 0.10); }
-    .glow-4 { top: 4000px; right: 10%; width: 550px; height: 550px; background: rgba(20, 184, 166, 0.12); }
 
     /* Navigation */
     header {
       position: sticky;
       top: 0;
       z-index: 50;
-      backdrop-filter: blur(18px);
-      background: rgba(9, 13, 22, 0.85);
-      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(16px);
+      background: rgba(255, 255, 255, 0.92);
+      border-bottom: 1px solid var(--border-color);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
     }
     .nav-container {
       max-width: 1320px;
       margin: 0 auto;
-      padding: 0.9rem 1.5rem;
+      padding: 0.85rem 1.5rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -94,9 +91,9 @@
       align-items: center;
       gap: 0.75rem;
       text-decoration: none;
-      color: #fff;
+      color: var(--text-main);
       font-weight: 800;
-      font-size: 1.3rem;
+      font-size: 1.28rem;
       letter-spacing: -0.5px;
     }
     .brand img {
@@ -117,7 +114,7 @@
       color: var(--text-muted);
       text-decoration: none;
       font-size: 0.92rem;
-      font-weight: 500;
+      font-weight: 600;
       transition: color 0.2s ease;
     }
     .nav-links a:hover {
@@ -129,9 +126,9 @@
       gap: 0.75rem;
     }
     .btn-nav-manual {
-      background: rgba(0, 242, 254, 0.12);
-      border: 1px solid rgba(0, 242, 254, 0.35);
-      color: var(--accent-cyan);
+      background: #e0f2fe;
+      border: 1px solid #bae6fd;
+      color: #0369a1;
       padding: 0.45rem 0.9rem;
       border-radius: 8px;
       font-size: 0.85rem;
@@ -140,12 +137,12 @@
       transition: all 0.2s ease;
     }
     .btn-nav-manual:hover {
-      background: rgba(0, 242, 254, 0.22);
-      box-shadow: 0 0 14px rgba(0, 242, 254, 0.3);
+      background: #bae6fd;
+      box-shadow: var(--shadow-sm);
     }
     .btn-github {
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: #0f172a;
+      border: 1px solid #0f172a;
       color: #fff;
       padding: 0.45rem 0.9rem;
       border-radius: 8px;
@@ -158,9 +155,8 @@
       transition: all 0.2s ease;
     }
     .btn-github:hover {
-      background: rgba(255, 255, 255, 0.15);
-      border-color: var(--accent-cyan);
-      box-shadow: 0 0 16px rgba(0, 242, 254, 0.2);
+      background: #1e293b;
+      box-shadow: var(--shadow-sm);
     }
 
     /* Container */
@@ -174,7 +170,7 @@
 
     /* Hero Section */
     .hero {
-      padding: 4.5rem 0 3.5rem;
+      padding: 4.5rem 0 3rem;
       text-align: center;
       position: relative;
     }
@@ -182,27 +178,25 @@
       display: inline-flex;
       align-items: center;
       gap: 0.5rem;
-      background: rgba(0, 242, 254, 0.1);
-      border: 1px solid rgba(0, 242, 254, 0.3);
-      color: var(--accent-cyan);
-      padding: 0.35rem 1rem;
+      background: #e0f2fe;
+      border: 1px solid #bae6fd;
+      color: #0369a1;
+      padding: 0.35rem 1.1rem;
       border-radius: 9999px;
       font-size: 0.85rem;
-      font-weight: 600;
+      font-weight: 700;
       margin-bottom: 1.5rem;
     }
     .hero-title {
-      font-size: 3.5rem;
+      font-size: 3.4rem;
       font-weight: 800;
-      line-height: 1.15;
+      line-height: 1.18;
       letter-spacing: -1.5px;
       margin-bottom: 1.25rem;
-      background: linear-gradient(135deg, #ffffff 30%, #a5f3fc 70%, #818cf8 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      color: #0f172a;
     }
     @media (max-width: 768px) {
-      .hero-title { font-size: 2.3rem; }
+      .hero-title { font-size: 2.2rem; }
     }
     .hero-subtitle {
       max-width: 840px;
@@ -220,34 +214,36 @@
       margin-bottom: 3.5rem;
     }
     .btn-primary {
-      background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
-      color: #000;
+      background: #0284c7;
+      color: #fff;
       padding: 0.85rem 1.85rem;
       border-radius: 10px;
       font-weight: 700;
       font-size: 1rem;
       text-decoration: none;
-      box-shadow: 0 10px 25px rgba(0, 242, 254, 0.35);
-      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+      transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
     }
     .btn-primary:hover {
+      background: #0369a1;
       transform: translateY(-2px);
-      box-shadow: 0 14px 30px rgba(0, 242, 254, 0.5);
+      box-shadow: 0 8px 22px rgba(2, 132, 199, 0.45);
     }
     .btn-secondary {
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      color: #fff;
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
       padding: 0.85rem 1.75rem;
       border-radius: 10px;
       font-weight: 600;
       font-size: 1rem;
       text-decoration: none;
+      box-shadow: var(--shadow-sm);
       transition: background 0.2s, border-color 0.2s;
     }
     .btn-secondary:hover {
-      background: rgba(255, 255, 255, 0.12);
-      border-color: rgba(255, 255, 255, 0.3);
+      background: #f8fafc;
+      border-color: #cbd5e1;
     }
 
     /* Stats Grid */
@@ -259,38 +255,36 @@
     }
     .stat-card {
       background: var(--bg-card);
-      border: 1px solid var(--line);
+      border: 1px solid var(--border-color);
       border-radius: 14px;
       padding: 1.5rem;
       text-align: center;
-      backdrop-filter: blur(12px);
-      transition: transform 0.2s, border-color 0.2s;
+      box-shadow: var(--shadow-sm);
+      transition: transform 0.2s, box-shadow 0.2s;
     }
     .stat-card:hover {
-      transform: translateY(-4px);
-      border-color: var(--border-glow);
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-md);
     }
     .stat-num {
       font-size: 2.3rem;
       font-weight: 800;
-      background: linear-gradient(135deg, #00f2fe, #38bdf8);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      color: #0284c7;
       margin-bottom: 0.25rem;
     }
     .stat-label {
       color: var(--text-muted);
       font-size: 0.88rem;
-      font-weight: 500;
+      font-weight: 600;
     }
 
     /* Section Headers */
     .section-header {
       text-align: center;
-      margin-bottom: 3.5rem;
+      margin-bottom: 3rem;
     }
     .section-tag {
-      color: var(--accent-cyan);
+      color: #0284c7;
       font-size: 0.85rem;
       font-weight: 700;
       letter-spacing: 1.5px;
@@ -298,15 +292,16 @@
       margin-bottom: 0.5rem;
     }
     .section-title {
-      font-size: 2.4rem;
+      font-size: 2.3rem;
       font-weight: 800;
       letter-spacing: -1px;
-      margin-bottom: 1rem;
+      margin-bottom: 0.85rem;
+      color: #0f172a;
     }
     .section-desc {
       color: var(--text-muted);
-      font-size: 1.1rem;
-      max-width: 720px;
+      font-size: 1.08rem;
+      max-width: 740px;
       margin: 0 auto;
     }
 
@@ -316,11 +311,10 @@
     }
     .video-card {
       background: var(--bg-card);
-      border: 1px solid var(--line);
+      border: 1px solid var(--border-color);
       border-radius: 20px;
-      padding: 1.5rem;
-      backdrop-filter: blur(14px);
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+      padding: 1.25rem;
+      box-shadow: var(--shadow-md);
     }
     .video-wrap {
       position: relative;
@@ -347,21 +341,22 @@
       margin-bottom: 2.5rem;
     }
     .filter-btn {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: #ffffff;
+      border: 1px solid var(--border-color);
       color: var(--text-muted);
-      padding: 0.55rem 1.2rem;
+      padding: 0.55rem 1.25rem;
       border-radius: 9999px;
       font-size: 0.9rem;
       font-weight: 600;
       cursor: pointer;
+      box-shadow: var(--shadow-sm);
       transition: all 0.2s ease;
     }
     .filter-btn.active, .filter-btn:hover {
-      background: var(--accent-cyan);
-      color: #000;
-      border-color: var(--accent-cyan);
-      box-shadow: 0 4px 15px rgba(0, 242, 254, 0.3);
+      background: #0284c7;
+      color: #fff;
+      border-color: #0284c7;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
     }
     .gallery-grid {
       display: grid;
@@ -371,25 +366,25 @@
     }
     .gallery-card {
       background: var(--bg-card);
-      border: 1px solid var(--line);
+      border: 1px solid var(--border-color);
       border-radius: 16px;
       overflow: hidden;
       display: flex;
       flex-direction: column;
-      backdrop-filter: blur(12px);
-      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s;
+      box-shadow: var(--shadow-sm);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s;
       cursor: pointer;
     }
     .gallery-card:hover {
-      transform: translateY(-6px);
-      border-color: var(--accent-cyan);
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+      transform: translateY(-5px);
+      box-shadow: var(--shadow-lg);
+      border-color: #cbd5e1;
     }
     .gallery-img-wrap {
       position: relative;
       width: 100%;
       height: 240px;
-      background: #0f172a;
+      background: #f1f5f9;
       overflow: hidden;
     }
     .gallery-img-wrap img {
@@ -406,9 +401,8 @@
       position: absolute;
       top: 12px;
       right: 12px;
-      background: rgba(9, 13, 22, 0.85);
+      background: rgba(15, 23, 42, 0.88);
       backdrop-filter: blur(8px);
-      border: 1px solid rgba(255, 255, 255, 0.15);
       color: #fff;
       padding: 0.25rem 0.65rem;
       border-radius: 6px;
@@ -426,12 +420,12 @@
       font-size: 1.15rem;
       font-weight: 700;
       margin-bottom: 0.4rem;
-      color: #fff;
+      color: #0f172a;
     }
     .gallery-desc {
       color: var(--text-muted);
       font-size: 0.88rem;
-      line-height: 1.5;
+      line-height: 1.55;
       margin-bottom: 1rem;
       flex-grow: 1;
     }
@@ -439,10 +433,10 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      border-top: 1px solid var(--line);
+      border-top: 1px solid var(--border-color);
       padding-top: 0.9rem;
-      font-size: 0.8rem;
-      color: #64748b;
+      font-size: 0.82rem;
+      color: var(--text-light);
     }
     .gallery-meta span {
       display: flex;
@@ -452,12 +446,12 @@
 
     /* Simulator Section */
     .simulator-section {
-      background: linear-gradient(180deg, rgba(15, 23, 42, 0.6) 0%, rgba(9, 13, 22, 0.95) 100%);
-      border: 1px solid var(--line);
+      background: #ffffff;
+      border: 1px solid var(--border-color);
       border-radius: 24px;
       padding: 3rem;
       margin-bottom: 5rem;
-      position: relative;
+      box-shadow: var(--shadow-md);
     }
     .sim-grid {
       display: grid;
@@ -476,9 +470,9 @@
       height: 280px;
       margin: 0 auto;
       padding: 12px;
-      background: rgba(0, 0, 0, 0.4);
+      background: #f8fafc;
       border-radius: 16px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 1px solid var(--border-color);
     }
     .matrix-cell {
       border-radius: 8px;
@@ -487,15 +481,15 @@
       justify-content: center;
       font-size: 0.75rem;
       font-weight: 700;
-      color: rgba(255, 255, 255, 0.9);
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
-      transition: all 0.3s ease;
+      color: rgba(255, 255, 255, 0.95);
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+      transition: all 0.2s ease;
       cursor: pointer;
     }
     .matrix-cell:hover {
       transform: scale(1.08);
       z-index: 10;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
     }
 
     /* Feature Cards */
@@ -507,32 +501,35 @@
     }
     .feature-card {
       background: var(--bg-card);
-      border: 1px solid var(--line);
+      border: 1px solid var(--border-color);
       border-radius: 16px;
       padding: 2rem;
-      transition: transform 0.2s, border-color 0.2s;
+      box-shadow: var(--shadow-sm);
+      transition: transform 0.2s, box-shadow 0.2s;
     }
     .feature-card:hover {
-      transform: translateY(-4px);
-      border-color: var(--accent-cyan);
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-md);
+      border-color: #cbd5e1;
     }
     .feature-icon {
       width: 48px;
       height: 48px;
       border-radius: 12px;
-      background: rgba(0, 242, 254, 0.1);
-      color: var(--accent-cyan);
+      background: #e0f2fe;
+      color: #0369a1;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 1.5rem;
       margin-bottom: 1.25rem;
-      border: 1px solid rgba(0, 242, 254, 0.25);
+      border: 1px solid #bae6fd;
     }
     .feature-title {
-      font-size: 1.25rem;
+      font-size: 1.22rem;
       font-weight: 700;
-      margin-bottom: 0.75rem;
+      margin-bottom: 0.65rem;
+      color: #0f172a;
     }
     .feature-desc {
       color: var(--text-muted);
@@ -555,16 +552,17 @@
       min-width: 280px;
       padding: 0.85rem 1.25rem;
       border-radius: 12px;
-      background: rgba(15, 23, 42, 0.9);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      color: #fff;
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      color: #0f172a;
       font-size: 0.95rem;
       outline: none;
-      transition: border-color 0.2s;
+      box-shadow: var(--shadow-sm);
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
     .algo-search-input:focus {
-      border-color: var(--accent-cyan);
-      box-shadow: 0 0 0 3px rgba(0, 242, 254, 0.15);
+      border-color: #0284c7;
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
     }
     .algo-filter-pills {
       display: flex;
@@ -572,34 +570,36 @@
       flex-wrap: wrap;
     }
     .algo-pill {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: #ffffff;
+      border: 1px solid var(--border-color);
       color: var(--text-muted);
       padding: 0.5rem 1rem;
       border-radius: 9999px;
-      font-size: 0.82rem;
+      font-size: 0.84rem;
       font-weight: 600;
       cursor: pointer;
+      box-shadow: var(--shadow-sm);
       transition: all 0.2s ease;
     }
     .algo-pill.active, .algo-pill:hover {
-      background: var(--accent-cyan);
-      color: #000;
-      border-color: var(--accent-cyan);
+      background: #0284c7;
+      color: #fff;
+      border-color: #0284c7;
     }
 
-    /* Accordion Item */
+    /* Algorithm Card (Open by default) */
     .algo-item {
       background: var(--bg-card);
-      border: 1px solid var(--line);
+      border: 1px solid var(--border-color);
       border-radius: 16px;
-      margin-bottom: 1.25rem;
+      margin-bottom: 1.5rem;
       overflow: hidden;
+      box-shadow: var(--shadow-sm);
       transition: border-color 0.2s, box-shadow 0.2s;
     }
-    .algo-item.active {
-      border-color: rgba(0, 242, 254, 0.4);
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    .algo-item:hover {
+      border-color: #cbd5e1;
+      box-shadow: var(--shadow-md);
     }
     .algo-header {
       padding: 1.25rem 1.75rem;
@@ -608,11 +608,12 @@
       justify-content: space-between;
       cursor: pointer;
       user-select: none;
-      background: rgba(255, 255, 255, 0.02);
+      background: #f8fafc;
+      border-bottom: 1px solid var(--border-color);
       transition: background 0.2s;
     }
     .algo-header:hover {
-      background: rgba(255, 255, 255, 0.05);
+      background: #f1f5f9;
     }
     .algo-header-left {
       display: flex;
@@ -621,48 +622,46 @@
       flex-wrap: wrap;
     }
     .algo-tag {
-      font-size: 0.72rem;
+      font-size: 0.75rem;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.06em;
       font-weight: 700;
-      padding: 0.2rem 0.6rem;
+      padding: 0.25rem 0.65rem;
       border-radius: 6px;
-      background: rgba(245, 158, 11, 0.12);
-      color: var(--accent-gold);
-      border: 1px solid rgba(245, 158, 11, 0.3);
+      background: #fef3c7;
+      color: #b45309;
+      border: 1px solid #fde68a;
     }
     .algo-title-text {
-      font-size: 1.15rem;
+      font-size: 1.18rem;
       font-weight: 700;
-      color: #fff;
+      color: #0f172a;
     }
     .algo-id-badge {
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.8rem;
-      color: var(--accent-cyan);
-      background: rgba(0, 242, 254, 0.08);
+      color: #0369a1;
+      background: #e0f2fe;
       padding: 0.2rem 0.6rem;
       border-radius: 6px;
-      border: 1px solid rgba(0, 242, 254, 0.2);
+      border: 1px solid #bae6fd;
     }
     .algo-arrow {
       font-size: 1.2rem;
-      color: var(--text-muted);
-      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      color: var(--text-light);
+      transition: transform 0.3s ease;
     }
-    .algo-item.active .algo-arrow {
-      transform: rotate(180deg);
-      color: var(--accent-cyan);
+    .algo-item.collapsed .algo-arrow {
+      transform: rotate(-90deg);
+    }
+    .algo-item.collapsed .algo-body {
+      display: none;
     }
 
     .algo-body {
-      display: none;
-      padding: 1.75rem;
-      border-top: 1px solid var(--line);
-      background: rgba(9, 13, 22, 0.6);
-    }
-    .algo-item.active .algo-body {
       display: block;
+      padding: 1.75rem;
+      background: #ffffff;
     }
 
     .algo-subheading {
@@ -670,8 +669,8 @@
       text-transform: uppercase;
       letter-spacing: 1px;
       font-weight: 700;
-      color: var(--accent-cyan);
-      margin: 1.25rem 0 0.5rem;
+      color: #0284c7;
+      margin: 1.4rem 0 0.6rem;
       display: flex;
       align-items: center;
       gap: 0.5rem;
@@ -679,12 +678,14 @@
     .algo-subheading:first-child { margin-top: 0; }
 
     .algo-math-box {
-      background: rgba(0, 0, 0, 0.45);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: #f8fafc;
+      border: 1px solid var(--border-color);
       border-radius: 10px;
       padding: 1.25rem 1.5rem;
       margin: 0.75rem 0 1.25rem;
       overflow-x: auto;
+      font-size: 1.05rem;
+      color: #0f172a;
     }
     .algo-table {
       width: 100%;
@@ -693,19 +694,19 @@
       font-size: 0.88rem;
     }
     .algo-table th, .algo-table td {
-      border: 1px solid var(--line);
+      border: 1px solid var(--border-color);
       padding: 0.65rem 0.9rem;
       text-align: left;
       vertical-align: top;
     }
     .algo-table th {
-      background: rgba(0, 242, 254, 0.08);
-      color: var(--accent-cyan);
+      background: #f1f5f9;
+      color: #0f172a;
       font-weight: 700;
     }
     .algo-table td code {
-      color: #38bdf8;
-      background: rgba(56, 189, 248, 0.1);
+      color: #0369a1;
+      background: #e0f2fe;
       padding: 0.15rem 0.4rem;
       border-radius: 4px;
       font-size: 0.8rem;
@@ -716,20 +717,21 @@
       margin: 0.75rem 0 1.25rem;
     }
     .code-block {
-      background: rgba(0, 0, 0, 0.6);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: #0f172a;
+      border: 1px solid #1e293b;
       border-radius: 10px;
       padding: 1.25rem;
       font-size: 0.85rem;
       color: #38bdf8;
       overflow-x: auto;
+      line-height: 1.5;
     }
     .btn-copy {
       position: absolute;
       top: 10px;
       right: 10px;
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.25);
       color: #fff;
       padding: 0.3rem 0.65rem;
       border-radius: 6px;
@@ -739,9 +741,9 @@
       transition: all 0.2s;
     }
     .btn-copy:hover {
-      background: var(--accent-cyan);
-      color: #000;
-      border-color: var(--accent-cyan);
+      background: #0284c7;
+      color: #fff;
+      border-color: #0284c7;
     }
 
     .citation-list {
@@ -749,11 +751,11 @@
       margin-top: 0.5rem;
     }
     .citation-item {
-      font-size: 0.85rem;
+      font-size: 0.88rem;
       color: var(--text-muted);
       padding: 0.4rem 0 0.4rem 1.5rem;
       position: relative;
-      line-height: 1.5;
+      line-height: 1.55;
     }
     .citation-item::before {
       content: "📖";
@@ -762,8 +764,9 @@
       font-size: 0.85rem;
     }
     .citation-item a {
-      color: var(--accent-cyan);
+      color: #0284c7;
       text-decoration: none;
+      font-weight: 600;
     }
     .citation-item a:hover {
       text-decoration: underline;
@@ -772,10 +775,11 @@
     /* Architecture & Testing Section */
     .arch-section {
       background: var(--bg-card);
-      border: 1px solid var(--line);
+      border: 1px solid var(--border-color);
       border-radius: 20px;
       padding: 2.5rem;
       margin-bottom: 5rem;
+      box-shadow: var(--shadow-sm);
     }
     .arch-grid {
       display: grid;
@@ -784,13 +788,13 @@
       margin-top: 2rem;
     }
     .arch-card {
-      background: rgba(0, 0, 0, 0.35);
-      border: 1px solid var(--line);
+      background: #f8fafc;
+      border: 1px solid var(--border-color);
       border-radius: 12px;
       padding: 1.5rem;
     }
     .arch-card h4 {
-      color: var(--accent-cyan);
+      color: #0369a1;
       font-size: 1.05rem;
       font-weight: 700;
       margin-bottom: 0.5rem;
@@ -801,17 +805,18 @@
     .arch-card p {
       font-size: 0.88rem;
       color: var(--text-muted);
-      line-height: 1.5;
+      line-height: 1.55;
     }
 
     /* Academic BibTeX Section */
     .bibtex-card {
-      background: rgba(0, 0, 0, 0.5);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: #0f172a;
+      border: 1px solid #1e293b;
       border-radius: 14px;
       padding: 1.5rem;
       position: relative;
       margin-bottom: 5rem;
+      box-shadow: var(--shadow-md);
     }
 
     /* Modal Lightbox */
@@ -820,7 +825,7 @@
       position: fixed;
       inset: 0;
       z-index: 100;
-      background: rgba(0, 0, 0, 0.88);
+      background: rgba(15, 23, 42, 0.85);
       backdrop-filter: blur(12px);
       align-items: center;
       justify-content: center;
@@ -830,16 +835,16 @@
     .modal-content {
       max-width: 1000px;
       width: 100%;
-      background: #0f172a;
-      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: #ffffff;
+      border: 1px solid var(--border-color);
       border-radius: 20px;
       overflow: hidden;
-      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8);
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.25);
       position: relative;
     }
     .modal-img-wrap {
       max-height: 65vh;
-      background: #020617;
+      background: #0f172a;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -860,7 +865,7 @@
       width: 36px;
       height: 36px;
       border-radius: 50%;
-      background: rgba(0, 0, 0, 0.6);
+      background: rgba(15, 23, 42, 0.7);
       color: #fff;
       border: 1px solid rgba(255, 255, 255, 0.2);
       display: flex;
@@ -870,12 +875,12 @@
       cursor: pointer;
       transition: background 0.2s;
     }
-    .modal-close:hover { background: #f43f5e; }
+    .modal-close:hover { background: #e11d48; }
 
     /* Footer */
     footer {
-      border-top: 1px solid var(--line);
-      background: rgba(9, 13, 22, 0.98);
+      border-top: 1px solid var(--border-color);
+      background: #ffffff;
       padding: 4rem 0 2.5rem;
     }
     .footer-grid {
@@ -888,7 +893,7 @@
       .footer-grid { grid-template-columns: 1fr; }
     }
     .footer-col h4 {
-      color: #fff;
+      color: #0f172a;
       font-size: 0.95rem;
       font-weight: 700;
       margin-bottom: 1rem;
@@ -909,22 +914,17 @@
       color: var(--accent-cyan);
     }
     .footer-bottom {
-      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      border-top: 1px solid var(--border-color);
       padding-top: 1.5rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      color: #64748b;
+      color: var(--text-light);
       font-size: 0.85rem;
     }
   </style>
 </head>
 <body class="bg-grid">
-
-  <div class="glow-orb glow-1"></div>
-  <div class="glow-orb glow-2"></div>
-  <div class="glow-orb glow-3"></div>
-  <div class="glow-orb glow-4"></div>
 
   <!-- Header Navigation -->
   <header>
@@ -1223,7 +1223,7 @@
           <div class="matrix-display" id="matrixDisplay">
             <!-- 9 Cells generated by JS -->
           </div>
-          <div style="text-align: center; margin-top: 1rem; color: var(--text-muted); font-size: 0.85rem;">
+          <div style="text-align: center; margin-top: 1rem; color: var(--text-light); font-size: 0.85rem; font-weight: 600;">
             Interactive 3×3 Matrix • Click any swatch to inspect color hex
           </div>
         </div>
@@ -1231,8 +1231,8 @@
         <!-- Controls -->
         <div>
           <div style="margin-bottom: 1.5rem;">
-            <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; font-size: 0.95rem;">Select Cartographic Palette:</label>
-            <select id="paletteSelect" style="width: 100%; padding: 0.75rem; border-radius: 8px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: #fff; font-size: 0.95rem; font-weight: 600;">
+            <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; font-size: 0.95rem; color: #0f172a;">Select Cartographic Palette:</label>
+            <select id="paletteSelect" style="width: 100%; padding: 0.75rem; border-radius: 8px; background: #ffffff; border: 1px solid var(--border-color); color: #0f172a; font-size: 0.95rem; font-weight: 600; box-shadow: var(--shadow-sm);">
               <option value="pink_blue">Pink — Blue (High Contrast Bivariate)</option>
               <option value="purple_green">Purple — Green (CVD Friendly)</option>
               <option value="orange_cyan">Orange — Cyan (Thermal vs Hydro)</option>
@@ -1241,8 +1241,8 @@
           </div>
 
           <div style="margin-bottom: 1.5rem;">
-            <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; font-size: 0.95rem;">Colorblind Vision Simulation (CVD):</label>
-            <select id="cvdSelect" style="width: 100%; padding: 0.75rem; border-radius: 8px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: #fff; font-size: 0.95rem; font-weight: 600;">
+            <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; font-size: 0.95rem; color: #0f172a;">Colorblind Vision Simulation (CVD):</label>
+            <select id="cvdSelect" style="width: 100%; padding: 0.75rem; border-radius: 8px; background: #ffffff; border: 1px solid var(--border-color); color: #0f172a; font-size: 0.95rem; font-weight: 600; box-shadow: var(--shadow-sm);">
               <option value="normal">Normal Vision (Trifocal)</option>
               <option value="deuteranopia">Deuteranopia (Green-Blind ~6% Males)</option>
               <option value="protanopia">Protanopia (Red-Blind ~2% Males)</option>
@@ -1251,14 +1251,14 @@
             </select>
           </div>
 
-          <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.25rem;">
+          <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem;">
             <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-              <span style="color: var(--text-muted); font-size: 0.88rem;">Corner Contrast Ratio (Luminance):</span>
-              <span id="contrastScore" style="color: #4ade80; font-weight: 700; font-size: 0.95rem;">14.2 : 1</span>
+              <span style="color: var(--text-muted); font-size: 0.88rem; font-weight: 600;">Corner Contrast Ratio (Luminance):</span>
+              <span id="contrastScore" style="color: #16a34a; font-weight: 800; font-size: 1rem;">14.2 : 1</span>
             </div>
             <div style="display: flex; justify-content: space-between;">
-              <span style="color: var(--text-muted); font-size: 0.88rem;">WCAG 2.1 Compliance:</span>
-              <span id="wcagBadge" style="background: #166534; color: #bbf7d0; padding: 0.15rem 0.6rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700;">AAA PASS</span>
+              <span style="color: var(--text-muted); font-size: 0.88rem; font-weight: 600;">WCAG 2.1 Compliance:</span>
+              <span id="wcagBadge" style="background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; padding: 0.2rem 0.65rem; border-radius: 6px; font-size: 0.75rem; font-weight: 800;">AAA PASS</span>
             </div>
           </div>
         </div>
@@ -1314,7 +1314,7 @@
       <div class="section-tag">Interactive Academic & Technical Reference</div>
       <h2 class="section-title">14 Processing Algorithms</h2>
       <p class="section-desc">
-        Complete mathematical derivations, theoretical background, parameter definitions, copyable PyQGIS code, and peer-reviewed literature citations.
+        All algorithms are open and expanded by default. Includes complete mathematical derivations, parameter definitions, copyable PyQGIS code, and peer-reviewed literature citations.
       </p>
     </div>
 
@@ -1331,18 +1331,18 @@
       </div>
     </div>
 
-    <!-- Algorithm Accordion List -->
+    <!-- Algorithm Accordion List (ALL OPEN BY DEFAULT) -->
     <div id="algoAccordionList">
 
       <!-- 1. Geometric Interval Classification -->
-      <div class="algo-item active" data-category="Classification" data-search="geometric interval classification gic head tail breaks fisher jenks natural breaks skew power law log normal">
+      <div class="algo-item" data-category="Classification" data-search="geometric interval classification gic head tail breaks fisher jenks natural breaks skew power law log normal">
         <div class="algo-header" onclick="toggleAlgo(this)">
           <div class="algo-header-left">
             <span class="algo-tag">Classification</span>
             <span class="algo-title-text">1. Advanced Classification (GIC / Head-Tail / Fisher-Jenks)</span>
             <span class="algo-id-badge">zero2cartolab:geometric_interval_classification</span>
           </div>
-          <div class="algo-arrow">▼</div>
+          <div class="algo-arrow">▲</div>
         </div>
         <div class="algo-body">
           <div class="algo-subheading">📐 Theoretical Formulation</div>
@@ -1352,10 +1352,10 @@
           </p>
           <div class="algo-math-box">
             $$C_k = a \cdot r^k, \quad k \in \{0, 1, \dots, K\}$$
-            $$	ext{Objective:} \quad \min_{r} \sum_{k=1}^{K} \left( f_k - rac{n}{K} ight)^2$$
+            $$\text{Objective:} \quad \min_{r} \sum_{k=1}^{K} \left( f_k - \frac{n}{K} \right)^2$$
           </div>
           <p>
-            <strong>Head/Tail Breaks</strong> (Jiang, 2013) recursively partitions heavy-tailed data at the arithmetic mean $\mu_i$, retaining values where $x > \mu_i$ until the head proportion $\ge 40\%$. 
+            <strong>Head/Tail Breaks</strong> (Jiang, 2013) recursively partitions heavy-tailed data at the arithmetic mean $\mu$, retaining values where $x > \mu$ until the head proportion $\ge 40\%$. 
             <strong>Fisher-Jenks</strong> minimizes the total within-class variance (Sum of Squared Deviations, $SSDW$).
           </p>
 
@@ -1405,16 +1405,16 @@ QgsProject.instance().addMapLayer(result['OUTPUT'])</pre>
             <span class="algo-title-text">2. Bivariate Choropleth Mapping</span>
             <span class="algo-id-badge">zero2cartolab:bivariate_choropleth</span>
           </div>
-          <div class="algo-arrow">▼</div>
+          <div class="algo-arrow">▲</div>
         </div>
         <div class="algo-body">
           <div class="algo-subheading">📐 Theoretical Formulation</div>
           <p>
-            Encodes two continuous spatial variables into an $N 	imes N$ matrix ($N \in \{3, 4\}$) by classifying each variable independently and mapping class coordinates $(i, j)$ to an interpolated RGB color:
+            Encodes two continuous spatial variables into an $N \times N$ matrix ($N \in \{3, 4\}$) by classifying each variable independently and mapping class coordinates $(i, j)$ to an interpolated RGB color:
           </p>
           <div class="algo-math-box">
             $$\mathbf{C}(u, v) = (1-u)(1-v)\mathbf{C}_{00} + u(1-v)\mathbf{C}_{10} + (1-u)v\mathbf{C}_{01} + uv\mathbf{C}_{11}$$
-            $$	ext{where } u = rac{i-1}{N-1}, \quad v = rac{j-1}{N-1}, \quad i,j \in \{1, \dots, N\}$$
+            $$\text{where } u = \frac{i-1}{N-1}, \quad v = \frac{j-1}{N-1}, \quad i,j \in \{1, \dots, N\}$$
           </div>
 
           <div class="algo-subheading">⚙️ Algorithm Parameters</div>
@@ -1426,7 +1426,7 @@ QgsProject.instance().addMapLayer(result['OUTPUT'])</pre>
               <tr><td><code>INPUT</code></td><td>Vector Layer</td><td>&mdash;</td><td>Source polygon layer.</td></tr>
               <tr><td><code>FIELD_X</code></td><td>Field</td><td>&mdash;</td><td>First numeric variable (horizontal axis).</td></tr>
               <tr><td><code>FIELD_Y</code></td><td>Field</td><td>&mdash;</td><td>Second numeric variable (vertical axis).</td></tr>
-              <tr><td><code>MATRIX_SIZE</code></td><td>Integer (3 or 4)</td><td>3</td><td>Matrix dimension ($3	imes3$ or $4	imes4$).</td></tr>
+              <tr><td><code>MATRIX_SIZE</code></td><td>Integer (3 or 4)</td><td>3</td><td>Matrix dimension ($3\times3$ or $4\times4$).</td></tr>
               <tr><td><code>PALETTE_PRESET</code></td><td>Enum</td><td>0</td><td>Color scheme (Pink-Blue, Purple-Green, Orange-Cyan, etc.).</td></tr>
               <tr><td><code>OUTPUT</code></td><td>Vector Layer</td><td>[Create Temporary]</td><td>Output layer with <code>bivar_x</code>, <code>bivar_y</code>, <code>bivar_class</code>.</td></tr>
             </tbody>
@@ -1466,7 +1466,7 @@ QgsProject.instance().addMapLayer(res['OUTPUT'])</pre>
             <span class="algo-title-text">3. Standalone Bivariate Matrix Generator</span>
             <span class="algo-id-badge">zero2cartolab:bivariate_matrix_export</span>
           </div>
-          <div class="algo-arrow">▼</div>
+          <div class="algo-arrow">▲</div>
         </div>
         <div class="algo-body">
           <div class="algo-subheading">📐 Theoretical Formulation</div>
@@ -1513,7 +1513,7 @@ processing.run('zero2cartolab:bivariate_matrix_export', params)</pre>
             <span class="algo-title-text">4. Continuous-Area Diffusion Cartogram</span>
             <span class="algo-id-badge">zero2cartolab:compute_cartogram</span>
           </div>
-          <div class="algo-arrow">▼</div>
+          <div class="algo-arrow">▲</div>
         </div>
         <div class="algo-body">
           <div class="algo-subheading">📐 Theoretical Formulation</div>
@@ -1521,10 +1521,8 @@ processing.run('zero2cartolab:bivariate_matrix_export', params)</pre>
             Implements the Gastner & Newman (2004) diffusion-based density-equalizing algorithm. Polygons deform following the continuous velocity field $\mathbf{v}(\mathbf{r}, t)$ generated by spatial density gradients:
           </p>
           <div class="algo-math-box">
-            $$
-abla^2 ho - rac{\partial ho}{\partial t} = 0, \quad \mathbf{v}(\mathbf{r}, t) = -rac{
-abla ho}{ho}$$
-            $$rac{d\mathbf{r}}{dt} = \mathbf{v}(\mathbf{r}, t), \quad \mathbf{r}(0) = \mathbf{r}_0$$
+            $$\nabla^2 \rho - \frac{\partial \rho}{\partial t} = 0, \qquad \mathbf{v}(\mathbf{r}, t) = -\frac{\nabla \rho}{\rho}$$
+            $$\frac{d\mathbf{r}}{dt} = \mathbf{v}(\mathbf{r}, t), \qquad \mathbf{r}(0) = \mathbf{r}_0$$
           </div>
 
           <div class="algo-subheading">⚙️ Algorithm Parameters</div>
@@ -1556,16 +1554,16 @@ abla ho}{ho}$$
             <span class="algo-title-text">5. Hole-Aware Dot-Density Symbology</span>
             <span class="algo-id-badge">zero2cartolab:dot_density</span>
           </div>
-          <div class="algo-arrow">▼</div>
+          <div class="algo-arrow">▲</div>
         </div>
         <div class="algo-body">
           <div class="algo-subheading">📐 Theoretical Formulation</div>
           <p>
-            Scatters $N = \lfloor V_i / 	ext{DotValue} floor$ discrete point features inside each polygon $P_i$. 
+            Scatters $N = \lfloor V_i / \text{DotValue} \rfloor$ discrete point features inside each polygon $P_i$. 
             Uses seeded rejection sampling within bounding boxes while respecting interior holes and multi-polygon boundaries.
           </p>
           <div class="algo-math-box">
-            $$N_i = \mathrm{round}\left(rac{V_i}{	ext{DOT\_VALUE}}ight), \quad p_k \in P_i \setminus igcup_{j} H_{i,j}$$
+            $$N_i = \mathrm{round}\left(\frac{V_i}{\text{DOT\_VALUE}}\right), \qquad p_k \in P_i \setminus \bigcup_{j} H_{i,j}$$
           </div>
 
           <div class="algo-subheading">⚙️ Algorithm Parameters</div>
@@ -1592,7 +1590,7 @@ abla ho}{ho}$$
             <span class="algo-title-text">6. Hexagonal Binning & Spatial Aggregation</span>
             <span class="algo-id-badge">zero2cartolab:hexbin_aggregate</span>
           </div>
-          <div class="algo-arrow">▼</div>
+          <div class="algo-arrow">▲</div>
         </div>
         <div class="algo-body">
           <div class="algo-subheading">📐 Theoretical Formulation</div>
@@ -1600,8 +1598,8 @@ abla ho}{ho}$$
             Constructs a regular pointy-top hexagonal tessellation over the point extent and aggregates counts, sums, and averages using axial coordinate hashing $(q, r)$:
           </p>
           <div class="algo-math-box">
-            $$q = rac{\sqrt{3}/3 \cdot x - 1/3 \cdot y}{R}, \quad r = rac{2/3 \cdot y}{R}$$
-            $$	ext{Area}_{	ext{hex}} = rac{3\sqrt{3}}{2} R^2$$
+            $$q = \frac{\sqrt{3}/3 \cdot x - 1/3 \cdot y}{R}, \qquad r = \frac{2/3 \cdot y}{R}$$
+            $$\text{Area}_{\text{hex}} = \frac{3\sqrt{3}}{2} R^2$$
           </div>
         </div>
       </div>
@@ -1614,12 +1612,12 @@ abla ho}{ho}$$
             <span class="algo-title-text">7. Reference Graticule & Grid Generation</span>
             <span class="algo-id-badge">zero2cartolab:graticule_grid</span>
           </div>
-          <div class="algo-arrow">▼</div>
+          <div class="algo-arrow">▲</div>
         </div>
         <div class="algo-body">
           <div class="algo-subheading">📐 Theoretical Formulation</div>
           <p>
-            Generates clean projected or geographic grid lines across the extent with Heckbert nice-number intervals and formatted coordinate labels (e.g. $38^\circ 25' 	ext{N}$).
+            Generates clean projected or geographic grid lines across the extent with Heckbert nice-number intervals and formatted coordinate labels (e.g. $38^\circ 25' \text{N}$).
           </p>
         </div>
       </div>
@@ -1632,7 +1630,7 @@ abla ho}{ho}$$
             <span class="algo-title-text">8. Visual-Center Label Points (Polylabel)</span>
             <span class="algo-id-badge">zero2cartolab:label_points</span>
           </div>
-          <div class="algo-arrow">▼</div>
+          <div class="algo-arrow">▲</div>
         </div>
         <div class="algo-body">
           <div class="algo-subheading">📐 Theoretical Formulation</div>
@@ -1640,7 +1638,7 @@ abla ho}{ho}$$
             Calculates the Pole of Inaccessibility&mdash;the interior point furthest from any polygon boundary&mdash;using an iterative quadtree spatial search (Garcia-Castellanos & Lombardo, 2007):
           </p>
           <div class="algo-math-box">
-            $$p^* = rg\max_{p \in P} \min_{e \in \partial P} \|p - e\|$$
+            $$p^* = \arg\max_{p \in P} \min_{e \in \partial P} \|p - e\|$$
           </div>
         </div>
       </div>
@@ -1653,7 +1651,7 @@ abla ho}{ho}$$
             <span class="algo-title-text">9. Statistical Normalization & Location Quotient</span>
             <span class="algo-id-badge">zero2cartolab:normalize_field</span>
           </div>
-          <div class="algo-arrow">▼</div>
+          <div class="algo-arrow">▲</div>
         </div>
         <div class="algo-body">
           <div class="algo-subheading">📐 Theoretical Formulation</div>
@@ -1661,7 +1659,7 @@ abla ho}{ho}$$
             Provides 6 standard statistical transformations for comparative mapping:
           </p>
           <div class="algo-math-box">
-            $$z = rac{x - \mu}{\sigma}, \quad z_{	ext{robust}} = rac{x - 	ext{median}}{1.4826 \cdot 	ext{MAD}}, \quad 	ext{LQ} = rac{e_i / e_{	ext{total}}}{E_i / E_{	ext{total}}}$$
+            $$z = \frac{x - \mu}{\sigma}, \qquad z_{\text{robust}} = \frac{x - \text{median}}{1.4826 \cdot \text{MAD}}, \qquad \text{LQ} = \frac{e_i / e_{\text{total}}}{E_i / E_{\text{total}}}$$
           </div>
         </div>
       </div>
@@ -1674,7 +1672,7 @@ abla ho}{ho}$$
             <span class="algo-title-text">10. Flannery Perceptual Proportional Symbols</span>
             <span class="algo-id-badge">zero2cartolab:proportional_symbols</span>
           </div>
-          <div class="algo-arrow">▼</div>
+          <div class="algo-arrow">▲</div>
         </div>
         <div class="algo-body">
           <div class="algo-subheading">📐 Theoretical Formulation</div>
@@ -1682,7 +1680,7 @@ abla ho}{ho}$$
             Compensates for human underestimation of circular visual areas using Flannery's psychophysical exponent ($0.57$ instead of geometric $0.50$):
           </p>
           <div class="algo-math-box">
-            $$R_i = R_0 \cdot \left( rac{V_i}{V_0} ight)^{0.5716}$$
+            $$R_i = R_0 \cdot \left( \frac{V_i}{V_0} \right)^{0.5716}$$
           </div>
           <ul class="citation-list">
             <li class="citation-item">Flannery, J. J. (1971). <em>The relative effectiveness of standard and modified graduated circles in statistical distribution maps</em>. The Canadian Cartographer, 8(2), 96–109.</li>
@@ -1698,7 +1696,7 @@ abla ho}{ho}$$
             <span class="algo-title-text">11. Quick Style Thematic Symbology</span>
             <span class="algo-id-badge">zero2cartolab:quick_style</span>
           </div>
-          <div class="algo-arrow">▼</div>
+          <div class="algo-arrow">▲</div>
         </div>
         <div class="algo-body">
           <div class="algo-subheading">📐 Theoretical Formulation</div>
@@ -1716,7 +1714,7 @@ abla ho}{ho}$$
             <span class="algo-title-text">12. Joyplot Ridge-Line Elevation Profiles</span>
             <span class="algo-id-badge">zero2cartolab:ridge_map</span>
           </div>
-          <div class="algo-arrow">▼</div>
+          <div class="algo-arrow">▲</div>
         </div>
         <div class="algo-body">
           <div class="algo-subheading">📐 Theoretical Formulation</div>
@@ -1734,7 +1732,7 @@ abla ho}{ho}$$
             <span class="algo-title-text">13. Value-by-Alpha (VbA) Uncertainty Symbology</span>
             <span class="algo-id-badge">zero2cartolab:value_by_alpha</span>
           </div>
-          <div class="algo-arrow">▼</div>
+          <div class="algo-arrow">▲</div>
         </div>
         <div class="algo-body">
           <div class="algo-subheading">📐 Theoretical Formulation</div>
@@ -1742,7 +1740,7 @@ abla ho}{ho}$$
             Modulates the alpha (transparency) channel based on statistical uncertainty or sample size, preventing low-confidence estimates from dominating map visual hierarchy:
           </p>
           <div class="algo-math-box">
-            $$lpha_i = lpha_{\min} + (255 - lpha_{\min}) \cdot \left(rac{R_i - R_{\min}}{R_{\max} - R_{\min}}ight)^\gamma$$
+            $$\alpha_i = \alpha_{\min} + (255 - \alpha_{\min}) \cdot \left(\frac{R_i - R_{\min}}{R_{\max} - R_{\min}}\right)^\gamma$$
           </div>
         </div>
       </div>
@@ -1755,16 +1753,16 @@ abla ho}{ho}$$
             <span class="algo-title-text">14. Architectural 2.5D Building Extrusion</span>
             <span class="algo-id-badge">zero2cartolab:building_25d_style</span>
           </div>
-          <div class="algo-arrow">▼</div>
+          <div class="algo-arrow">▲</div>
         </div>
         <div class="algo-body">
           <div class="algo-subheading">📐 Theoretical Formulation</div>
           <p>
-            Calculates oblique roof offsets, stepped floor bands, and trigonometric wall shading based on solar azimuth $	heta_{	ext{sun}}$ and elevation angle $\phi$:
+            Calculates oblique roof offsets, stepped floor bands, and trigonometric wall shading based on solar azimuth $\theta_{\text{sun}}$ and elevation angle $\phi$:
           </p>
           <div class="algo-math-box">
-            $$\Delta x = H_i \cdot \cos(	heta_{	ext{view}}), \quad \Delta y = H_i \cdot \sin(	heta_{	ext{view}})$$
-            $$I_{	ext{wall}} = I_{	ext{ambient}} + I_{	ext{direct}} \cdot \max(0, \cos(	heta_{	ext{wall}} - 	heta_{	ext{sun}}))$$
+            $$\Delta x = H_i \cdot \cos(\theta_{\text{view}}), \qquad \Delta y = H_i \cdot \sin(\theta_{\text{view}})$$
+            $$I_{\text{wall}} = I_{\text{ambient}} + I_{\text{direct}} \cdot \max\left(0, \cos(\theta_{\text{wall}} - \theta_{\text{sun}})\right)$$
           </div>
         </div>
       </div>
@@ -1776,7 +1774,7 @@ abla ho}{ho}$$
   <section id="architecture" class="container arch-section">
     <div class="section-header" style="margin-bottom: 2rem;">
       <div class="section-tag">System Design</div>
-      <h2 class="section-title" style="font-size: 2.2rem;">Architectural Principles & Robustness</h2>
+      <h2 class="section-title" style="font-size: 2.1rem;">Architectural Principles & Robustness</h2>
       <p class="section-desc">Engineered for stability across both QGIS 3.x LTR and QGIS 4.x next-generation releases.</p>
     </div>
 
@@ -1830,7 +1828,7 @@ abla ho}{ho}$$
         <img id="modalImg" src="" alt="Enlarged Layout">
       </div>
       <div class="modal-body">
-        <h3 id="modalTitle" style="font-size: 1.3rem; font-weight: 700; margin-bottom: 0.4rem; color: #fff;"></h3>
+        <h3 id="modalTitle" style="font-size: 1.3rem; font-weight: 700; margin-bottom: 0.4rem; color: #0f172a;"></h3>
         <p id="modalDesc" style="color: var(--text-muted); font-size: 0.92rem;"></p>
       </div>
     </div>
@@ -1967,9 +1965,14 @@ abla ho}{ho}$$
       });
     });
 
+    // Toggle collapse on click
     function toggleAlgo(header) {
       const item = header.closest('.algo-item');
-      item.classList.toggle('active');
+      item.classList.toggle('collapsed');
+      const arrow = item.querySelector('.algo-arrow');
+      if (arrow) {
+        arrow.innerText = item.classList.contains('collapsed') ? '▼' : '▲';
+      }
     }
 
     function copyCode(btn) {
