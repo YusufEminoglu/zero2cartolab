@@ -121,7 +121,7 @@ Acceptance: `validate_plugin.py` VALID, no bare `%`, tags ≤ Hub limit, reads
 naturally (no keyword stuffing — the Hub review team penalises that).
 
 #### 0.2 First-run onboarding (`ui/onboarding.py` + hook in `main_plugin.py`)
-- On first load after install (QSettings flag `planx_cartolab/seen_welcome`),
+- On first load after install (QSettings flag `zero2cartolab/seen_welcome`),
   show a small welcome dialog: three buttons — **"Create a sample map"**,
   **"Open Dashboard"**, **"Rate CartoLab ⭐"**.
 - **"Create a sample map"** builds an in-memory demo polygon layer (a value

@@ -1,4 +1,4 @@
-# Changelog - PlanX CartoLab
+# Changelog - 02CartoLab
 
 ## [2.9.1] - 2026-08-20
 

@@ -4,13 +4,27 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>02CartoLab — Unified Cartographic Studio & Print Layout Automation for QGIS</title>
-  <meta name="description" content="Design publication-quality thematic maps and automated print layouts in QGIS: bivariate maps, 2.5D building extrusion, template gallery, colorblind accessibility inspector, and 14 Processing algorithms.">
+  <meta name="description" content="Comprehensive cartography suite and academic reference for QGIS: bivariate maps, 2.5D building extrusion, publication template gallery, colorblind accessibility inspector, and 14 Processing algorithms with mathematical formulations and literature citations.">
   <meta name="author" content="Yusuf Eminoglu">
   <link rel="icon" type="image/png" href="img/icon.png">
-  <!-- Fonts -->
+
+  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <!-- MathJax 3 for LaTeX Rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']],
+        tags: 'ams'
+      }
+    };
+  </script>
+
   <style>
     :root {
       --bg-dark: #090d16;
@@ -22,50 +36,53 @@
       --accent-purple: #8a2be2;
       --accent-gold: #f59e0b;
       --accent-rose: #f43f5e;
+      --accent-teal: #14b8a6;
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
+      --line: rgba(255, 255, 255, 0.08);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
       background-color: var(--bg-dark);
       color: var(--text-main);
-      line-height: 1.6;
+      line-height: 1.65;
       overflow-x: hidden;
     }
     code, pre {
       font-family: 'JetBrains Mono', monospace;
     }
     
-    /* Background grid & glows */
+    /* Background grid & ambient glows */
     .bg-grid {
       background-image: 
-        linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+        linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
       background-size: 40px 40px;
     }
     .glow-orb {
       position: absolute;
       border-radius: 50%;
-      filter: blur(120px);
+      filter: blur(140px);
       pointer-events: none;
       z-index: 0;
     }
-    .glow-1 { top: -100px; left: 10%; width: 500px; height: 500px; background: rgba(0, 242, 254, 0.15); }
-    .glow-2 { top: 400px; right: 5%; width: 450px; height: 450px; background: rgba(138, 43, 226, 0.18); }
-    .glow-3 { top: 1600px; left: 20%; width: 600px; height: 600px; background: rgba(244, 63, 94, 0.12); }
+    .glow-1 { top: -120px; left: 8%; width: 520px; height: 520px; background: rgba(0, 242, 254, 0.14); }
+    .glow-2 { top: 600px; right: 4%; width: 480px; height: 480px; background: rgba(138, 43, 226, 0.16); }
+    .glow-3 { top: 2200px; left: 15%; width: 620px; height: 620px; background: rgba(244, 63, 94, 0.10); }
+    .glow-4 { top: 4000px; right: 10%; width: 550px; height: 550px; background: rgba(20, 184, 166, 0.12); }
 
     /* Navigation */
     header {
       position: sticky;
       top: 0;
       z-index: 50;
-      backdrop-filter: blur(16px);
-      background: rgba(9, 13, 22, 0.82);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(18px);
+      background: rgba(9, 13, 22, 0.85);
+      border-bottom: 1px solid var(--line);
     }
     .nav-container {
-      max-width: 1280px;
+      max-width: 1320px;
       margin: 0 auto;
       padding: 0.9rem 1.5rem;
       display: flex;
@@ -90,8 +107,11 @@
     .nav-links {
       display: flex;
       align-items: center;
-      gap: 1.75rem;
+      gap: 1.6rem;
       list-style: none;
+    }
+    @media (max-width: 1024px) {
+      .nav-links { display: none; }
     }
     .nav-links a {
       color: var(--text-muted);
@@ -103,13 +123,33 @@
     .nav-links a:hover {
       color: var(--accent-cyan);
     }
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .btn-nav-manual {
+      background: rgba(0, 242, 254, 0.12);
+      border: 1px solid rgba(0, 242, 254, 0.35);
+      color: var(--accent-cyan);
+      padding: 0.45rem 0.9rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+    .btn-nav-manual:hover {
+      background: rgba(0, 242, 254, 0.22);
+      box-shadow: 0 0 14px rgba(0, 242, 254, 0.3);
+    }
     .btn-github {
       background: rgba(255, 255, 255, 0.08);
       border: 1px solid rgba(255, 255, 255, 0.15);
       color: #fff;
-      padding: 0.5rem 1rem;
+      padding: 0.45rem 0.9rem;
       border-radius: 8px;
-      font-size: 0.88rem;
+      font-size: 0.85rem;
       font-weight: 600;
       display: flex;
       align-items: center;
@@ -125,7 +165,7 @@
 
     /* Container */
     .container {
-      max-width: 1280px;
+      max-width: 1320px;
       margin: 0 auto;
       padding: 0 1.5rem;
       position: relative;
@@ -134,7 +174,7 @@
 
     /* Hero Section */
     .hero {
-      padding: 5rem 0 4rem;
+      padding: 4.5rem 0 3.5rem;
       text-align: center;
       position: relative;
     }
@@ -152,7 +192,7 @@
       margin-bottom: 1.5rem;
     }
     .hero-title {
-      font-size: 3.6rem;
+      font-size: 3.5rem;
       font-weight: 800;
       line-height: 1.15;
       letter-spacing: -1.5px;
@@ -161,10 +201,13 @@
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
+    @media (max-width: 768px) {
+      .hero-title { font-size: 2.3rem; }
+    }
     .hero-subtitle {
-      max-width: 800px;
-      margin: 0 auto 2.5rem;
-      font-size: 1.25rem;
+      max-width: 840px;
+      margin: 0 auto 2.25rem;
+      font-size: 1.2rem;
       color: var(--text-muted);
       font-weight: 400;
     }
@@ -212,11 +255,11 @@
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 1.25rem;
-      margin-bottom: 5rem;
+      margin-bottom: 4.5rem;
     }
     .stat-card {
       background: var(--bg-card);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--line);
       border-radius: 14px;
       padding: 1.5rem;
       text-align: center;
@@ -228,7 +271,7 @@
       border-color: var(--border-glow);
     }
     .stat-num {
-      font-size: 2.4rem;
+      font-size: 2.3rem;
       font-weight: 800;
       background: linear-gradient(135deg, #00f2fe, #38bdf8);
       -webkit-background-clip: text;
@@ -255,7 +298,7 @@
       margin-bottom: 0.5rem;
     }
     .section-title {
-      font-size: 2.5rem;
+      font-size: 2.4rem;
       font-weight: 800;
       letter-spacing: -1px;
       margin-bottom: 1rem;
@@ -263,11 +306,39 @@
     .section-desc {
       color: var(--text-muted);
       font-size: 1.1rem;
-      max-width: 680px;
+      max-width: 720px;
       margin: 0 auto;
     }
 
-    /* Interactive Gallery Section */
+    /* Video Walkthrough Box */
+    .video-section {
+      margin-bottom: 5rem;
+    }
+    .video-card {
+      background: var(--bg-card);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 1.5rem;
+      backdrop-filter: blur(14px);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    }
+    .video-wrap {
+      position: relative;
+      width: 100%;
+      padding-top: 56.25%;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #000;
+    }
+    .video-wrap iframe {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
+    }
+
+    /* Gallery Section */
     .gallery-filter {
       display: flex;
       justify-content: center;
@@ -292,7 +363,6 @@
       border-color: var(--accent-cyan);
       box-shadow: 0 4px 15px rgba(0, 242, 254, 0.3);
     }
-
     .gallery-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
@@ -301,7 +371,7 @@
     }
     .gallery-card {
       background: var(--bg-card);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--line);
       border-radius: 16px;
       overflow: hidden;
       display: flex;
@@ -369,7 +439,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      border-top: 1px solid var(--line);
       padding-top: 0.9rem;
       font-size: 0.8rem;
       color: #64748b;
@@ -380,10 +450,10 @@
       gap: 0.35rem;
     }
 
-    /* Live Interactive Simulator Section */
+    /* Simulator Section */
     .simulator-section {
-      background: linear-gradient(180deg, rgba(15, 23, 42, 0.5) 0%, rgba(9, 13, 22, 0.9) 100%);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.6) 0%, rgba(9, 13, 22, 0.95) 100%);
+      border: 1px solid var(--line);
       border-radius: 24px;
       padding: 3rem;
       margin-bottom: 5rem;
@@ -428,7 +498,7 @@
       box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
     }
 
-    /* Features Grid */
+    /* Feature Cards */
     .feature-cards {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
@@ -437,7 +507,7 @@
     }
     .feature-card {
       background: var(--bg-card);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--line);
       border-radius: 16px;
       padding: 2rem;
       transition: transform 0.2s, border-color 0.2s;
@@ -468,6 +538,280 @@
       color: var(--text-muted);
       font-size: 0.92rem;
       line-height: 1.6;
+    }
+
+    /* ── ALGORITHM CATALOG & ACADEMIC HUB ── */
+    .algo-explorer {
+      margin-bottom: 5rem;
+    }
+    .algo-search-bar {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+    }
+    .algo-search-input {
+      flex: 1;
+      min-width: 280px;
+      padding: 0.85rem 1.25rem;
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #fff;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .algo-search-input:focus {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 0 3px rgba(0, 242, 254, 0.15);
+    }
+    .algo-filter-pills {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .algo-pill {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-muted);
+      padding: 0.5rem 1rem;
+      border-radius: 9999px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .algo-pill.active, .algo-pill:hover {
+      background: var(--accent-cyan);
+      color: #000;
+      border-color: var(--accent-cyan);
+    }
+
+    /* Accordion Item */
+    .algo-item {
+      background: var(--bg-card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      margin-bottom: 1.25rem;
+      overflow: hidden;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .algo-item.active {
+      border-color: rgba(0, 242, 254, 0.4);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+    .algo-header {
+      padding: 1.25rem 1.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+      background: rgba(255, 255, 255, 0.02);
+      transition: background 0.2s;
+    }
+    .algo-header:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .algo-header-left {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .algo-tag {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 700;
+      padding: 0.2rem 0.6rem;
+      border-radius: 6px;
+      background: rgba(245, 158, 11, 0.12);
+      color: var(--accent-gold);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+    .algo-title-text {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #fff;
+    }
+    .algo-id-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--accent-cyan);
+      background: rgba(0, 242, 254, 0.08);
+      padding: 0.2rem 0.6rem;
+      border-radius: 6px;
+      border: 1px solid rgba(0, 242, 254, 0.2);
+    }
+    .algo-arrow {
+      font-size: 1.2rem;
+      color: var(--text-muted);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .algo-item.active .algo-arrow {
+      transform: rotate(180deg);
+      color: var(--accent-cyan);
+    }
+
+    .algo-body {
+      display: none;
+      padding: 1.75rem;
+      border-top: 1px solid var(--line);
+      background: rgba(9, 13, 22, 0.6);
+    }
+    .algo-item.active .algo-body {
+      display: block;
+    }
+
+    .algo-subheading {
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      margin: 1.25rem 0 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .algo-subheading:first-child { margin-top: 0; }
+
+    .algo-math-box {
+      background: rgba(0, 0, 0, 0.45);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      padding: 1.25rem 1.5rem;
+      margin: 0.75rem 0 1.25rem;
+      overflow-x: auto;
+    }
+    .algo-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0.75rem 0 1.25rem;
+      font-size: 0.88rem;
+    }
+    .algo-table th, .algo-table td {
+      border: 1px solid var(--line);
+      padding: 0.65rem 0.9rem;
+      text-align: left;
+      vertical-align: top;
+    }
+    .algo-table th {
+      background: rgba(0, 242, 254, 0.08);
+      color: var(--accent-cyan);
+      font-weight: 700;
+    }
+    .algo-table td code {
+      color: #38bdf8;
+      background: rgba(56, 189, 248, 0.1);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+    }
+
+    .code-container {
+      position: relative;
+      margin: 0.75rem 0 1.25rem;
+    }
+    .code-block {
+      background: rgba(0, 0, 0, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      padding: 1.25rem;
+      font-size: 0.85rem;
+      color: #38bdf8;
+      overflow-x: auto;
+    }
+    .btn-copy {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      padding: 0.3rem 0.65rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-copy:hover {
+      background: var(--accent-cyan);
+      color: #000;
+      border-color: var(--accent-cyan);
+    }
+
+    .citation-list {
+      list-style: none;
+      margin-top: 0.5rem;
+    }
+    .citation-item {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      padding: 0.4rem 0 0.4rem 1.5rem;
+      position: relative;
+      line-height: 1.5;
+    }
+    .citation-item::before {
+      content: "📖";
+      position: absolute;
+      left: 0;
+      font-size: 0.85rem;
+    }
+    .citation-item a {
+      color: var(--accent-cyan);
+      text-decoration: none;
+    }
+    .citation-item a:hover {
+      text-decoration: underline;
+    }
+
+    /* Architecture & Testing Section */
+    .arch-section {
+      background: var(--bg-card);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 2.5rem;
+      margin-bottom: 5rem;
+    }
+    .arch-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      margin-top: 2rem;
+    }
+    .arch-card {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+    .arch-card h4 {
+      color: var(--accent-cyan);
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .arch-card p {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Academic BibTeX Section */
+    .bibtex-card {
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 14px;
+      padding: 1.5rem;
+      position: relative;
+      margin-bottom: 5rem;
     }
 
     /* Modal Lightbox */
@@ -530,10 +874,9 @@
 
     /* Footer */
     footer {
-      border-top: 1px solid rgba(255, 255, 255, 0.08);
-      background: rgba(9, 13, 22, 0.95);
-      padding: 3.5rem 0 2rem;
-      margin-top: 5rem;
+      border-top: 1px solid var(--line);
+      background: rgba(9, 13, 22, 0.98);
+      padding: 4rem 0 2.5rem;
     }
     .footer-grid {
       display: grid;
@@ -581,8 +924,9 @@
   <div class="glow-orb glow-1"></div>
   <div class="glow-orb glow-2"></div>
   <div class="glow-orb glow-3"></div>
+  <div class="glow-orb glow-4"></div>
 
-  <!-- Header -->
+  <!-- Header Navigation -->
   <header>
     <div class="nav-container">
       <a href="#" class="brand">
@@ -590,16 +934,20 @@
         <span>02CartoLab</span>
       </a>
       <ul class="nav-links">
-        <li><a href="#gallery">Templates</a></li>
-        <li><a href="#simulator">Bivariate Lab</a></li>
-        <li><a href="#features">Studio Modules</a></li>
-        <li><a href="#processing">Algorithms</a></li>
-        <li><a href="CARTOLAB_REFERENCE_MANUAL.html">Manual</a></li>
+        <li><a href="#gallery">Layout Templates</a></li>
+        <li><a href="#simulator">Bivariate & CVD Lab</a></li>
+        <li><a href="#video">Walkthrough</a></li>
+        <li><a href="#algorithms">14 Algorithms</a></li>
+        <li><a href="#architecture">Architecture</a></li>
+        <li><a href="#citation">Citation</a></li>
       </ul>
-      <a href="https://github.com/YusufEminoglu/zero2cartolab" target="_blank" class="btn-github">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-        <span>GitHub Star</span>
-      </a>
+      <div class="nav-actions">
+        <a href="CARTOLAB_REFERENCE_MANUAL.html" class="btn-nav-manual">📖 Full Manual</a>
+        <a href="https://github.com/YusufEminoglu/zero2cartolab" target="_blank" class="btn-github">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          <span>Star</span>
+        </a>
+      </div>
     </div>
   </header>
 
@@ -608,19 +956,20 @@
     <div class="hero-badge">
       <span>🚀 v1.0.0</span>
       <span>•</span>
-      <span>QGIS 3.28+ & QGIS 4.x Compatible</span>
+      <span>QGIS 3.28+ LTR & QGIS 4.x Ready</span>
       <span>•</span>
-      <span>Pure Python & C++ QGIS Core</span>
+      <span>Zero External Dependencies</span>
     </div>
     <h1 class="hero-title">Unified Cartographic Studio &<br>Print Layout Automation</h1>
     <p class="hero-subtitle">
-      Bridge thematic analytical symbology and publication-grade print layouts in one seamless workflow.
-      From 2.5D building extrusion and bivariate choropleths to 1-click exhibition posters and automated map book series.
+      Bridge analytical thematic symbology and publication-grade print layouts in one seamless QGIS workflow.
+      From 2.5D building extrusion and bivariate choropleths to automated map book series and 14 scriptable Processing algorithms.
     </p>
     <div class="hero-actions">
       <a href="https://github.com/YusufEminoglu/zero2cartolab/releases" class="btn-primary">Download Plugin (ZIP)</a>
-      <a href="#gallery" class="btn-secondary">Explore Real Map Outputs</a>
-      <a href="CARTOLAB_REFERENCE_MANUAL.html" class="btn-secondary">Read Full Manual</a>
+      <a href="#gallery" class="btn-secondary">Explore Real Outputs</a>
+      <a href="#algorithms" class="btn-secondary">14 Algorithm Guides</a>
+      <a href="CARTOLAB_REFERENCE_MANUAL.html" class="btn-secondary">Deep Academic Manual</a>
     </div>
 
     <!-- Stats -->
@@ -638,8 +987,22 @@
         <div class="stat-label">Tactile Paper Themes</div>
       </div>
       <div class="stat-card">
-        <div class="stat-num">100%</div>
-        <div class="stat-label">Dependency-Free QGIS Core</div>
+        <div class="stat-num">68 / 68</div>
+        <div class="stat-label">Verified Passing CI Tests</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Video Walkthrough Section -->
+  <section id="video" class="container video-section">
+    <div class="section-header">
+      <div class="section-tag">Video Walkthrough</div>
+      <h2 class="section-title">See 02CartoLab in Action</h2>
+      <p class="section-desc">Watch an end-to-end walkthrough of building extrusion, bivariate mapping, and automated layout generation.</p>
+    </div>
+    <div class="video-card">
+      <div class="video-wrap">
+        <iframe src="https://www.youtube-nocookie.com/embed/Y_DgVejcm8A" title="02CartoLab Video Walkthrough" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
       </div>
     </div>
   </section>
@@ -945,31 +1308,517 @@
     </div>
   </section>
 
-  <!-- Processing Algorithms Catalog -->
-  <section id="processing" class="container">
+  <!-- ═══════════════ 14 HEADLESS PROCESSING ALGORITHMS EXPLORER ═══════════════ -->
+  <section id="algorithms" class="container algo-explorer">
     <div class="section-header">
-      <div class="section-tag">Processing Provider</div>
-      <h2 class="section-title">14 Headless Algorithms</h2>
-      <p class="section-desc">Accessible from QGIS Processing Toolbox, Graphical Modeler, and Python API.</p>
+      <div class="section-tag">Interactive Academic & Technical Reference</div>
+      <h2 class="section-title">14 Processing Algorithms</h2>
+      <p class="section-desc">
+        Complete mathematical derivations, theoretical background, parameter definitions, copyable PyQGIS code, and peer-reviewed literature citations.
+      </p>
     </div>
 
-    <div style="background: var(--bg-card); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 2rem; margin-bottom: 5rem;">
-      <pre style="color: #38bdf8; font-size: 0.9rem; overflow-x: auto; padding: 1.5rem; background: rgba(0,0,0,0.5); border-radius: 10px; border: 1px solid rgba(255,255,255,0.08);">
-# Example: Running Quick Style via PyQGIS
-import processing
+    <!-- Search & Filter Controls -->
+    <div class="algo-search-bar">
+      <input type="text" id="algoSearchInput" class="algo-search-input" placeholder="🔍 Search algorithms by name, keyword, ID, or mathematical concept...">
+      <div class="algo-filter-pills">
+        <button class="algo-pill active" data-filter="all">All (14)</button>
+        <button class="algo-pill" data-filter="Classification">Classification (2)</button>
+        <button class="algo-pill" data-filter="Thematic">Thematic (4)</button>
+        <button class="algo-pill" data-filter="Cartogram">Cartogram & Aggregation (2)</button>
+        <button class="algo-pill" data-filter="3D">2.5D Massing (1)</button>
+        <button class="algo-pill" data-filter="Layout">Layout & Reference (5)</button>
+      </div>
+    </div>
+
+    <!-- Algorithm Accordion List -->
+    <div id="algoAccordionList">
+
+      <!-- 1. Geometric Interval Classification -->
+      <div class="algo-item active" data-category="Classification" data-search="geometric interval classification gic head tail breaks fisher jenks natural breaks skew power law log normal">
+        <div class="algo-header" onclick="toggleAlgo(this)">
+          <div class="algo-header-left">
+            <span class="algo-tag">Classification</span>
+            <span class="algo-title-text">1. Advanced Classification (GIC / Head-Tail / Fisher-Jenks)</span>
+            <span class="algo-id-badge">zero2cartolab:geometric_interval_classification</span>
+          </div>
+          <div class="algo-arrow">▼</div>
+        </div>
+        <div class="algo-body">
+          <div class="algo-subheading">📐 Theoretical Formulation</div>
+          <p>
+            Implements three complementary partition algorithms for skewed and non-normal urban data distributions. 
+            The <strong>Adaptive Geometric Interval Classification (GIC)</strong> fits a geometric progression to class breaks:
+          </p>
+          <div class="algo-math-box">
+            $$C_k = a \cdot r^k, \quad k \in \{0, 1, \dots, K\}$$
+            $$	ext{Objective:} \quad \min_{r} \sum_{k=1}^{K} \left( f_k - rac{n}{K} ight)^2$$
+          </div>
+          <p>
+            <strong>Head/Tail Breaks</strong> (Jiang, 2013) recursively partitions heavy-tailed data at the arithmetic mean $\mu_i$, retaining values where $x > \mu_i$ until the head proportion $\ge 40\%$. 
+            <strong>Fisher-Jenks</strong> minimizes the total within-class variance (Sum of Squared Deviations, $SSDW$).
+          </p>
+
+          <div class="algo-subheading">⚙️ Algorithm Parameters</div>
+          <table class="algo-table">
+            <thead>
+              <tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>INPUT</code></td><td>Vector Layer</td><td>&mdash;</td><td>Source polygon, line, or point layer.</td></tr>
+              <tr><td><code>FIELD</code></td><td>Field</td><td>&mdash;</td><td>Numeric field to classify.</td></tr>
+              <tr><td><code>METHOD</code></td><td>Enum (0=GIC, 1=Head/Tail, 2=Fisher-Jenks)</td><td>0</td><td>Classification strategy.</td></tr>
+              <tr><td><code>CLASSES</code></td><td>Integer</td><td>5</td><td>Target number of classes (for GIC and Fisher-Jenks).</td></tr>
+              <tr><td><code>OUTPUT</code></td><td>Vector Layer</td><td>[Create Temporary]</td><td>Output layer with <code>gic_class</code> and <code>gic_label</code> fields.</td></tr>
+            </tbody>
+          </table>
+
+          <div class="algo-subheading">💻 PyQGIS Execution Example</div>
+          <div class="code-container">
+            <button class="btn-copy" onclick="copyCode(this)">Copy Code</button>
+            <pre class="code-block">import processing
 
 params = {
-    'INPUT': 'path/to/districts.gpkg|layername=districts',
-    'FIELD': 'population_density',
-    'MODE': 1,            # 1 = Graduated
-    'CLASSES': 5,
-    'METHOD': 0,          # 0 = Quantile, 1 = Equal Interval, 2 = Geometric Interval
-    'PALETTE': 2,         # ColorBrewer Blues
-    'OUTLINE': True
+    'INPUT': 'path/to/land_values.gpkg|layername=parcels',
+    'FIELD': 'unit_price_sqm',
+    'METHOD': 0, # 0 = Adaptive GIC
+    'CLASSES': 6,
+    'OUTPUT': 'memory:classified_land_values'
 }
-result = processing.run('zero2cartolab:quick_style', params)
-print(result['SUMMARY'])
-      </pre>
+result = processing.run('zero2cartolab:geometric_interval_classification', params)
+QgsProject.instance().addMapLayer(result['OUTPUT'])</pre>
+          </div>
+
+          <div class="algo-subheading">📚 Academic References</div>
+          <ul class="citation-list">
+            <li class="citation-item">Jiang, B. (2013). <em>Head/tail breaks: A new classification scheme for data with a heavy-tailed distribution</em>. The Professional Geographer, 65(3), 482–494. <a href="https://doi.org/10.1080/00330124.2012.700499" target="_blank">doi:10.1080/00330124.2012.700499</a></li>
+            <li class="citation-item">Jenks, G. F. (1967). <em>The data model concept in statistical mapping</em>. International Yearbook of Cartography, 7, 186–190.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 2. Bivariate Choropleth -->
+      <div class="algo-item" data-category="Thematic" data-search="bivariate choropleth 2d matrix color correlation interaction quantile bilinear interpolation">
+        <div class="algo-header" onclick="toggleAlgo(this)">
+          <div class="algo-header-left">
+            <span class="algo-tag">Thematic</span>
+            <span class="algo-title-text">2. Bivariate Choropleth Mapping</span>
+            <span class="algo-id-badge">zero2cartolab:bivariate_choropleth</span>
+          </div>
+          <div class="algo-arrow">▼</div>
+        </div>
+        <div class="algo-body">
+          <div class="algo-subheading">📐 Theoretical Formulation</div>
+          <p>
+            Encodes two continuous spatial variables into an $N 	imes N$ matrix ($N \in \{3, 4\}$) by classifying each variable independently and mapping class coordinates $(i, j)$ to an interpolated RGB color:
+          </p>
+          <div class="algo-math-box">
+            $$\mathbf{C}(u, v) = (1-u)(1-v)\mathbf{C}_{00} + u(1-v)\mathbf{C}_{10} + (1-u)v\mathbf{C}_{01} + uv\mathbf{C}_{11}$$
+            $$	ext{where } u = rac{i-1}{N-1}, \quad v = rac{j-1}{N-1}, \quad i,j \in \{1, \dots, N\}$$
+          </div>
+
+          <div class="algo-subheading">⚙️ Algorithm Parameters</div>
+          <table class="algo-table">
+            <thead>
+              <tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>INPUT</code></td><td>Vector Layer</td><td>&mdash;</td><td>Source polygon layer.</td></tr>
+              <tr><td><code>FIELD_X</code></td><td>Field</td><td>&mdash;</td><td>First numeric variable (horizontal axis).</td></tr>
+              <tr><td><code>FIELD_Y</code></td><td>Field</td><td>&mdash;</td><td>Second numeric variable (vertical axis).</td></tr>
+              <tr><td><code>MATRIX_SIZE</code></td><td>Integer (3 or 4)</td><td>3</td><td>Matrix dimension ($3	imes3$ or $4	imes4$).</td></tr>
+              <tr><td><code>PALETTE_PRESET</code></td><td>Enum</td><td>0</td><td>Color scheme (Pink-Blue, Purple-Green, Orange-Cyan, etc.).</td></tr>
+              <tr><td><code>OUTPUT</code></td><td>Vector Layer</td><td>[Create Temporary]</td><td>Output layer with <code>bivar_x</code>, <code>bivar_y</code>, <code>bivar_class</code>.</td></tr>
+            </tbody>
+          </table>
+
+          <div class="algo-subheading">💻 PyQGIS Execution Example</div>
+          <div class="code-container">
+            <button class="btn-copy" onclick="copyCode(this)">Copy Code</button>
+            <pre class="code-block">import processing
+
+params = {
+    'INPUT': 'path/to/neighborhoods.gpkg',
+    'FIELD_X': 'median_income',
+    'FIELD_Y': 'tree_canopy_pct',
+    'MATRIX_SIZE': 3,
+    'PALETTE_PRESET': 0, # Pink - Blue
+    'METHOD': 0, # 0 = Quantiles
+    'OUTPUT': 'memory:bivariate_income_canopy'
+}
+res = processing.run('zero2cartolab:bivariate_choropleth', params)
+QgsProject.instance().addMapLayer(res['OUTPUT'])</pre>
+          </div>
+
+          <div class="algo-subheading">📚 Academic References</div>
+          <ul class="citation-list">
+            <li class="citation-item">Brewer, C. A. (1994). <em>Color use guidelines for mapping and visualization</em>. Visualization in Modern Cartography, 123–147.</li>
+            <li class="citation-item">Elmqvist, N., et al. (2008). <em>Z-ordering for scatterplot matrices</em>. IEEE TVCG, 14(6), 1532–1539.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 3. Bivariate Matrix Export -->
+      <div class="algo-item" data-category="Thematic" data-search="bivariate matrix export legend standalone svg png graphic generator">
+        <div class="algo-header" onclick="toggleAlgo(this)">
+          <div class="algo-header-left">
+            <span class="algo-tag">Thematic</span>
+            <span class="algo-title-text">3. Standalone Bivariate Matrix Generator</span>
+            <span class="algo-id-badge">zero2cartolab:bivariate_matrix_export</span>
+          </div>
+          <div class="algo-arrow">▼</div>
+        </div>
+        <div class="algo-body">
+          <div class="algo-subheading">📐 Theoretical Formulation</div>
+          <p>
+            Generates high-resolution raster (PNG) or scalable vector (SVG) diamond/square 2D legend matrices with rotated axis labels and customizable corner swatches for academic layout insertion.
+          </p>
+
+          <div class="algo-subheading">⚙️ Algorithm Parameters</div>
+          <table class="algo-table">
+            <thead>
+              <tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>PALETTE_PRESET</code></td><td>Enum</td><td>0</td><td>Color ramp preset or custom 4-corner interpolation.</td></tr>
+              <tr><td><code>MATRIX_SIZE</code></td><td>Integer (3 or 4)</td><td>3</td><td>Grid dimension.</td></tr>
+              <tr><td><code>LABEL_X</code></td><td>String</td><td>"Variable X →"</td><td>Horizontal axis label.</td></tr>
+              <tr><td><code>LABEL_Y</code></td><td>String</td><td>"Variable Y ↑"</td><td>Vertical axis label.</td></tr>
+              <tr><td><code>OUTPUT_IMAGE</code></td><td>File (PNG/SVG)</td><td>&mdash;</td><td>Export path for the generated matrix graphic.</td></tr>
+            </tbody>
+          </table>
+
+          <div class="algo-subheading">💻 PyQGIS Execution Example</div>
+          <div class="code-container">
+            <button class="btn-copy" onclick="copyCode(this)">Copy Code</button>
+            <pre class="code-block">import processing
+
+params = {
+    'PALETTE_PRESET': 1, # Purple-Green
+    'MATRIX_SIZE': 3,
+    'LABEL_X': 'Social Vulnerability →',
+    'LABEL_Y': 'Flood Inundation Risk ↑',
+    'OUTPUT_IMAGE': 'C:/reports/bivariate_legend.png'
+}
+processing.run('zero2cartolab:bivariate_matrix_export', params)</pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Continuous-Area Cartogram -->
+      <div class="algo-item" data-category="Cartogram" data-search="cartogram gastner newman diffusion continuous area distortion density equalizing">
+        <div class="algo-header" onclick="toggleAlgo(this)">
+          <div class="algo-header-left">
+            <span class="algo-tag">Cartogram</span>
+            <span class="algo-title-text">4. Continuous-Area Diffusion Cartogram</span>
+            <span class="algo-id-badge">zero2cartolab:compute_cartogram</span>
+          </div>
+          <div class="algo-arrow">▼</div>
+        </div>
+        <div class="algo-body">
+          <div class="algo-subheading">📐 Theoretical Formulation</div>
+          <p>
+            Implements the Gastner & Newman (2004) diffusion-based density-equalizing algorithm. Polygons deform following the continuous velocity field $\mathbf{v}(\mathbf{r}, t)$ generated by spatial density gradients:
+          </p>
+          <div class="algo-math-box">
+            $$
+abla^2 ho - rac{\partial ho}{\partial t} = 0, \quad \mathbf{v}(\mathbf{r}, t) = -rac{
+abla ho}{ho}$$
+            $$rac{d\mathbf{r}}{dt} = \mathbf{v}(\mathbf{r}, t), \quad \mathbf{r}(0) = \mathbf{r}_0$$
+          </div>
+
+          <div class="algo-subheading">⚙️ Algorithm Parameters</div>
+          <table class="algo-table">
+            <thead>
+              <tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>INPUT</code></td><td>Polygon Layer</td><td>&mdash;</td><td>Contiguous polygon layer.</td></tr>
+              <tr><td><code>FIELD</code></td><td>Field</td><td>&mdash;</td><td>Positive numeric variable to scale area to.</td></tr>
+              <tr><td><code>ITERATIONS</code></td><td>Integer</td><td>10</td><td>Number of diffusion integration steps.</td></tr>
+              <tr><td><code>GRID_SIZE</code></td><td>Integer</td><td>128</td><td>Underlying FFT / finite-difference resolution.</td></tr>
+              <tr><td><code>OUTPUT</code></td><td>Polygon Layer</td><td>[Create Temporary]</td><td>Equalized cartogram layer.</td></tr>
+            </tbody>
+          </table>
+
+          <div class="algo-subheading">📚 Academic References</div>
+          <ul class="citation-list">
+            <li class="citation-item">Gastner, M. T., & Newman, M. E. (2004). <em>Diffusion-based method for producing density-equalizing maps</em>. PNAS, 101(20), 7499–7504. <a href="https://doi.org/10.1073/pnas.0400280101" target="_blank">doi:10.1073/pnas.0400280101</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 5. Dot-Density Map -->
+      <div class="algo-item" data-category="Thematic" data-search="dot density stochastic hole aware polygon scattering count population">
+        <div class="algo-header" onclick="toggleAlgo(this)">
+          <div class="algo-header-left">
+            <span class="algo-tag">Thematic</span>
+            <span class="algo-title-text">5. Hole-Aware Dot-Density Symbology</span>
+            <span class="algo-id-badge">zero2cartolab:dot_density</span>
+          </div>
+          <div class="algo-arrow">▼</div>
+        </div>
+        <div class="algo-body">
+          <div class="algo-subheading">📐 Theoretical Formulation</div>
+          <p>
+            Scatters $N = \lfloor V_i / 	ext{DotValue} floor$ discrete point features inside each polygon $P_i$. 
+            Uses seeded rejection sampling within bounding boxes while respecting interior holes and multi-polygon boundaries.
+          </p>
+          <div class="algo-math-box">
+            $$N_i = \mathrm{round}\left(rac{V_i}{	ext{DOT\_VALUE}}ight), \quad p_k \in P_i \setminus igcup_{j} H_{i,j}$$
+          </div>
+
+          <div class="algo-subheading">⚙️ Algorithm Parameters</div>
+          <table class="algo-table">
+            <thead>
+              <tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>INPUT</code></td><td>Polygon Layer</td><td>&mdash;</td><td>Source boundary layer.</td></tr>
+              <tr><td><code>FIELD</code></td><td>Field</td><td>&mdash;</td><td>Count field (e.g. population, households).</td></tr>
+              <tr><td><code>DOT_VALUE</code></td><td>Double</td><td>100.0</td><td>Value represented by 1 dot.</td></tr>
+              <tr><td><code>SEED</code></td><td>Integer</td><td>42</td><td>Random seed for reproducible placements.</td></tr>
+              <tr><td><code>OUTPUT</code></td><td>Point Layer</td><td>[Create Temporary]</td><td>Output scattered point layer.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 6. Hexbin Aggregation -->
+      <div class="algo-item" data-category="Cartogram" data-search="hexbin aggregation pointy top hexagon grid binning spatial index">
+        <div class="algo-header" onclick="toggleAlgo(this)">
+          <div class="algo-header-left">
+            <span class="algo-tag">Cartogram & Aggregation</span>
+            <span class="algo-title-text">6. Hexagonal Binning & Spatial Aggregation</span>
+            <span class="algo-id-badge">zero2cartolab:hexbin_aggregate</span>
+          </div>
+          <div class="algo-arrow">▼</div>
+        </div>
+        <div class="algo-body">
+          <div class="algo-subheading">📐 Theoretical Formulation</div>
+          <p>
+            Constructs a regular pointy-top hexagonal tessellation over the point extent and aggregates counts, sums, and averages using axial coordinate hashing $(q, r)$:
+          </p>
+          <div class="algo-math-box">
+            $$q = rac{\sqrt{3}/3 \cdot x - 1/3 \cdot y}{R}, \quad r = rac{2/3 \cdot y}{R}$$
+            $$	ext{Area}_{	ext{hex}} = rac{3\sqrt{3}}{2} R^2$$
+          </div>
+        </div>
+      </div>
+
+      <!-- 7. Graticule Reference Grid -->
+      <div class="algo-item" data-category="Layout" data-search="graticule reference grid meridians parallels coordinates neatline">
+        <div class="algo-header" onclick="toggleAlgo(this)">
+          <div class="algo-header-left">
+            <span class="algo-tag">Layout & Reference</span>
+            <span class="algo-title-text">7. Reference Graticule & Grid Generation</span>
+            <span class="algo-id-badge">zero2cartolab:graticule_grid</span>
+          </div>
+          <div class="algo-arrow">▼</div>
+        </div>
+        <div class="algo-body">
+          <div class="algo-subheading">📐 Theoretical Formulation</div>
+          <p>
+            Generates clean projected or geographic grid lines across the extent with Heckbert nice-number intervals and formatted coordinate labels (e.g. $38^\circ 25' 	ext{N}$).
+          </p>
+        </div>
+      </div>
+
+      <!-- 8. Visual-Center Label Points -->
+      <div class="algo-item" data-category="Layout" data-search="label points polylabel pole of inaccessibility quadtree inscribed circle center">
+        <div class="algo-header" onclick="toggleAlgo(this)">
+          <div class="algo-header-left">
+            <span class="algo-tag">Layout & Reference</span>
+            <span class="algo-title-text">8. Visual-Center Label Points (Polylabel)</span>
+            <span class="algo-id-badge">zero2cartolab:label_points</span>
+          </div>
+          <div class="algo-arrow">▼</div>
+        </div>
+        <div class="algo-body">
+          <div class="algo-subheading">📐 Theoretical Formulation</div>
+          <p>
+            Calculates the Pole of Inaccessibility&mdash;the interior point furthest from any polygon boundary&mdash;using an iterative quadtree spatial search (Garcia-Castellanos & Lombardo, 2007):
+          </p>
+          <div class="algo-math-box">
+            $$p^* = rg\max_{p \in P} \min_{e \in \partial P} \|p - e\|$$
+          </div>
+        </div>
+      </div>
+
+      <!-- 9. Normalization & Location Quotient -->
+      <div class="algo-item" data-category="Classification" data-search="normalize field zscore robust mad location quotient lq min max percentile rank">
+        <div class="algo-header" onclick="toggleAlgo(this)">
+          <div class="algo-header-left">
+            <span class="algo-tag">Classification</span>
+            <span class="algo-title-text">9. Statistical Normalization & Location Quotient</span>
+            <span class="algo-id-badge">zero2cartolab:normalize_field</span>
+          </div>
+          <div class="algo-arrow">▼</div>
+        </div>
+        <div class="algo-body">
+          <div class="algo-subheading">📐 Theoretical Formulation</div>
+          <p>
+            Provides 6 standard statistical transformations for comparative mapping:
+          </p>
+          <div class="algo-math-box">
+            $$z = rac{x - \mu}{\sigma}, \quad z_{	ext{robust}} = rac{x - 	ext{median}}{1.4826 \cdot 	ext{MAD}}, \quad 	ext{LQ} = rac{e_i / e_{	ext{total}}}{E_i / E_{	ext{total}}}$$
+          </div>
+        </div>
+      </div>
+
+      <!-- 10. Proportional Symbols (Flannery) -->
+      <div class="algo-item" data-category="Thematic" data-search="proportional symbols flannery perceptual area underestimation compensation scaling">
+        <div class="algo-header" onclick="toggleAlgo(this)">
+          <div class="algo-header-left">
+            <span class="algo-tag">Thematic</span>
+            <span class="algo-title-text">10. Flannery Perceptual Proportional Symbols</span>
+            <span class="algo-id-badge">zero2cartolab:proportional_symbols</span>
+          </div>
+          <div class="algo-arrow">▼</div>
+        </div>
+        <div class="algo-body">
+          <div class="algo-subheading">📐 Theoretical Formulation</div>
+          <p>
+            Compensates for human underestimation of circular visual areas using Flannery's psychophysical exponent ($0.57$ instead of geometric $0.50$):
+          </p>
+          <div class="algo-math-box">
+            $$R_i = R_0 \cdot \left( rac{V_i}{V_0} ight)^{0.5716}$$
+          </div>
+          <ul class="citation-list">
+            <li class="citation-item">Flannery, J. J. (1971). <em>The relative effectiveness of standard and modified graduated circles in statistical distribution maps</em>. The Canadian Cartographer, 8(2), 96–109.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 11. Quick Style -->
+      <div class="algo-item" data-category="Thematic" data-search="quick style graduated categorized publication presets colorbrewer viridis magma">
+        <div class="algo-header" onclick="toggleAlgo(this)">
+          <div class="algo-header-left">
+            <span class="algo-tag">Thematic</span>
+            <span class="algo-title-text">11. Quick Style Thematic Symbology</span>
+            <span class="algo-id-badge">zero2cartolab:quick_style</span>
+          </div>
+          <div class="algo-arrow">▼</div>
+        </div>
+        <div class="algo-body">
+          <div class="algo-subheading">📐 Theoretical Formulation</div>
+          <p>
+            Applies instant, publication-tested graduated and categorized styling rules with 40+ embedded ColorBrewer, Viridis, and scientific colormaps.
+          </p>
+        </div>
+      </div>
+
+      <!-- 12. Joyplot Ridge Map -->
+      <div class="algo-item" data-category="Thematic" data-search="ridge map joyplot joy division scanlines dem elevation terrain raster profiles">
+        <div class="algo-header" onclick="toggleAlgo(this)">
+          <div class="algo-header-left">
+            <span class="algo-tag">Thematic</span>
+            <span class="algo-title-text">12. Joyplot Ridge-Line Elevation Profiles</span>
+            <span class="algo-id-badge">zero2cartolab:ridge_map</span>
+          </div>
+          <div class="algo-arrow">▼</div>
+        </div>
+        <div class="algo-body">
+          <div class="algo-subheading">📐 Theoretical Formulation</div>
+          <p>
+            Samples a single-band DEM / raster along horizontal scanlines, modulating elevation into vertical polygon waves with solid backfill to create striking physical terrain silhouettes.
+          </p>
+        </div>
+      </div>
+
+      <!-- 13. Value-by-Alpha -->
+      <div class="algo-item" data-category="Thematic" data-search="value by alpha vba uncertainty reliability opacity transparency dual variable">
+        <div class="algo-header" onclick="toggleAlgo(this)">
+          <div class="algo-header-left">
+            <span class="algo-tag">Thematic</span>
+            <span class="algo-title-text">13. Value-by-Alpha (VbA) Uncertainty Symbology</span>
+            <span class="algo-id-badge">zero2cartolab:value_by_alpha</span>
+          </div>
+          <div class="algo-arrow">▼</div>
+        </div>
+        <div class="algo-body">
+          <div class="algo-subheading">📐 Theoretical Formulation</div>
+          <p>
+            Modulates the alpha (transparency) channel based on statistical uncertainty or sample size, preventing low-confidence estimates from dominating map visual hierarchy:
+          </p>
+          <div class="algo-math-box">
+            $$lpha_i = lpha_{\min} + (255 - lpha_{\min}) \cdot \left(rac{R_i - R_{\min}}{R_{\max} - R_{\min}}ight)^\gamma$$
+          </div>
+        </div>
+      </div>
+
+      <!-- 14. Architectural 2.5D Building Extrusion -->
+      <div class="algo-item" data-category="3D" data-search="2.5d building extrusion solar angle azimuth sun lighting floor bands qml massing">
+        <div class="algo-header" onclick="toggleAlgo(this)">
+          <div class="algo-header-left">
+            <span class="algo-tag">2.5D Massing</span>
+            <span class="algo-title-text">14. Architectural 2.5D Building Extrusion</span>
+            <span class="algo-id-badge">zero2cartolab:building_25d_style</span>
+          </div>
+          <div class="algo-arrow">▼</div>
+        </div>
+        <div class="algo-body">
+          <div class="algo-subheading">📐 Theoretical Formulation</div>
+          <p>
+            Calculates oblique roof offsets, stepped floor bands, and trigonometric wall shading based on solar azimuth $	heta_{	ext{sun}}$ and elevation angle $\phi$:
+          </p>
+          <div class="algo-math-box">
+            $$\Delta x = H_i \cdot \cos(	heta_{	ext{view}}), \quad \Delta y = H_i \cdot \sin(	heta_{	ext{view}})$$
+            $$I_{	ext{wall}} = I_{	ext{ambient}} + I_{	ext{direct}} \cdot \max(0, \cos(	heta_{	ext{wall}} - 	heta_{	ext{sun}}))$$
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ═══════════════ ARCHITECTURE & TESTING ═══════════════ -->
+  <section id="architecture" class="container arch-section">
+    <div class="section-header" style="margin-bottom: 2rem;">
+      <div class="section-tag">System Design</div>
+      <h2 class="section-title" style="font-size: 2.2rem;">Architectural Principles & Robustness</h2>
+      <p class="section-desc">Engineered for stability across both QGIS 3.x LTR and QGIS 4.x next-generation releases.</p>
+    </div>
+
+    <div class="arch-grid">
+      <div class="arch-card">
+        <h4>📦 Pure Python Core Math</h4>
+        <p>All core computational engines (classification, bivariate interpolation, geometry math, CVD matrices) are written in pure Python/NumPy with zero external binary or C-extension requirements.</p>
+      </div>
+      <div class="arch-card">
+        <h4>⚡ Headless Processing Provider</h4>
+        <p>Every algorithm runs headlessly inside the QGIS Processing framework, enabling full integration with Graphical Modeler workflows, Python CLI scripts, and automated batch processing.</p>
+      </div>
+      <div class="arch-card">
+        <h4>🧪 Dual-Runtime Verification</h4>
+        <p>68 comprehensive end-to-end unit and integration tests run continuously across both QGIS 3.44 LTR and QGIS 4.2 runtimes, ensuring zero regressions on Qt5 and Qt6.</p>
+      </div>
+      <div class="arch-card">
+        <h4>🛡️ Color Accessibility Guard</h4>
+        <p>Embedded Machado/Brettel colorblindness simulation engine and automated WCAG 2.1 contrast ratio calculators prevent illegible or inaccessible cartographic outputs.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ ACADEMIC CITATION & BIBTEX ═══════════════ -->
+  <section id="citation" class="container">
+    <div class="section-header">
+      <div class="section-tag">Academic Attribution</div>
+      <h2 class="section-title">Citation & Bibliography</h2>
+      <p class="section-desc">If you use 02CartoLab in academic research, planning reports, or publications, please cite the software.</p>
+    </div>
+
+    <div class="bibtex-card">
+      <button class="btn-copy" onclick="copyCode(this)">Copy BibTeX</button>
+      <pre class="code-block" style="background: transparent; border: none; padding: 0; margin: 0;">@software{Eminoglu_02CartoLab_2026,
+  author       = {Eminoğlu, Yusuf},
+  title        = {{02CartoLab: Unified Cartographic Studio & Print Layout Automation for QGIS}},
+  year         = {2026},
+  version      = {1.0.0},
+  publisher    = {QGIS Plugin Repository},
+  url          = {https://github.com/YusufEminoglu/zero2cartolab},
+  institution  = {Dokuz Eylül University, Department of City and Regional Planning}
+}</pre>
     </div>
   </section>
 
@@ -997,23 +1846,25 @@ print(result['SUMMARY'])
             <span>02CartoLab</span>
           </div>
           <p style="color: var(--text-muted); font-size: 0.88rem; max-width: 320px;">
-            A unified cartographic studio for map symbology and publication print layout automation in QGIS.
+            A unified cartographic studio for map symbology, analytical classification, and publication print layout automation in QGIS.
           </p>
         </div>
         <div class="footer-col">
           <h4>Navigation</h4>
           <ul>
-            <li><a href="#gallery">Templates</a></li>
+            <li><a href="#gallery">Layout Templates</a></li>
             <li><a href="#simulator">Bivariate Lab</a></li>
-            <li><a href="#features">Features</a></li>
-            <li><a href="CARTOLAB_REFERENCE_MANUAL.html">User Manual</a></li>
+            <li><a href="#algorithms">14 Algorithms</a></li>
+            <li><a href="CARTOLAB_REFERENCE_MANUAL.html">Academic Manual</a></li>
+            <li><a href="COMMAND_GUIDE.html">Command Guide</a></li>
           </ul>
         </div>
         <div class="footer-col">
-          <h4>Repository</h4>
+          <h4>Repository & Hub</h4>
           <ul>
             <li><a href="https://github.com/YusufEminoglu/zero2cartolab" target="_blank">GitHub Repository</a></li>
             <li><a href="https://github.com/YusufEminoglu/zero2cartolab/releases" target="_blank">Releases (ZIP)</a></li>
+            <li><a href="https://plugins.qgis.org/plugins/zero2cartolab/" target="_blank">QGIS Plugin Hub</a></li>
             <li><a href="https://github.com/YusufEminoglu/zero2cartolab/issues" target="_blank">Issue Tracker</a></li>
           </ul>
         </div>
@@ -1034,7 +1885,7 @@ print(result['SUMMARY'])
     </div>
   </footer>
 
-  <!-- Script for Interactivity -->
+  <!-- Interactive JavaScript -->
   <script>
     // Gallery Filtering
     const filterBtns = document.querySelectorAll('.filter-btn');
@@ -1081,6 +1932,58 @@ print(result['SUMMARY'])
       document.body.style.overflow = 'auto';
     }
 
+    // Algorithm Explorer Search & Filtering
+    const algoSearchInput = document.getElementById('algoSearchInput');
+    const algoPills = document.querySelectorAll('.algo-pill');
+    const algoItems = document.querySelectorAll('.algo-item');
+
+    function filterAlgos() {
+      const query = (algoSearchInput.value || '').toLowerCase().trim();
+      const activePill = document.querySelector('.algo-pill.active');
+      const category = activePill ? activePill.getAttribute('data-filter') : 'all';
+
+      algoItems.forEach(item => {
+        const itemCat = item.getAttribute('data-category') || '';
+        const itemSearch = (item.getAttribute('data-search') || '').toLowerCase();
+        const itemText = item.innerText.toLowerCase();
+
+        const matchesCat = (category === 'all' || itemCat.includes(category));
+        const matchesQuery = !query || itemSearch.includes(query) || itemText.includes(query);
+
+        if (matchesCat && matchesQuery) {
+          item.style.display = 'block';
+        } else {
+          item.style.display = 'none';
+        }
+      });
+    }
+
+    algoSearchInput.addEventListener('input', filterAlgos);
+    algoPills.forEach(pill => {
+      pill.addEventListener('click', () => {
+        algoPills.forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+        filterAlgos();
+      });
+    });
+
+    function toggleAlgo(header) {
+      const item = header.closest('.algo-item');
+      item.classList.toggle('active');
+    }
+
+    function copyCode(btn) {
+      const container = btn.closest('.code-container') || btn.closest('.bibtex-card');
+      const codeEl = container.querySelector('pre');
+      if (codeEl) {
+        navigator.clipboard.writeText(codeEl.innerText).then(() => {
+          const orig = btn.innerText;
+          btn.innerText = '✓ Copied!';
+          setTimeout(() => { btn.innerText = orig; }, 2000);
+        });
+      }
+    }
+
     // Bivariate & CVD Simulator
     const palettes = {
       pink_blue: [
@@ -1107,7 +2010,6 @@ print(result['SUMMARY'])
 
     function simulateCVD(hex, type) {
       if (type === 'normal') return hex;
-      // Convert hex to rgb
       let r = parseInt(hex.slice(1, 3), 16);
       let g = parseInt(hex.slice(3, 5), 16);
       let b = parseInt(hex.slice(5, 7), 16);

@@ -712,7 +712,7 @@ class CartoLabDashboard(_QDialogBase):
             "OUTPUT": "TEMPORARY_OUTPUT",
         }
         try:
-            res = processing.run("planx_cartolab:bivariate_choropleth", params)
+            res = processing.run("zero2cartolab:bivariate_choropleth", params)
             out_layer = res.get("OUTPUT")
             if out_layer:
                 QgsProject.instance().addMapLayer(out_layer)
@@ -990,7 +990,7 @@ class CartoLabDashboard(_QDialogBase):
             "OUTLINE": True,
         }
         try:
-            res = processing.run("planx_cartolab:quick_style", params)
+            res = processing.run("zero2cartolab:quick_style", params)
             with suppress(Exception):
                 if hasattr(self.iface, "layerTreeView"):
                     self.iface.layerTreeView().refreshLayerSymbology(layer.id())
@@ -1110,8 +1110,8 @@ class CartoLabDashboard(_QDialogBase):
         hdr_row.addStretch(1)
 
         rate = QLabel(
-            '<a href="https://plugins.qgis.org/plugins/planx_cartolab/" '
-            'style="color:#3182bd;text-decoration:none;">Enjoying CartoLab? '
+            '<a href="https://plugins.qgis.org/plugins/zero2cartolab/" '
+            'style="color:#3182bd;text-decoration:none;">Enjoying 02CartoLab? '
             'Rate it on the Hub&nbsp;&#9733;</a>'
         )
         rate.setOpenExternalLinks(True)
@@ -1263,7 +1263,7 @@ class CartoLabDashboard(_QDialogBase):
             self.favorites.add(algo_id)
         else:
             self.favorites.discard(algo_id)
-        self.settings.setValue("planx_cartolab/favorites", sorted(self.favorites))
+        self.settings.setValue("zero2cartolab/favorites", sorted(self.favorites))
         self._filter_cards()
 
     # ── Algorithm execution ──────────────────────────────────────────
