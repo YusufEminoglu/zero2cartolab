@@ -15,7 +15,7 @@ from typing import Optional
 
 try:
     from qgis.core import QgsProject, QgsLayoutItemMap
-    from qgis.PyQt.QtCore import Qt, QUrl
+    from qgis.PyQt.QtCore import Qt, QUrl, QSize
     from qgis.PyQt.QtGui import QDesktopServices, QIcon
     from qgis.PyQt.QtWidgets import (
         QAction,
@@ -40,7 +40,7 @@ try:
     )
 except ImportError:
     QgsProject = QgsLayoutItemMap = None
-    Qt = QUrl = QDesktopServices = QIcon = QAction = QCheckBox = QComboBox = QDockWidget = QDoubleSpinBox = QFileDialog = QFormLayout = QGroupBox = QHBoxLayout = QLabel = QLineEdit = QMenu = QMessageBox = QPushButton = QScrollArea = QTabWidget = QToolBar = QVBoxLayout = QWidget = None
+    Qt = QUrl = QSize = QDesktopServices = QIcon = QAction = QCheckBox = QComboBox = QDockWidget = QDoubleSpinBox = QFileDialog = QFormLayout = QGroupBox = QHBoxLayout = QLabel = QLineEdit = QMenu = QMessageBox = QPushButton = QScrollArea = QTabWidget = QToolBar = QVBoxLayout = QWidget = None
 
 
 
@@ -155,6 +155,7 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
     main_lyt.setSpacing(6)
 
     tabs = QTabWidget()
+    tabs.setIconSize(QSize(16, 16))
     tabs.setStyleSheet("""
         QTabWidget::pane {
             border: 1px solid #e2e8f0;
@@ -436,7 +437,7 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
     lyt_canvas.addWidget(gb_typo)
     lyt_canvas.addStretch()
 
-    tabs.addTab(tab_canvas, _get_cartolab_icon("layout.png"), "Canvas & Grid")
+    tabs.addTab(tab_canvas, _get_cartolab_icon("layout.png"), "Canvas && Grid")
 
 
     # -----------------------------------------------------------------
@@ -957,7 +958,7 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
     lyt_exp.addWidget(gb_exp)
     lyt_exp.addStretch()
 
-    tabs.addTab(tab_exp, _get_cartolab_icon("isometric.png"), "3D & Export")
+    tabs.addTab(tab_exp, _get_cartolab_icon("isometric.png"), "3D && Export")
 
     main_lyt.addWidget(tabs)
     dock.setWidget(container)

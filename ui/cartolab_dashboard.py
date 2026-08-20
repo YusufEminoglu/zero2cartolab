@@ -302,8 +302,8 @@ class CartoLabDashboard(_QDialogBase):
             QTabWidget::pane {{ border: 1px solid #e2e8f0; border-radius: {r}px; background: #ffffff; margin-top: -1px; }}
             QTabBar::tab {{
                 background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; border-bottom: none;
-                padding: 7px 18px 7px 18px; border-top-left-radius: 6px; border-top-right-radius: 6px; margin-right: 4px;
-                font-weight: 600; font-size: 12px; min-height: 26px;
+                padding: 6px 14px; border-top-left-radius: 6px; border-top-right-radius: 6px; margin-right: 4px;
+                font-weight: 600; font-size: 12px; min-height: 24px;
             }}
             QTabBar::tab:selected {{ background: #ffffff; color: #1d4ed8; font-weight: 700; border: 1px solid #94a3b8; border-bottom: 2px solid #2563eb; }}
             QTabBar::tab:hover:!selected {{ background: #e2e8f0; color: #0f172a; }}
@@ -465,6 +465,7 @@ class CartoLabDashboard(_QDialogBase):
         layout.setContentsMargins(6, 6, 6, 6)
 
         self.symbology_sub_tabs = QTabWidget()
+        self.symbology_sub_tabs.setIconSize(QSize(16, 16))
         self.symbology_sub_tabs.setUsesScrollButtons(True)
         with suppress(Exception):
             _ElideNone = getattr(getattr(Qt, "TextElideMode", Qt), "ElideNone", getattr(Qt, "ElideNone", 0))
@@ -496,7 +497,7 @@ class CartoLabDashboard(_QDialogBase):
 
         # Sub-tab 4: Palette & Accessibility Inspector
         palette_widget = self._build_palette_inspector_subwidget()
-        self.symbology_sub_tabs.addTab(palette_widget, _cartolab_icon("inspector.png"), "Palette & Accessibility")
+        self.symbology_sub_tabs.addTab(palette_widget, _cartolab_icon("inspector.png"), "Palette && Accessibility")
         self.symbology_sub_tabs.setTabToolTip(3, "Palette & Accessibility Inspector: CVD simulation & WCAG 2.1 contrast scoring")
 
         layout.addWidget(self.symbology_sub_tabs)
@@ -2265,6 +2266,7 @@ class CartoLabDashboard(_QDialogBase):
         layout.setContentsMargins(6, 6, 6, 6)
 
         self.layout_sub_tabs = QTabWidget()
+        self.layout_sub_tabs.setIconSize(QSize(16, 16))
         self.layout_sub_tabs.setUsesScrollButtons(True)
         with suppress(Exception):
             _ElideNone = getattr(getattr(Qt, "TextElideMode", Qt), "ElideNone", getattr(Qt, "ElideNone", 0))
