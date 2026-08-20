@@ -1,9 +1,9 @@
 # Architecture
 
-PlanX CartoLab is intentionally small and QGIS-native.
+02CartoLab is intentionally small and QGIS-native.
 
 ```text
-planx_cartolab/
+zero2cartolab/
   __init__.py
   main_plugin.py
   metadata.txt
@@ -28,12 +28,12 @@ The `core/` package contains reusable logic:
 
 The Processing provider exposes repeatable QGIS algorithms. The current provider includes:
 
-- `planx_cartolab:building_25d_style`
-- `planx_cartolab:bivariate_choropleth`
-- `planx_cartolab:value_by_alpha`
-- `planx_cartolab:ridge_map`
-- `planx_cartolab:compute_cartogram`
-- `planx_cartolab:geometric_interval_classification`
+- `zero2cartolab:building_25d_style`
+- `zero2cartolab:bivariate_choropleth`
+- `zero2cartolab:value_by_alpha`
+- `zero2cartolab:ridge_map`
+- `zero2cartolab:compute_cartogram`
+- `zero2cartolab:geometric_interval_classification`
 
 ## UI
 
@@ -44,7 +44,7 @@ The dashboard is a QDialog-based production console. It does not require externa
 The plugin ZIP is built through the shared PlanX packaging scripts from the physical plugin root:
 
 ```powershell
-.\packaging\Build-PluginZip.ps1 -PluginDir planx_cartolab
+.\packaging\Build-PluginZip.ps1 -PluginDir zero2cartolab
 ```
 
 The `.zipignore` file excludes GitHub showcase files from the Plugin Hub ZIP.

@@ -276,13 +276,13 @@ class CartoLabDashboard(_QDialogBase):
                 color: #065f46; background: #ecfdf5; border: 1px solid #a7f3d0;
                 border-radius: 6px; padding: 4px 10px; font-weight: 600; font-size: 11px;
             }}
-            QTabWidget::pane {{ border: 1px solid #e2e8f0; border-radius: {r}px; background: #ffffff; }}
+            QTabWidget::pane {{ border: 1px solid #e2e8f0; border-radius: {r}px; background: #ffffff; margin-top: -1px; }}
             QTabBar::tab {{
-                background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1;
-                padding: 7px 14px; border-top-left-radius: 6px; border-top-right-radius: 6px; margin-right: 3px;
-                font-weight: 600; font-size: 11.5px; min-height: 24px;
+                background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; border-bottom: none;
+                padding: 7px 18px 7px 18px; border-top-left-radius: 6px; border-top-right-radius: 6px; margin-right: 4px;
+                font-weight: 600; font-size: 12px; min-height: 26px;
             }}
-            QTabBar::tab:selected {{ background: #ffffff; color: #0f172a; font-weight: 700; border-bottom: 2px solid #2563eb; }}
+            QTabBar::tab:selected {{ background: #ffffff; color: #1d4ed8; font-weight: 700; border: 1px solid #94a3b8; border-bottom: 2px solid #2563eb; }}
             QTabBar::tab:hover:!selected {{ background: #e2e8f0; color: #0f172a; }}
             QListWidget#sidebarNav {{
                 background: #ffffff; color: #334155; border: 1px solid #e2e8f0;
@@ -361,10 +361,10 @@ class CartoLabDashboard(_QDialogBase):
         gb = QGroupBox(title)
         gb.setFont(QFont("Inter, Segoe UI", 9, QFont.Weight.Bold))
         gb.setStyleSheet(
-            "QGroupBox { border: 1px solid #ccc; border-radius: 6px; "
-            "margin-top: 8px; padding: 8px; }"
-            "QGroupBox::title { subcontrol-origin: margin; left: 10px; "
-            "padding: 0 4px; }"
+            "QGroupBox { border: 1px solid #cbd5e1; border-radius: 8px; "
+            "margin-top: 16px; padding-top: 14px; padding-left: 10px; padding-right: 10px; padding-bottom: 10px; background: #ffffff; }"
+            "QGroupBox::title { subcontrol-origin: margin; subcontrol-position: top left; left: 12px; "
+            "padding: 0 6px; background: #ffffff; color: #0f172a; font-weight: 700; }"
         )
         return gb
 
@@ -439,15 +439,19 @@ class CartoLabDashboard(_QDialogBase):
         """Workspace 1: Unified Symbology & Thematic Studio (Quick Style, 2.5D, Advanced Suite, Palette Inspector)."""
         studio_widget = QWidget()
         layout = QVBoxLayout(studio_widget)
-        layout.setContentsMargins(4, 4, 4, 4)
+        layout.setContentsMargins(6, 6, 6, 6)
 
         self.symbology_sub_tabs = QTabWidget()
         self.symbology_sub_tabs.setUsesScrollButtons(True)
+        with suppress(Exception):
+            _ElideNone = getattr(getattr(Qt, "TextElideMode", Qt), "ElideNone", getattr(Qt, "ElideNone", 0))
+            self.symbology_sub_tabs.tabBar().setElideMode(_ElideNone)
+            self.symbology_sub_tabs.tabBar().setExpanding(False)
 
         # Sub-tab 1: Quick Style
         qs_widget = QWidget()
         qs_layout = QVBoxLayout(qs_widget)
-        qs_layout.setContentsMargins(8, 8, 8, 8)
+        qs_layout.setContentsMargins(12, 16, 12, 12)
         self._build_quick_style_contents(qs_layout)
         self.symbology_sub_tabs.addTab(qs_widget, _cartolab_icon("style.png"), "Quick Style")
         self.symbology_sub_tabs.setTabToolTip(0, "Quick Style: One-click graduated & categorized thematic styling")
@@ -469,7 +473,7 @@ class CartoLabDashboard(_QDialogBase):
 
         # Sub-tab 4: Palette & Accessibility Inspector
         palette_widget = self._build_palette_inspector_subwidget()
-        self.symbology_sub_tabs.addTab(palette_widget, _cartolab_icon("style.png"), "Palette && Accessibility")
+        self.symbology_sub_tabs.addTab(palette_widget, _cartolab_icon("inspector.png"), "Palette & Accessibility")
         self.symbology_sub_tabs.setTabToolTip(3, "Palette & Accessibility Inspector: CVD simulation & WCAG 2.1 contrast scoring")
 
         layout.addWidget(self.symbology_sub_tabs)
@@ -559,12 +563,12 @@ class CartoLabDashboard(_QDialogBase):
         grid.setSpacing(10)
 
         algos = [
-            ("Value-by-Alpha (VbA)", "planx_cartolab:value_by_alpha", "Encode data reliability or uncertainty directly into polygon opacity.", "vba.png"),
-            ("Ridge Map (Joyplot)", "planx_cartolab:ridge_map", "Raster-to-vector scanline elevation profiles (Joy Division style).", "ridge.png"),
-            ("Dot-Density Map", "planx_cartolab:dot_density", "Seeded, hole-aware discrete dots inside polygons — one dot per N units.", "dot_density.png"),
-            ("Proportional Symbols (Flannery)", "planx_cartolab:proportional_symbols", "Perceptually compensated graduated point symbols.", "proportional.png"),
-            ("Hexbin Aggregation", "planx_cartolab:hexbin_aggregate", "Bin point layers into regular pointy-top hexagonal cells with metrics.", "hexbin.png"),
-            ("Cartogram Transform", "planx_cartolab:compute_cartogram", "Continuous area cartogram polygon deformation by attribute weight.", "cartogram.png"),
+            ("Value-by-Alpha (VbA)", "zero2cartolab:value_by_alpha", "Encode data reliability or uncertainty directly into polygon opacity.", "vba.png"),
+            ("Ridge Map (Joyplot)", "zero2cartolab:ridge_map", "Raster-to-vector scanline elevation profiles (Joy Division style).", "ridge.png"),
+            ("Dot-Density Map", "zero2cartolab:dot_density", "Seeded, hole-aware discrete dots inside polygons — one dot per N units.", "dot_density.png"),
+            ("Proportional Symbols (Flannery)", "zero2cartolab:proportional_symbols", "Perceptually compensated graduated point symbols.", "proportional.png"),
+            ("Hexbin Aggregation", "zero2cartolab:hexbin_aggregate", "Bin point layers into regular pointy-top hexagonal cells with metrics.", "hexbin.png"),
+            ("Cartogram Transform", "zero2cartolab:compute_cartogram", "Continuous area cartogram polygon deformation by attribute weight.", "cartogram.png"),
         ]
 
         for i, (name, aid, desc, ic_name) in enumerate(algos):
@@ -1139,19 +1143,19 @@ class CartoLabDashboard(_QDialogBase):
         self._current_card_columns = columns
         idx = 0
         ICON_MAP = {
-            "planx_cartolab:bivariate_choropleth": "bivariate.png",
-            "planx_cartolab:compute_cartogram": "cartogram.png",
-            "planx_cartolab:ridge_map": "ridge.png",
-            "planx_cartolab:value_by_alpha": "vba.png",
-            "planx_cartolab:building_25d_style": "isometric.png",
-            "planx_cartolab:quick_style": "style.png",
-            "planx_cartolab:dot_density": "dot_density.png",
-            "planx_cartolab:proportional_symbols": "proportional.png",
-            "planx_cartolab:hexbin_aggregate": "hexbin.png",
-            "planx_cartolab:geometric_interval_classification": "bivariate.png",
-            "planx_cartolab:graticule_grid": "grid.png",
-            "planx_cartolab:label_points": "compass.png",
-            "planx_cartolab:normalize_field": "style.png",
+            "zero2cartolab:bivariate_choropleth": "bivariate.png",
+            "zero2cartolab:compute_cartogram": "cartogram.png",
+            "zero2cartolab:ridge_map": "ridge.png",
+            "zero2cartolab:value_by_alpha": "vba.png",
+            "zero2cartolab:building_25d_style": "isometric.png",
+            "zero2cartolab:quick_style": "style.png",
+            "zero2cartolab:dot_density": "dot_density.png",
+            "zero2cartolab:proportional_symbols": "proportional.png",
+            "zero2cartolab:hexbin_aggregate": "hexbin.png",
+            "zero2cartolab:geometric_interval_classification": "bivariate.png",
+            "zero2cartolab:graticule_grid": "grid.png",
+            "zero2cartolab:label_points": "compass.png",
+            "zero2cartolab:normalize_field": "style.png",
         }
 
         for group, accent, items in ALGO_GROUPS:
@@ -2235,10 +2239,14 @@ class CartoLabDashboard(_QDialogBase):
         """Workspace 2: Layout Automation Studio (Templates Gallery, Custom Map Sheet, Isometric Stacker)."""
         studio_widget = QWidget()
         layout = QVBoxLayout(studio_widget)
-        layout.setContentsMargins(4, 4, 4, 4)
+        layout.setContentsMargins(6, 6, 6, 6)
 
         self.layout_sub_tabs = QTabWidget()
         self.layout_sub_tabs.setUsesScrollButtons(True)
+        with suppress(Exception):
+            _ElideNone = getattr(getattr(Qt, "TextElideMode", Qt), "ElideNone", getattr(Qt, "ElideNone", 0))
+            self.layout_sub_tabs.tabBar().setElideMode(_ElideNone)
+            self.layout_sub_tabs.tabBar().setExpanding(False)
 
         # Sub-tab 1: Layout Templates Gallery
         templates_widget = self._build_template_gallery_subwidget()
@@ -2247,7 +2255,7 @@ class CartoLabDashboard(_QDialogBase):
 
         # Sub-tab 2: Custom Map Sheet & Manager
         mapsheet_widget = self._build_custom_mapsheet_subwidget()
-        self.layout_sub_tabs.addTab(mapsheet_widget, _cartolab_icon("grid.png"), "Map Sheet && Manager")
+        self.layout_sub_tabs.addTab(mapsheet_widget, _cartolab_icon("grid.png"), "Map Sheet Studio")
         self.layout_sub_tabs.setTabToolTip(1, "Auto Map Sheet Builder, Layout Manager & Decorators")
 
         # Sub-tab 3: Isometric 3D Stacker

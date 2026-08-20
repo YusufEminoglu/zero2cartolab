@@ -1,6 +1,6 @@
-# PlanX CartoLab Documentation
+# 02CartoLab Documentation
 
-PlanX CartoLab is a QGIS-native cartography suite for analytical urban planning maps.
+02CartoLab is a QGIS-native cartography suite for analytical urban planning maps.
 
 ## Start Here
 

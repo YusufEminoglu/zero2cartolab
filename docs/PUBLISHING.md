@@ -5,20 +5,20 @@
 From `C:\Users\YE\PyCharmMiscProject\qgis_plugins`:
 
 ```powershell
-.\packaging\Build-PluginZip.ps1 -PluginDir planx_cartolab
+.\packaging\Build-PluginZip.ps1 -PluginDir zero2cartolab
 ```
 
 Output:
 
 ```text
-QGIS_Plugin_Releases\planx_cartolab.zip
+QGIS_Plugin_Releases\zero2cartolab.zip
 ```
 
 ## Validate Before Push
 
 ```powershell
-py -3 .\packaging\validate_plugin.py .\planx_cartolab
-py -3 .\packaging\full_release_gate.py --plugins planx_cartolab --skip-runtime --skip-geostats-smoke
+py -3 .\packaging\validate_plugin.py .\zero2cartolab
+py -3 .\packaging\full_release_gate.py --plugins zero2cartolab --skip-runtime --skip-geostats-smoke
 ```
 
 ## GitHub Pages
