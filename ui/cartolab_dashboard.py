@@ -301,11 +301,11 @@ class CartoLabDashboard(_QDialogBase):
             }}
             QTabWidget::pane {{ border: 1px solid #e2e8f0; border-radius: {r}px; background: #ffffff; margin-top: -1px; }}
             QTabBar::tab {{
-                background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; border-bottom: none;
-                padding: 6px 14px; border-top-left-radius: 6px; border-top-right-radius: 6px; margin-right: 4px;
-                font-weight: 600; font-size: 12px; min-height: 24px;
+                background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-bottom: none;
+                padding: 8px 22px 8px 26px; border-top-left-radius: 6px; border-top-right-radius: 6px; margin-right: 4px;
+                font-weight: 600; font-size: 12px; min-height: 22px;
             }}
-            QTabBar::tab:selected {{ background: #ffffff; color: #1d4ed8; font-weight: 700; border: 1px solid #94a3b8; border-bottom: 2px solid #2563eb; }}
+            QTabBar::tab:selected {{ background: #ffffff; color: #1d4ed8; font-weight: 600; border-color: #cbd5e1; }}
             QTabBar::tab:hover:!selected {{ background: #e2e8f0; color: #0f172a; }}
             QListWidget#sidebarNav {{
                 background: #ffffff; color: #334155; border: 1px solid #e2e8f0;
@@ -472,7 +472,7 @@ class CartoLabDashboard(_QDialogBase):
         qs_layout = QVBoxLayout(qs_widget)
         qs_layout.setContentsMargins(12, 16, 12, 12)
         self._build_quick_style_contents(qs_layout)
-        self.symbology_sub_tabs.addTab(qs_widget, "Quick Style")
+        self.symbology_sub_tabs.addTab(qs_widget, "  Quick Style  ")
         self.symbology_sub_tabs.setTabToolTip(0, "Quick Style: One-click graduated & categorized thematic styling")
 
         # Sub-tab 2: 2.5D Building Extrusion
@@ -482,17 +482,17 @@ class CartoLabDashboard(_QDialogBase):
         tab_body = QWidget()
         self.tab_25d.setWidget(tab_body)
         self._build_25d_contents(tab_body)
-        self.symbology_sub_tabs.addTab(self.tab_25d, "2.5D Buildings")
+        self.symbology_sub_tabs.addTab(self.tab_25d, "  2.5D Buildings  ")
         self.symbology_sub_tabs.setTabToolTip(1, "2.5D Building Extrusion: Native height extrusion, lighting & floor bands")
 
         # Sub-tab 3: Advanced Thematic Suite
         thematic_widget = self._build_thematic_suite_subwidget()
-        self.symbology_sub_tabs.addTab(thematic_widget, "Thematic Maps")
+        self.symbology_sub_tabs.addTab(thematic_widget, "  Thematic Maps  ")
         self.symbology_sub_tabs.setTabToolTip(2, "Thematic Maps: Bivariate choropleth, Value-by-Alpha, Cartogram, Ridge maps")
 
         # Sub-tab 4: Palette & Accessibility Inspector
         palette_widget = self._build_palette_inspector_subwidget()
-        self.symbology_sub_tabs.addTab(palette_widget, "Palette && Accessibility")
+        self.symbology_sub_tabs.addTab(palette_widget, "  Palette & Accessibility  ")
         self.symbology_sub_tabs.setTabToolTip(3, "Palette & Accessibility Inspector: CVD simulation & WCAG 2.1 contrast scoring")
 
         layout.addWidget(self.symbology_sub_tabs)
@@ -2265,17 +2265,17 @@ class CartoLabDashboard(_QDialogBase):
 
         # Sub-tab 1: Layout Templates Gallery
         templates_widget = self._build_template_gallery_subwidget()
-        self.layout_sub_tabs.addTab(templates_widget, "Template Gallery")
+        self.layout_sub_tabs.addTab(templates_widget, "  Template Gallery  ")
         self.layout_sub_tabs.setTabToolTip(0, "Publication Layout Templates: Report Figure, Academic Journal, Poster, Fact Sheet, Diptych")
 
         # Sub-tab 2: Custom Map Sheet & Manager
         mapsheet_widget = self._build_custom_mapsheet_subwidget()
-        self.layout_sub_tabs.addTab(mapsheet_widget, "Map Sheet Studio")
+        self.layout_sub_tabs.addTab(mapsheet_widget, "  Map Sheet Studio  ")
         self.layout_sub_tabs.setTabToolTip(1, "Auto Map Sheet Builder, Layout Manager & Decorators")
 
         # Sub-tab 3: Isometric 3D Stacker
         iso_widget = self._build_isometric_stacker_subwidget()
-        self.layout_sub_tabs.addTab(iso_widget, "3D Isometric Stacker")
+        self.layout_sub_tabs.addTab(iso_widget, "  3D Isometric Stacker  ")
         self.layout_sub_tabs.setTabToolTip(2, "3D Isometric Layer Stacker: Multi-layer perspective assembly")
 
         layout.addWidget(self.layout_sub_tabs)

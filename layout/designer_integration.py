@@ -165,7 +165,7 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
         QTabBar::tab {
             background: #f1f5f9;
             color: #475569;
-            padding: 8px 12px;
+            padding: 8px 18px 8px 22px;
             font-weight: 600;
             font-size: 11px;
             border-top-left-radius: 6px;
@@ -176,7 +176,7 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
         QTabBar::tab:selected {
             background: #ffffff;
             color: #0f172a;
-            font-weight: 700;
+            font-weight: 600;
             border-bottom: 2px solid #2563eb;
         }
         QGroupBox {
@@ -327,7 +327,7 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
     lyt_tpl.addWidget(gb_quick_tpl)
     lyt_tpl.addStretch()
 
-    tabs.addTab(tab_tpl, "Templates")
+    tabs.addTab(tab_tpl, "  Templates  ")
 
     # -----------------------------------------------------------------
     # TAB 1: Canvas & Grid
@@ -437,7 +437,7 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
     lyt_canvas.addWidget(gb_typo)
     lyt_canvas.addStretch()
 
-    tabs.addTab(tab_canvas, _get_cartolab_icon("layout.png"), "Canvas && Grid")
+    tabs.addTab(tab_canvas, "  Canvas & Grid  ")
 
 
     # -----------------------------------------------------------------
@@ -791,7 +791,7 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
 
     lyt_dec.addStretch()
 
-    tabs.addTab(tab_dec, "Decorators")
+    tabs.addTab(tab_dec, "  Decorators  ")
 
     # -----------------------------------------------------------------
     # TAB 3: 3D Perspective & Quick Export
@@ -958,7 +958,7 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
     lyt_exp.addWidget(gb_exp)
     lyt_exp.addStretch()
 
-    tabs.addTab(tab_exp, "3D && Export")
+    tabs.addTab(tab_exp, "  3D & Export  ")
 
     main_lyt.addWidget(tabs)
     dock.setWidget(container)
