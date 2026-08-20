@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>02CartoLab — Unified Cartographic Studio & Print Layout Automation for QGIS</title>
+  <meta name="description" content="Design publication-quality thematic maps and automated print layouts in QGIS: bivariate maps, 2.5D building extrusion, template gallery, colorblind accessibility inspector, and 14 Processing algorithms.">
+  <meta name="author" content="Yusuf Eminoglu">
+  <link rel="icon" type="image/png" href="img/icon.png">
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #090d16;
+      --bg-card: rgba(15, 23, 42, 0.75);
+      --bg-card-hover: rgba(30, 41, 59, 0.85);
+      --border-glow: rgba(56, 189, 248, 0.25);
+      --accent-cyan: #00f2fe;
+      --accent-blue: #4facfe;
+      --accent-purple: #8a2be2;
+      --accent-gold: #f59e0b;
+      --accent-rose: #f43f5e;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+    code, pre {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    
+    /* Background grid & glows */
+    .bg-grid {
+      background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+    .glow-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(120px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .glow-1 { top: -100px; left: 10%; width: 500px; height: 500px; background: rgba(0, 242, 254, 0.15); }
+    .glow-2 { top: 400px; right: 5%; width: 450px; height: 450px; background: rgba(138, 43, 226, 0.18); }
+    .glow-3 { top: 1600px; left: 20%; width: 600px; height: 600px; background: rgba(244, 63, 94, 0.12); }
+
+    /* Navigation */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      backdrop-filter: blur(16px);
+      background: rgba(9, 13, 22, 0.82);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .nav-container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0.9rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      text-decoration: none;
+      color: #fff;
+      font-weight: 800;
+      font-size: 1.3rem;
+      letter-spacing: -0.5px;
+    }
+    .brand img {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 1.75rem;
+      list-style: none;
+    }
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.92rem;
+      font-weight: 500;
+      transition: color 0.2s ease;
+    }
+    .nav-links a:hover {
+      color: var(--accent-cyan);
+    }
+    .btn-github {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #fff;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+    .btn-github:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 16px rgba(0, 242, 254, 0.2);
+    }
+
+    /* Container */
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Hero Section */
+    .hero {
+      padding: 5rem 0 4rem;
+      text-align: center;
+      position: relative;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(0, 242, 254, 0.1);
+      border: 1px solid rgba(0, 242, 254, 0.3);
+      color: var(--accent-cyan);
+      padding: 0.35rem 1rem;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+    }
+    .hero-title {
+      font-size: 3.6rem;
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -1.5px;
+      margin-bottom: 1.25rem;
+      background: linear-gradient(135deg, #ffffff 30%, #a5f3fc 70%, #818cf8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero-subtitle {
+      max-width: 800px;
+      margin: 0 auto 2.5rem;
+      font-size: 1.25rem;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 3.5rem;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+      color: #000;
+      padding: 0.85rem 1.85rem;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 1rem;
+      text-decoration: none;
+      box-shadow: 0 10px 25px rgba(0, 242, 254, 0.35);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 30px rgba(0, 242, 254, 0.5);
+    }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #fff;
+      padding: 0.85rem 1.75rem;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 1rem;
+      text-decoration: none;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    /* Stats Grid */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 5rem;
+    }
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 1.5rem;
+      text-align: center;
+      backdrop-filter: blur(12px);
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .stat-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--border-glow);
+    }
+    .stat-num {
+      font-size: 2.4rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #00f2fe, #38bdf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.25rem;
+    }
+    .stat-label {
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      font-weight: 500;
+    }
+
+    /* Section Headers */
+    .section-header {
+      text-align: center;
+      margin-bottom: 3.5rem;
+    }
+    .section-tag {
+      color: var(--accent-cyan);
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+    }
+    .section-title {
+      font-size: 2.5rem;
+      font-weight: 800;
+      letter-spacing: -1px;
+      margin-bottom: 1rem;
+    }
+    .section-desc {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
+    /* Interactive Gallery Section */
+    .gallery-filter {
+      display: flex;
+      justify-content: center;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+      margin-bottom: 2.5rem;
+    }
+    .filter-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-muted);
+      padding: 0.55rem 1.2rem;
+      border-radius: 9999px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .filter-btn.active, .filter-btn:hover {
+      background: var(--accent-cyan);
+      color: #000;
+      border-color: var(--accent-cyan);
+      box-shadow: 0 4px 15px rgba(0, 242, 254, 0.3);
+    }
+
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 1.75rem;
+      margin-bottom: 5rem;
+    }
+    .gallery-card {
+      background: var(--bg-card);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      backdrop-filter: blur(12px);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s;
+      cursor: pointer;
+    }
+    .gallery-card:hover {
+      transform: translateY(-6px);
+      border-color: var(--accent-cyan);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    }
+    .gallery-img-wrap {
+      position: relative;
+      width: 100%;
+      height: 240px;
+      background: #0f172a;
+      overflow: hidden;
+    }
+    .gallery-img-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: top center;
+      transition: transform 0.4s ease;
+    }
+    .gallery-card:hover .gallery-img-wrap img {
+      transform: scale(1.04);
+    }
+    .gallery-badge {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: rgba(9, 13, 22, 0.85);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #fff;
+      padding: 0.25rem 0.65rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    .gallery-content {
+      padding: 1.4rem;
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
+    }
+    .gallery-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+      color: #fff;
+    }
+    .gallery-desc {
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      line-height: 1.5;
+      margin-bottom: 1rem;
+      flex-grow: 1;
+    }
+    .gallery-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 0.9rem;
+      font-size: 0.8rem;
+      color: #64748b;
+    }
+    .gallery-meta span {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    /* Live Interactive Simulator Section */
+    .simulator-section {
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.5) 0%, rgba(9, 13, 22, 0.9) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 24px;
+      padding: 3rem;
+      margin-bottom: 5rem;
+      position: relative;
+    }
+    .sim-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3rem;
+      align-items: center;
+    }
+    @media (max-width: 900px) {
+      .sim-grid { grid-template-columns: 1fr; }
+    }
+    .matrix-display {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      width: 280px;
+      height: 280px;
+      margin: 0 auto;
+      padding: 12px;
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .matrix-cell {
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: rgba(255, 255, 255, 0.9);
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+    .matrix-cell:hover {
+      transform: scale(1.08);
+      z-index: 10;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Features Grid */
+    .feature-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 5rem;
+    }
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 2rem;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .feature-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--accent-cyan);
+    }
+    .feature-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: rgba(0, 242, 254, 0.1);
+      color: var(--accent-cyan);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      margin-bottom: 1.25rem;
+      border: 1px solid rgba(0, 242, 254, 0.25);
+    }
+    .feature-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+    }
+    .feature-desc {
+      color: var(--text-muted);
+      font-size: 0.92rem;
+      line-height: 1.6;
+    }
+
+    /* Modal Lightbox */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: rgba(0, 0, 0, 0.88);
+      backdrop-filter: blur(12px);
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    .modal.active { display: flex; }
+    .modal-content {
+      max-width: 1000px;
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8);
+      position: relative;
+    }
+    .modal-img-wrap {
+      max-height: 65vh;
+      background: #020617;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .modal-img-wrap img {
+      max-width: 100%;
+      max-height: 65vh;
+      object-fit: contain;
+    }
+    .modal-body {
+      padding: 1.5rem 2rem;
+    }
+    .modal-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.6);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .modal-close:hover { background: #f43f5e; }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(9, 13, 22, 0.95);
+      padding: 3.5rem 0 2rem;
+      margin-top: 5rem;
+    }
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 2.5rem;
+      margin-bottom: 3rem;
+    }
+    @media (max-width: 768px) {
+      .footer-grid { grid-template-columns: 1fr; }
+    }
+    .footer-col h4 {
+      color: #fff;
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+    }
+    .footer-col ul {
+      list-style: none;
+    }
+    .footer-col ul li {
+      margin-bottom: 0.6rem;
+    }
+    .footer-col ul li a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.88rem;
+      transition: color 0.2s;
+    }
+    .footer-col ul li a:hover {
+      color: var(--accent-cyan);
+    }
+    .footer-bottom {
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      padding-top: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: #64748b;
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body class="bg-grid">
+
+  <div class="glow-orb glow-1"></div>
+  <div class="glow-orb glow-2"></div>
+  <div class="glow-orb glow-3"></div>
+
+  <!-- Header -->
+  <header>
+    <div class="nav-container">
+      <a href="#" class="brand">
+        <img src="img/icon.png" alt="02CartoLab Icon">
+        <span>02CartoLab</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="#gallery">Templates</a></li>
+        <li><a href="#simulator">Bivariate Lab</a></li>
+        <li><a href="#features">Studio Modules</a></li>
+        <li><a href="#processing">Algorithms</a></li>
+        <li><a href="CARTOLAB_REFERENCE_MANUAL.html">Manual</a></li>
+      </ul>
+      <a href="https://github.com/YusufEminoglu/zero2cartolab" target="_blank" class="btn-github">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+        <span>GitHub Star</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero container">
+    <div class="hero-badge">
+      <span>🚀 v1.0.0</span>
+      <span>•</span>
+      <span>QGIS 3.28+ & QGIS 4.x Compatible</span>
+      <span>•</span>
+      <span>Pure Python & C++ QGIS Core</span>
+    </div>
+    <h1 class="hero-title">Unified Cartographic Studio &<br>Print Layout Automation</h1>
+    <p class="hero-subtitle">
+      Bridge thematic analytical symbology and publication-grade print layouts in one seamless workflow.
+      From 2.5D building extrusion and bivariate choropleths to 1-click exhibition posters and automated map book series.
+    </p>
+    <div class="hero-actions">
+      <a href="https://github.com/YusufEminoglu/zero2cartolab/releases" class="btn-primary">Download Plugin (ZIP)</a>
+      <a href="#gallery" class="btn-secondary">Explore Real Map Outputs</a>
+      <a href="CARTOLAB_REFERENCE_MANUAL.html" class="btn-secondary">Read Full Manual</a>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-num">14</div>
+        <div class="stat-label">Processing Algorithms</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">5</div>
+        <div class="stat-label">Publication Archetypes</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">6</div>
+        <div class="stat-label">Tactile Paper Themes</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">100%</div>
+        <div class="stat-label">Dependency-Free QGIS Core</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Real Layout Gallery -->
+  <section id="gallery" class="container">
+    <div class="section-header">
+      <div class="section-tag">Visual Showcase</div>
+      <h2 class="section-title">Publication-Grade Map Layouts</h2>
+      <p class="section-desc">
+        Explore genuine layouts rendered by 02CartoLab using urban planning vector datasets. Click any card to inspect pixel-by-pixel.
+      </p>
+    </div>
+
+    <!-- Filters -->
+    <div class="gallery-filter">
+      <button class="filter-btn active" data-filter="all">All Outputs</button>
+      <button class="filter-btn" data-filter="template">Publication Templates</button>
+      <button class="filter-btn" data-filter="theme">Paper Themes</button>
+      <button class="filter-btn" data-filter="thematic">Thematic Maps</button>
+      <button class="filter-btn" data-filter="atlas">Atlas Series</button>
+    </div>
+
+    <!-- Cards Grid -->
+    <div class="gallery-grid" id="galleryGrid">
+
+      <!-- 1. Report Figure 16:9 -->
+      <div class="gallery-card" data-category="template" onclick="openModal('img/02_template_report_figure_16x9.png', 'Report & Slide Figure (16:9 Landscape)', 'Optimized for executive presentations, slide decks, and widescreen reports with a prominent figure title, hero map frame, takeaway metric cards, and a compact right HUD.')">
+        <div class="gallery-img-wrap">
+          <img src="img/02_template_report_figure_16x9.png" alt="Report Figure 16:9">
+          <div class="gallery-badge">16:9 Landscape</div>
+        </div>
+        <div class="gallery-content">
+          <h3 class="gallery-title">Report & Slide Figure</h3>
+          <p class="gallery-desc">High-impact 16:9 widescreen format designed for executive slides, policy decks, and digital displays with right HUD sidebar.</p>
+          <div class="gallery-meta">
+            <span>📐 297 × 167 mm</span>
+            <span>✨ Heckbert Scalebar</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Academic Journal A4 -->
+      <div class="gallery-card" data-category="template" onclick="openModal('img/03_template_academic_journal_a4.png', 'Academic Journal Figure (A4 Portrait)', '2-column scientific format with formal figure numbering, methodology note, stepped line scalebar, and standardized citation block.')">
+        <div class="gallery-img-wrap">
+          <img src="img/03_template_academic_journal_a4.png" alt="Academic Journal A4">
+          <div class="gallery-badge">A4 Portrait</div>
+        </div>
+        <div class="gallery-content">
+          <h3 class="gallery-title">Academic Journal Figure</h3>
+          <p class="gallery-desc">Formal scientific paper layout with figure captions, analytical methodology notes, and academic citation blocks.</p>
+          <div class="gallery-meta">
+            <span>📐 A4 210 × 297 mm</span>
+            <span>🏛️ Formal Citation</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Exhibition Poster A2 -->
+      <div class="gallery-card" data-category="template" onclick="openModal('img/04_template_poster_exhibition_a2.png', 'Exhibition Poster (A2 Landscape)', 'High-impact presentation poster with bold architectural header banner, dominant hero map, regional locator inset map, and thematic legend cards.')">
+        <div class="gallery-img-wrap">
+          <img src="img/04_template_poster_exhibition_a2.png" alt="Exhibition Poster A2">
+          <div class="gallery-badge">A2 Landscape</div>
+        </div>
+        <div class="gallery-content">
+          <h3 class="gallery-title">Exhibition & Competition Poster</h3>
+          <p class="gallery-desc">Large-format presentation board featuring bold architectural banner, regional locator map, and dual legend cards.</p>
+          <div class="gallery-meta">
+            <span>📐 A2 594 × 420 mm</span>
+            <span>🗺️ Locator Inset</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Executive Fact Sheet A4 -->
+      <div class="gallery-card" data-category="template" onclick="openModal('img/05_template_fact_sheet_a4.png', 'Executive Fact Sheet (A4 Portrait)', 'Executive 1-pager with top 4 KPI metric cards, central thematic map, and bottom analytical narrative & policy recommendation block.')">
+        <div class="gallery-img-wrap">
+          <img src="img/05_template_fact_sheet_a4.png" alt="Fact Sheet A4">
+          <div class="gallery-badge">A4 Fact Sheet</div>
+        </div>
+        <div class="gallery-content">
+          <h3 class="gallery-title">Executive Fact Sheet</h3>
+          <p class="gallery-desc">One-page briefing document combining KPI stat cards, central thematic map, and structured policy narrative.</p>
+          <div class="gallery-meta">
+            <span>📐 A4 210 × 297 mm</span>
+            <span>📊 4 KPI Stat Cards</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Comparative Diptych -->
+      <div class="gallery-card" data-category="template" onclick="openModal('img/06_template_comparative_diptych.png', 'Side-by-Side Diptych (A4 Landscape)', 'Comparative dual-map layout with paired synchronized map frames, scenario A/B badges, shared extent & CRS, and comparative synthesis bar.')">
+        <div class="gallery-img-wrap">
+          <img src="img/06_template_comparative_diptych.png" alt="Comparative Diptych">
+          <div class="gallery-badge">Dual Map Diptych</div>
+        </div>
+        <div class="gallery-content">
+          <h3 class="gallery-title">Comparative Diptych</h3>
+          <p class="gallery-desc">Dual synchronized map canvases for scenario A vs B analysis, temporal change detection, or multi-criteria evaluation.</p>
+          <div class="gallery-meta">
+            <span>📐 A4 297 × 210 mm</span>
+            <span>🔄 Paired Extents</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6. Dark Matter Paper Theme -->
+      <div class="gallery-card" data-category="theme" onclick="openModal('img/01_map_sheet_dark_matter.png', 'Paper Theme: Dark Matter', 'Deep midnight navy background (#0b101b) with glowing neon turquoise and amber accents. Ideal for high-contrast command centers.')">
+        <div class="gallery-img-wrap">
+          <img src="img/01_map_sheet_dark_matter.png" alt="Dark Matter Theme">
+          <div class="gallery-badge">Dark Matter</div>
+        </div>
+        <div class="gallery-content">
+          <h3 class="gallery-title">Theme: Dark Matter</h3>
+          <p class="gallery-desc">Midnight blue background with luminous neon vectors for command center displays and dark-mode dashboards.</p>
+          <div class="gallery-meta">
+            <span>🎨 #0b101b Base</span>
+            <span>💡 High Contrast</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7. Swiss Modern Paper Theme -->
+      <div class="gallery-card" data-category="theme" onclick="openModal('img/01_map_sheet_swiss_modern.png', 'Paper Theme: Swiss Modern', 'Clean Helvetica/Inter minimalist styling with neutral gray tones, hairline grid, and structured typographic hierarchy.')">
+        <div class="gallery-img-wrap">
+          <img src="img/01_map_sheet_swiss_modern.png" alt="Swiss Modern Theme">
+          <div class="gallery-badge">Swiss Modern</div>
+        </div>
+        <div class="gallery-content">
+          <h3 class="gallery-title">Theme: Swiss Modern</h3>
+          <p class="gallery-desc">Minimalist white canvas with crisp typography, hairline borders, and international typographic style.</p>
+          <div class="gallery-meta">
+            <span>🎨 Clean White</span>
+            <span>📐 Hairline Grid</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 8. Japanese Washi Paper Theme -->
+      <div class="gallery-card" data-category="theme" onclick="openModal('img/01_map_sheet_japanese_washi.png', 'Paper Theme: Japanese Washi', 'Warm organic off-white textured feel (#faf8f5) with delicate earthy accents and harmonious balanced margins.')">
+        <div class="gallery-img-wrap">
+          <img src="img/01_map_sheet_japanese_washi.png" alt="Japanese Washi Theme">
+          <div class="gallery-badge">Japanese Washi</div>
+        </div>
+        <div class="gallery-content">
+          <h3 class="gallery-title">Theme: Japanese Washi</h3>
+          <p class="gallery-desc">Warm organic paper tone with subtle warm gray borders and harmonious, tranquil map framing.</p>
+          <div class="gallery-meta">
+            <span>🎨 #faf8f5 Washi</span>
+            <span>🌿 Organic Warmth</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 9. Bivariate Choropleth -->
+      <div class="gallery-card" data-category="thematic" onclick="openModal('img/07_bivariate_choropleth_layout.png', 'Bivariate Choropleth Map & Native Legend', 'Two-variable choropleth with 3x3 interpolated color matrix, automatic quantile/geometric interval breaks, and native editable legend item.')">
+        <div class="gallery-img-wrap">
+          <img src="img/07_bivariate_choropleth_layout.png" alt="Bivariate Choropleth">
+          <div class="gallery-badge">Bivariate 3×3</div>
+        </div>
+        <div class="gallery-content">
+          <h3 class="gallery-title">Bivariate Choropleth Engine</h3>
+          <p class="gallery-desc">Visualizes two interacting numeric attributes simultaneously using a 2D color matrix with bilinear interpolation.</p>
+          <div class="gallery-meta">
+            <span>📊 3×3 / 4×4 Matrix</span>
+            <span>🎯 Native QGIS Legend</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 10. Value by Alpha -->
+      <div class="gallery-card" data-category="thematic" onclick="openModal('img/08_value_by_alpha_layout.png', 'Value-by-Alpha Uncertainty Map', 'Encodes statistical reliability or population density as opacity, allowing uncertain or low-weight data to fade gracefully into the background.')">
+        <div class="gallery-img-wrap">
+          <img src="img/08_value_by_alpha_layout.png" alt="Value-by-Alpha">
+          <div class="gallery-badge">Value-by-Alpha</div>
+        </div>
+        <div class="gallery-content">
+          <h3 class="gallery-title">Value-by-Alpha (VbA)</h3>
+          <p class="gallery-desc">Encodes statistical confidence or density as opacity, ensuring unreliable estimates do not dominate visual attention.</p>
+          <div class="gallery-meta">
+            <span>🛡️ Uncertainty Safe</span>
+            <span>📉 Alpha Modulated</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 11. Automated Atlas Series -->
+      <div class="gallery-card" data-category="atlas" onclick="openModal('img/12_atlas_map_series_page1.png', 'Automated Map Series / Atlas Exporter', 'Automated multi-page atlas book generator with dynamic page headers, coverage layer filtering, overview inset locator map, and batch export.')">
+        <div class="gallery-img-wrap">
+          <img src="img/12_atlas_map_series_page1.png" alt="Atlas Series">
+          <div class="gallery-badge">Atlas Engine</div>
+        </div>
+        <div class="gallery-content">
+          <h3 class="gallery-title">Automated Map Book Atlas</h3>
+          <p class="gallery-desc">Produces coherent multi-page map books across districts or administrative units with dynamic headers and locator maps.</p>
+          <div class="gallery-meta">
+            <span>📖 Multi-Page PDF</span>
+            <span>🗺️ Dynamic Locator</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Interactive Bivariate & CVD Simulator -->
+  <section id="simulator" class="container">
+    <div class="simulator-section">
+      <div class="section-header" style="margin-bottom: 2rem;">
+        <div class="section-tag">Interactive Laboratory</div>
+        <h2 class="section-title" style="font-size: 2rem;">Live Bivariate & CVD Inspector</h2>
+        <p class="section-desc">Test 2D color schemes and evaluate Color Vision Deficiency (CVD) safety with real-time WCAG contrast scoring.</p>
+      </div>
+
+      <div class="sim-grid">
+        <!-- Matrix Visualizer -->
+        <div>
+          <div class="matrix-display" id="matrixDisplay">
+            <!-- 9 Cells generated by JS -->
+          </div>
+          <div style="text-align: center; margin-top: 1rem; color: var(--text-muted); font-size: 0.85rem;">
+            Interactive 3×3 Matrix • Click any swatch to inspect color hex
+          </div>
+        </div>
+
+        <!-- Controls -->
+        <div>
+          <div style="margin-bottom: 1.5rem;">
+            <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; font-size: 0.95rem;">Select Cartographic Palette:</label>
+            <select id="paletteSelect" style="width: 100%; padding: 0.75rem; border-radius: 8px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: #fff; font-size: 0.95rem; font-weight: 600;">
+              <option value="pink_blue">Pink — Blue (High Contrast Bivariate)</option>
+              <option value="purple_green">Purple — Green (CVD Friendly)</option>
+              <option value="orange_cyan">Orange — Cyan (Thermal vs Hydro)</option>
+              <option value="teal_gold">Teal — Gold (Planning Economic)</option>
+            </select>
+          </div>
+
+          <div style="margin-bottom: 1.5rem;">
+            <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; font-size: 0.95rem;">Colorblind Vision Simulation (CVD):</label>
+            <select id="cvdSelect" style="width: 100%; padding: 0.75rem; border-radius: 8px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: #fff; font-size: 0.95rem; font-weight: 600;">
+              <option value="normal">Normal Vision (Trifocal)</option>
+              <option value="deuteranopia">Deuteranopia (Green-Blind ~6% Males)</option>
+              <option value="protanopia">Protanopia (Red-Blind ~2% Males)</option>
+              <option value="tritanopia">Tritanopia (Blue-Blind ~0.1%)</option>
+              <option value="achromatopsia">Achromatopsia (Monochrome / Grayscale)</option>
+            </select>
+          </div>
+
+          <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.25rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+              <span style="color: var(--text-muted); font-size: 0.88rem;">Corner Contrast Ratio (Luminance):</span>
+              <span id="contrastScore" style="color: #4ade80; font-weight: 700; font-size: 0.95rem;">14.2 : 1</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--text-muted); font-size: 0.88rem;">WCAG 2.1 Compliance:</span>
+              <span id="wcagBadge" style="background: #166534; color: #bbf7d0; padding: 0.15rem 0.6rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700;">AAA PASS</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features / Modules Grid -->
+  <section id="features" class="container">
+    <div class="section-header">
+      <div class="section-tag">Modular Architecture</div>
+      <h2 class="section-title">Built for Urban Planners & Cartographers</h2>
+      <p class="section-desc">Six specialized studios integrated seamlessly inside QGIS.</p>
+    </div>
+
+    <div class="feature-cards">
+      <div class="feature-card">
+        <div class="feature-icon">📐</div>
+        <h3 class="feature-title">Print Layout Designer Studio</h3>
+        <p class="feature-desc">Hooks directly into QGIS layout windows with an embedded dock. Features multi-segment Heckbert scalebars, modern north needles, and automated coordinate graticules.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🏙️</div>
+        <h3 class="feature-title">2.5D Building Extrusions</h3>
+        <p class="feature-desc">Transforms 2D building footprints into architectural 2.5D massing with solar angle lighting presets, soft drop shadows, and per-floor color bands.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🎨</div>
+        <h3 class="feature-title">Thematic Symbology Studio</h3>
+        <p class="feature-desc">Generates Bivariate Choropleths, Value-by-Alpha maps, Continuous-Area Cartograms, Joyplot Ridge Maps, and Flannery Proportional Symbols.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🖼️</div>
+        <h3 class="feature-title">Publication Template Gallery</h3>
+        <p class="feature-desc">One-click assembly of executive reports (16:9), academic journal figures (A4), exhibition posters (A2), fact sheets, and comparative diptychs.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">♿</div>
+        <h3 class="feature-title">Accessibility & CVD Inspector</h3>
+        <p class="feature-desc">Live Color Vision Deficiency (CVD) simulation matrix (Brettel/Machado) and real-time WCAG 2.1 AA/AAA contrast ratio evaluation.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <h3 class="feature-title">14 Processing Algorithms</h3>
+        <p class="feature-desc">Headless, scriptable, modeler-ready algorithms for automated spatial pipelines, batch processing, and Python scripts.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Processing Algorithms Catalog -->
+  <section id="processing" class="container">
+    <div class="section-header">
+      <div class="section-tag">Processing Provider</div>
+      <h2 class="section-title">14 Headless Algorithms</h2>
+      <p class="section-desc">Accessible from QGIS Processing Toolbox, Graphical Modeler, and Python API.</p>
+    </div>
+
+    <div style="background: var(--bg-card); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 2rem; margin-bottom: 5rem;">
+      <pre style="color: #38bdf8; font-size: 0.9rem; overflow-x: auto; padding: 1.5rem; background: rgba(0,0,0,0.5); border-radius: 10px; border: 1px solid rgba(255,255,255,0.08);">
+# Example: Running Quick Style via PyQGIS
+import processing
+
+params = {
+    'INPUT': 'path/to/districts.gpkg|layername=districts',
+    'FIELD': 'population_density',
+    'MODE': 1,            # 1 = Graduated
+    'CLASSES': 5,
+    'METHOD': 0,          # 0 = Quantile, 1 = Equal Interval, 2 = Geometric Interval
+    'PALETTE': 2,         # ColorBrewer Blues
+    'OUTLINE': True
+}
+result = processing.run('zero2cartolab:quick_style', params)
+print(result['SUMMARY'])
+      </pre>
+    </div>
+  </section>
+
+  <!-- Modal Lightbox -->
+  <div class="modal" id="imageModal" onclick="closeModal(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <button class="modal-close" onclick="closeModalDirect()">&times;</button>
+      <div class="modal-img-wrap">
+        <img id="modalImg" src="" alt="Enlarged Layout">
+      </div>
+      <div class="modal-body">
+        <h3 id="modalTitle" style="font-size: 1.3rem; font-weight: 700; margin-bottom: 0.4rem; color: #fff;"></h3>
+        <p id="modalDesc" style="color: var(--text-muted); font-size: 0.92rem;"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-col">
+          <div class="brand" style="margin-bottom: 1rem;">
+            <img src="img/icon.png" alt="02CartoLab">
+            <span>02CartoLab</span>
+          </div>
+          <p style="color: var(--text-muted); font-size: 0.88rem; max-width: 320px;">
+            A unified cartographic studio for map symbology and publication print layout automation in QGIS.
+          </p>
+        </div>
+        <div class="footer-col">
+          <h4>Navigation</h4>
+          <ul>
+            <li><a href="#gallery">Templates</a></li>
+            <li><a href="#simulator">Bivariate Lab</a></li>
+            <li><a href="#features">Features</a></li>
+            <li><a href="CARTOLAB_REFERENCE_MANUAL.html">User Manual</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Repository</h4>
+          <ul>
+            <li><a href="https://github.com/YusufEminoglu/zero2cartolab" target="_blank">GitHub Repository</a></li>
+            <li><a href="https://github.com/YusufEminoglu/zero2cartolab/releases" target="_blank">Releases (ZIP)</a></li>
+            <li><a href="https://github.com/YusufEminoglu/zero2cartolab/issues" target="_blank">Issue Tracker</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Author & Lab</h4>
+          <p style="color: var(--text-muted); font-size: 0.85rem; line-height: 1.6;">
+            Developed by <strong>Yusuf Eminoğlu</strong><br>
+            Dokuz Eylül University<br>
+            City & Regional Planning Department
+          </p>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <span>&copy; 2026 Yusuf Eminoğlu. Released under GPL-3.0 License.</span>
+        <span>PlanX QGIS Plugin Ecosystem</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Script for Interactivity -->
+  <script>
+    // Gallery Filtering
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    const cards = document.querySelectorAll('.gallery-card');
+
+    filterBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        filterBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const filter = btn.getAttribute('data-filter');
+
+        cards.forEach(card => {
+          if (filter === 'all' || card.getAttribute('data-category') === filter) {
+            card.style.display = 'flex';
+          } else {
+            card.style.display = 'none';
+          }
+        });
+      });
+    });
+
+    // Lightbox Modal
+    const modal = document.getElementById('imageModal');
+    const modalImg = document.getElementById('modalImg');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalDesc = document.getElementById('modalDesc');
+
+    function openModal(src, title, desc) {
+      modalImg.src = src;
+      modalTitle.innerText = title;
+      modalDesc.innerText = desc;
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal(e) {
+      if (e.target === modal) {
+        closeModalDirect();
+      }
+    }
+
+    function closeModalDirect() {
+      modal.classList.remove('active');
+      document.body.style.overflow = 'auto';
+    }
+
+    // Bivariate & CVD Simulator
+    const palettes = {
+      pink_blue: [
+        ["#e8e8e8", "#b0d5df", "#64acbe"],
+        ["#e4acac", "#ad9ea5", "#627f94"],
+        ["#c85a5a", "#985356", "#56424e"]
+      ],
+      purple_green: [
+        ["#f3f3f3", "#c2e699", "#78c679"],
+        ["#d4b9da", "#9ebcda", "#41b6c4"],
+        ["#8c6bb1", "#88419d", "#253494"]
+      ],
+      orange_cyan: [
+        ["#edf8fb", "#b2e2e2", "#66c2a4"],
+        ["#fecc5c", "#bd925a", "#41b6c4"],
+        ["#bd0026", "#800026", "#08589e"]
+      ],
+      teal_gold: [
+        ["#e0f3f8", "#fee090", "#fdae61"],
+        ["#91bfdb", "#e08214", "#f46d43"],
+        ["#4575b4", "#b2182b", "#d73027"]
+      ]
+    };
+
+    function simulateCVD(hex, type) {
+      if (type === 'normal') return hex;
+      // Convert hex to rgb
+      let r = parseInt(hex.slice(1, 3), 16);
+      let g = parseInt(hex.slice(3, 5), 16);
+      let b = parseInt(hex.slice(5, 7), 16);
+
+      if (type === 'deuteranopia') {
+        let nr = 0.625 * r + 0.375 * g;
+        let ng = 0.70 * r + 0.30 * g;
+        let nb = 0.30 * g + 0.70 * b;
+        return rgbToHex(nr, ng, nb);
+      } else if (type === 'protanopia') {
+        let nr = 0.56667 * r + 0.43333 * g;
+        let ng = 0.55833 * r + 0.44167 * g;
+        let nb = 0.24167 * g + 0.75833 * b;
+        return rgbToHex(nr, ng, nb);
+      } else if (type === 'tritanopia') {
+        let nr = 0.95 * r + 0.05 * g;
+        let ng = 0.43333 * g + 0.56667 * b;
+        let nb = 0.475 * g + 0.525 * b;
+        return rgbToHex(nr, ng, nb);
+      } else if (type === 'achromatopsia') {
+        let lum = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
+        return rgbToHex(lum, lum, lum);
+      }
+      return hex;
+    }
+
+    function rgbToHex(r, g, b) {
+      r = Math.min(255, Math.max(0, Math.round(r)));
+      g = Math.min(255, Math.max(0, Math.round(g)));
+      b = Math.min(255, Math.max(0, Math.round(b)));
+      return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+    }
+
+    function renderMatrix() {
+      const pKey = document.getElementById('paletteSelect').value;
+      const cvdKey = document.getElementById('cvdSelect').value;
+      const matrix = palettes[pKey];
+      const display = document.getElementById('matrixDisplay');
+      display.innerHTML = '';
+
+      for (let r = 2; r >= 0; r--) {
+        for (let c = 0; c < 3; c++) {
+          const originalHex = matrix[r][c];
+          const finalHex = simulateCVD(originalHex, cvdKey);
+          const cell = document.createElement('div');
+          cell.className = 'matrix-cell';
+          cell.style.backgroundColor = finalHex;
+          cell.innerText = `${c+1},${r+1}`;
+          cell.title = `Swatch (${c+1}, ${r+1}): ${finalHex}`;
+          cell.onclick = () => alert(`Color (${c+1}, ${r+1}): ${finalHex} (Original: ${originalHex})`);
+          display.appendChild(cell);
+        }
+      }
+    }
+
+    document.getElementById('paletteSelect').addEventListener('change', renderMatrix);
+    document.getElementById('cvdSelect').addEventListener('change', renderMatrix);
+    renderMatrix();
+  </script>
+</body>
+</html>

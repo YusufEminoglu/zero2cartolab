@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pyo
+.idea/
+*.egg-info/
+dist/
+*.zip
+.DS_Store
+*.qgs~
+*.qgz~

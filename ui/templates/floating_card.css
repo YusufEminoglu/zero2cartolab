@@ -1,0 +1,72 @@
+/* PlanX CartoLab — Floating Annotation Card Styles */
+/* Tailwind-inspired utility-first design, no framework dependency */
+
+.planx-card {
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12), 0 1px 4px rgba(0, 0, 0, 0.08);
+  padding: 16px;
+  min-width: 220px;
+  max-width: 340px;
+  color: #1a1a2e;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.planx-card h3 {
+  margin: 0 0 10px 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #16213e;
+  border-bottom: 2px solid #e94560;
+  padding-bottom: 6px;
+}
+
+.planx-card .metric-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.planx-card .metric-label {
+  color: #555;
+}
+
+.planx-card .metric-value {
+  font-weight: 600;
+}
+
+.planx-card canvas {
+  display: block;
+  margin: 8px auto;
+}
+
+.planx-card .bar-row {
+  display: flex;
+  align-items: center;
+  margin: 3px 0;
+  font-size: 11px;
+}
+
+.planx-card .bar-label {
+  flex: 0 0 80px;
+  color: #555;
+  text-align: right;
+  padding-right: 6px;
+}
+
+.planx-card .bar-fill {
+  height: 14px;
+  background: #e94560;
+  border-radius: 3px;
+  min-width: 4px;
+  transition: width 0.3s ease;
+}
+
+.planx-card .bar-value {
+  margin-left: 6px;
+  font-weight: 500;
+  color: #333;
+}

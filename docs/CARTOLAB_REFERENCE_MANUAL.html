@@ -1,0 +1,2239 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PlanX CartoLab — Academic Reference Manual</title>
+  <meta name="description" content="Comprehensive academic reference for all 13 PlanX CartoLab QGIS processing algorithms with mathematical formulations, theoretical background, and verified literature.">
+  <style>
+    :root {
+      --ink: #132025;
+      --muted: #526870;
+      --paper: #f5f7f2;
+      --line: #d7ded8;
+      --teal: #1c7a75;
+      --copper: #b76639;
+      --blue: #315f86;
+      --gold: #c9983b;
+      --plum: #5f4c69;
+      --white: #ffffff;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Inter, Arial, sans-serif;
+      color: var(--ink);
+      background: var(--paper);
+      line-height: 1.65;
+      display: flex;
+    }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      position: fixed;
+      inset: 0 auto 0 0;
+      width: 280px;
+      background: var(--white);
+      border-right: 1px solid var(--line);
+      overflow-y: auto;
+      padding: 28px 20px 40px;
+      z-index: 10;
+    }
+
+    .sidebar h2 {
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--copper);
+      margin: 0 0 10px;
+    }
+
+    .sidebar .brand-line {
+      font-weight: 800;
+      font-size: 17px;
+      color: var(--ink);
+      margin-bottom: 22px;
+      display: block;
+    }
+
+    .sidebar .toc-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .sidebar .toc-list li {
+      margin: 0;
+    }
+
+    .sidebar .toc-list a {
+      display: block;
+      padding: 5px 10px;
+      text-decoration: none;
+      color: var(--ink);
+      font-size: 13px;
+      border-radius: 5px;
+      border-left: 3px solid transparent;
+    }
+
+    .sidebar .toc-list a:hover,
+    .sidebar .toc-list a:focus {
+      background: rgba(28, 122, 117, 0.06);
+      border-left-color: var(--teal);
+      color: var(--teal);
+    }
+
+    .sidebar .toc-list a.sub {
+      padding-left: 24px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .sidebar .toc-divider {
+      height: 1px;
+      background: var(--line);
+      margin: 14px 0;
+    }
+
+    .search-box {
+      margin-bottom: 20px;
+    }
+
+    .search-box input {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      font-size: 13px;
+      background: var(--paper);
+      color: var(--ink);
+      outline: none;
+    }
+
+    .search-box input:focus {
+      border-color: var(--teal);
+      box-shadow: 0 0 0 3px rgba(28, 122, 117, 0.10);
+    }
+
+    .sidebar-footer {
+      margin-top: 30px;
+      padding-top: 16px;
+      border-top: 1px solid var(--line);
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    /* ── MAIN CONTENT ── */
+    .main {
+      margin-left: 280px;
+      flex: 1;
+      max-width: 1020px;
+      padding: 40px 48px 80px;
+    }
+
+    .main h1 {
+      font-size: 36px;
+      line-height: 1.12;
+      margin: 0 0 8px;
+      color: var(--ink);
+    }
+
+    .main h1 em {
+      font-style: normal;
+      color: var(--copper);
+    }
+
+    .main .subtitle {
+      color: var(--muted);
+      font-size: 15px;
+      margin: 0 0 44px;
+      padding-bottom: 28px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    /* ── ALGORITHM SECTION ── */
+    .algo-section {
+      margin-bottom: 56px;
+      padding-bottom: 48px;
+      border-bottom: 1px solid var(--line);
+      scroll-margin-top: 28px;
+    }
+
+    .algo-section:last-of-type { border-bottom: none; }
+
+    .algo-section h2 {
+      font-size: 24px;
+      line-height: 1.18;
+      margin: 0 0 4px;
+      color: var(--ink);
+    }
+
+    .algo-id {
+      font-size: 12px;
+      font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
+      color: var(--teal);
+      background: rgba(28, 122, 117, 0.08);
+      padding: 2px 8px;
+      border-radius: 4px;
+      display: inline-block;
+      margin-bottom: 4px;
+    }
+
+    .algo-group {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--copper);
+      margin-left: 8px;
+    }
+
+    h3 {
+      font-size: 18px;
+      margin: 24px 0 10px;
+      color: var(--ink);
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 6px;
+    }
+
+    h4 {
+      font-size: 15px;
+      margin: 18px 0 6px;
+      color: var(--blue);
+    }
+
+    p { margin: 0 0 12px; }
+
+    /* ── TABLES ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0 18px;
+      font-size: 14px;
+    }
+
+    th, td {
+      border: 1px solid var(--line);
+      padding: 8px 12px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: rgba(28, 122, 117, 0.06);
+      font-weight: 700;
+      color: var(--teal);
+    }
+
+    td code {
+      font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
+      font-size: 12px;
+      background: rgba(19, 32, 37, 0.05);
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+
+    /* ── EQUATIONS ── */
+    .eq-block {
+      background: rgba(255, 255, 255, 0.6);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 14px 20px;
+      margin: 10px 0 16px;
+      overflow-x: auto;
+    }
+
+    /* ── REFERENCES ── */
+    .ref-list {
+      list-style: none;
+      padding: 0;
+      margin: 8px 0 0;
+      counter-reset: ref-counter;
+    }
+
+    .ref-list li {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 6px;
+      padding: 4px 0;
+      padding-left: 24px;
+      position: relative;
+    }
+
+    .ref-list li::before {
+      counter-increment: ref-counter;
+      content: "[" counter(ref-counter) "]";
+      position: absolute;
+      left: 0;
+      font-weight: 700;
+      color: var(--copper);
+    }
+
+    .ref-list a {
+      color: var(--blue);
+      text-decoration: none;
+      border-bottom: 1px dotted var(--blue);
+    }
+
+    .ref-list a:hover { border-bottom-style: solid; }
+
+    .doi {
+      font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    /* ── INTERPRETATION BOX ── */
+    .interpret-box {
+      background: rgba(28, 122, 117, 0.04);
+      border-left: 3px solid var(--teal);
+      padding: 12px 16px;
+      margin: 14px 0 18px;
+      border-radius: 0 6px 6px 0;
+      font-size: 14px;
+    }
+
+    .interpret-box strong {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--teal);
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 800px) {
+      body { flex-direction: column; }
+      .sidebar {
+        position: relative;
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--line);
+        padding: 20px;
+      }
+      .main {
+        margin-left: 0;
+        max-width: 100%;
+        padding: 24px;
+      }
+      .main h1 { font-size: 26px; }
+    }
+
+    /* ── HIDDEN (search) ── */
+    .algo-section.hidden { display: none; }
+
+    .no-results {
+      display: none;
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    .no-results.visible { display: block; }
+  .video-embed { position: relative; width: 100%; padding-top: 56.25%; margin: 4px 0 28px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); background: #000; }
+.video-embed iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+</style>
+
+  <!-- MathJax 3 -->
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']],
+        tags: 'ams'
+      }
+    };
+  </script>
+</head>
+<body>
+
+<!-- ═══════════════ SIDEBAR ═══════════════ -->
+<aside class="sidebar" id="sidebar">
+  <span class="brand-line">PlanX CartoLab</span>
+
+  <div class="search-box">
+    <input type="search" id="algoSearch"
+           placeholder="Search algorithms…"
+           aria-label="Search algorithms">
+  </div>
+
+  <h2>Table of Contents</h2>
+  <ul class="toc-list">
+    <li><a href="#algo1">1. Advanced Classification</a></li>
+    <li><a href="#algo2">2. Bivariate Choropleth Map</a></li>
+    <li><a href="#algo3">3. Hexbin Aggregation</a></li>
+    <li><a href="#algo4">4. Dot-Density Map</a></li>
+    <li><a href="#algo5">5. Continuous-Area Cartogram</a></li>
+    <li><a href="#algo6">6. Graticule / Reference Grid</a></li>
+    <li><a href="#algo7">7. Value-by-Alpha (VbA) Map</a></li>
+    <li><a href="#algo8">8. Quick Style</a></li>
+    <li><a href="#algo9">9. Proportional Symbols (Flannery)</a></li>
+    <li><a href="#algo10">10. Ridge Map (Joy Division Style)</a></li>
+    <li><a href="#algo11">11. Building 2.5D Style &amp; Lighting</a></li>
+    <li><a href="#algo12">12. Visual-Center Label Points &amp; Angle</a></li>
+    <li><a href="#algo13">13. Normalization, LQ &amp; Deciles</a></li>
+    <li><a href="#algo14">14. Interactive Bivariate Studio</a></li>
+    <li><a href="#algo15">15. Print Layout Studio Suite</a></li>
+    <li><a href="#algo16">16. Color Accessibility &amp; CVD Engine</a></li>
+    <li><a href="#algo17">17. Solar Position &amp; Sun Lighting</a></li>
+    <li><a href="#algo18">18. Scientific Color Ramps Library</a></li>
+  </ul>
+
+  <div class="sidebar-footer">
+    <p>PlanX CartoLab by Yusuf Emino&#x11F;lu<br>
+    v2.8.6 &middot; QGIS 3.x / 4.x<br>
+    Cartography &amp; Thematic Mapping</p>
+  </div>
+</aside>
+
+<!-- ═══════════════ MAIN CONTENT ═══════════════ -->
+<main class="main" id="main-content">
+
+  <h1>CartoLab <em>Academic Reference Manual</em></h1>
+  <p class="subtitle">Mathematical formulations, theoretical foundations, and verified literature for all 13 Processing algorithms and 5 advanced Layout Studio systems. Version 2.8.6.</p>
+
+  <p style="color:var(--muted); max-width:760px;">
+    This manual provides the complete theoretical apparatus behind every algorithm and layout engine in
+    PlanX CartoLab. Each entry supplies the mathematical derivation, parameter
+    semantics, interpretative guidance, and peer-reviewed references. All equations are
+    typeset with MathJax 3.
+  </p>
+
+  <div class="video-embed">
+  <iframe src="https://www.youtube-nocookie.com/embed/Y_DgVejcm8A" title="PlanX CartoLab &mdash; video walkthrough" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+</div>
+
+<!-- ═══════════════ ALGORITHM 1 ═══════════════ -->
+  <section class="algo-section" id="algo1">
+    <span class="algo-id">geometric_interval_classification</span>
+    <span class="algo-group">Classification</span>
+    <h2>1. Advanced Classification (GIC / Head-Tail / Fisher-Jenks)</h2>
+
+    <h3>Theoretical Background</h3>
+    <p>
+      Classification is the fundamental cartographic operation that assigns continuous
+      data values to discrete visual classes. The choice of classification method
+      profoundly influences the map reader's perception of spatial pattern. Traditional
+      equal-interval or quantile methods often fail for urban datasets that exhibit
+      strong positive skew, power-law tails, or multimodal distributions. This
+      algorithm implements three complementary approaches that together cover the
+      principal distributional forms encountered in planning and demographic data.
+    </p>
+    <p>
+      The <strong>Adaptive Geometric Interval Classification (GIC)</strong> fits a
+      geometric series $C_k = a \cdot r^k$ to the data, optimising the ratio $r$ and
+      scale $a$ to minimise the sum of squared deviations between observed class
+      frequencies and the expected mean frequency $\bar{f} = n/K$. The method performs
+      a coarse-then-fine grid search over feasible $r$ values, using a shift parameter
+      to handle datasets containing zero or negative values. GIC is particularly
+      effective for variables such as population density, land value, and building
+      height, where the distribution is approximately log-normal.
+    </p>
+    <p>
+      <strong>Head/Tail Breaks</strong> (Jiang, 2013) recursively partitions the data
+      at the arithmetic mean, retaining the head (values above the mean) for further
+      subdivision. The recursion terminates when the head is no longer
+      "heavy-tailed"&mdash;defined as fewer than 2 items or less than 40% (head
+      proportion &#x2265; 80%) of the current subset. This method is designed for
+      data with a heavy-tailed or power-law distribution, common in city size
+      hierarchies, traffic flows, and income data. Unlike arbitrary class counts,
+      Head/Tail Breaks determines the number of classes from the data structure.
+      <strong>Fisher-Jenks Natural Breaks</strong> (Jenks, 1967; Fisher, 1958) uses
+      dynamic programming to minimise the sum of within-class variances. For $n > 5000$
+      observations, the algorithm automatically samples to maintain performance while
+      preserving distributional fidelity.
+    </p>
+
+    <h3>Mathematical Formulation</h3>
+
+    <div class="eq-block">
+      <strong>Geometric Interval (GIC) objective.</strong>
+      $$ \mathcal{L}(r, a) = \sum_{j=1}^{K} \left( f_j - \frac{n}{K} \right)^2,
+         \qquad C_k = a \cdot r^k $$
+      where $f_j$ is the number of observations falling in class $j$, $n$ is the total
+      count, and $K$ is the number of classes. The pair $(r^*, a^*)$ that minimises
+      $\mathcal{L}$ is found by coarse search over $r \in [0.5, 2.5]$ followed by
+      fine-grained refinement.
+      \tag{1}
+    </div>
+
+    <div class="eq-block">
+      <strong>Head/Tail Breaks mean partition.</strong>
+      $$ \mu = \frac{1}{n} \sum_{i=1}^{n} x_i, \qquad
+         H = \{\,x_i \mid x_i > \mu\,\}, \qquad
+         T = \{\,x_i \mid x_i \leq \mu\,\} $$
+      Recursion continues on $H$ while $|H|/|H \cup T| \geq 0.8$ and $|H| \geq 2$.
+      \tag{2}
+    </div>
+
+    <div class="eq-block">
+      <strong>Fisher-Jenks dynamic programming recurrence.</strong>
+      $$ \mathrm{SSQ}(i, j) = \sum_{k=i}^{j-1} (x_k - \bar{x}_{ij})^2, \qquad
+         \bar{x}_{ij} = \frac{1}{j-i} \sum_{k=i}^{j-1} x_k $$
+      $$ \mathrm{DP}[k][j] = \min_{i \,<\, j} \bigl( \mathrm{DP}[k-1][i] + \mathrm{SSQ}(i, j) \bigr) $$
+      where $\mathrm{DP}[k][j]$ is the minimum within-class variance when partitioning
+      the first $j$ sorted observations into $k$ classes. Computed via cumulative-sum
+      acceleration for $\mathcal{O}(K n^2)$ time.
+      \tag{3}
+    </div>
+
+    <div class="eq-block">
+      <strong>Within-class variance minimisation (Jenks optimality criterion).</strong>
+      $$ \mathrm{GVF} = 1 - \frac{\sum_{c=1}^{K} \sum_{x_i \in C_c} (x_i - \bar{x}_c)^2}
+                               {\sum_{i=1}^{n} (x_i - \bar{x})^2} $$
+      where $\mathrm{GVF}$ is the Goodness of Variance Fit (0&#x2013;1), higher is
+      better. Jenks breaks maximise GVF for a given $K$.
+      \tag{4}
+    </div>
+
+    <div class="eq-block">
+      <strong>Geometric interval with non-positive shift.</strong>
+      $$ x_i' = x_i + |\min(0, x_{\min})| + \varepsilon, \qquad \varepsilon = 10^{-6} $$
+      Shift is applied transparently; class boundaries are mapped back to the original
+      scale before output.
+      \tag{5}
+    </div>
+
+    <div class="eq-block">
+      <strong>Maximum Distribution Breaks (Largest Gap Partition).</strong>
+      $$ \Delta_i = x_{(i+1)} - x_{(i)}, \qquad \text{for sorted } x_{(1)} \le x_{(2)} \le \dots \le x_{(n)} $$
+      Partitions the data at the $K-1$ largest spacing differentials $\Delta_i$, isolating natural clusters.
+      \tag{6}
+    </div>
+
+    <div class="eq-block">
+      <strong>Pretty Nice-Round Breaks (Heckbert Algorithm).</strong>
+      $$ \Delta = \frac{x_{\max} - x_{\min}}{K}, \qquad d = 10^{\lfloor \log_{10} \Delta \rfloor} $$
+      $$ \text{Step } s \in \{1, 2, 5, 10\} \times d \quad \text{such that } s \approx \Delta $$
+      Yields aesthetically intuitive, human-readable integer class limits ($10, 20, 50, 100, 250\dots$).
+      \tag{7}
+    </div>
+
+    <h3>Parameters</h3>
+    <table>
+      <thead>
+        <tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Input layer</td><td>Vector (any geometry)</td><td>&mdash;</td><td>Layer containing the field to classify</td></tr>
+        <tr><td>Field to classify</td><td>Numeric field</td><td>&mdash;</td><td>Must be integer or real; NULL values are excluded</td></tr>
+        <tr><td>Number of classes</td><td>Integer</td><td>5</td><td>Range 2&#x2013;20; Head/Tail Breaks ignores this and auto-determines</td></tr>
+        <tr><td>Classification method</td><td>Enum</td><td>GIC</td><td>0 = Geometric Interval, 1 = Head/Tail Breaks, 2 = Fisher-Jenks, 3 = Maximum Breaks, 4 = Pretty Breaks</td></tr>
+        <tr><td>Color ramp</td><td>Enum</td><td>Viridis</td><td>Viridis, Plasma, Inferno, Magma, Cividis, Turbo, Mako, Rocket, Blues, Oranges, YlOrRd, Purples, Greens</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Output Description</h3>
+    <p>
+      The output layer is a copy of the input with two appended fields:
+      <code>gic_class</code> (integer, 0-indexed class assignment) and
+      <code>gic_label</code> (string, formatted range label such as
+      &ldquo;123.40 &ndash; 567.80&rdquo;). The layer is automatically styled with a
+      graduated renderer using the chosen colour ramp and clean class-boundary
+      legend entries.
+    </p>
+
+    <h3>Interpretation Guide</h3>
+    <div class="interpret-box">
+      <strong>Interpretation</strong>
+      Choose GIC for continuous skewed data (population, density, value), Head/Tail
+      Breaks when the histogram shows a heavy right tail (city sizes, traffic counts,
+      income), Fisher-Jenks for general-purpose choropleth mapping where visual
+      homogeneity within classes is the priority, Maximum Breaks when highlighting distinct multimodal clusters,
+      and Pretty Breaks for public-facing maps requiring intuitive, rounded interval boundaries. Examine the GVF value reported in the
+      log: values above 0.8 indicate a strong class structure.
+    </div>
+
+    <h3>References</h3>
+    <ol class="ref-list">
+      <li>ESRI. <em>Geometric Interval Classification</em>. ArcGIS Desktop Help: Classification methods. ESRI Technical Paper, 2005.</li>
+      <li>Jenks, G. F. <em>The Data Model Concept in Statistical Mapping</em>. International Yearbook of Cartography, 7: 186&#x2013;190, 1967.</li>
+      <li>Fisher, W. D. <em>On Grouping for Maximum Homogeneity</em>. Journal of the American Statistical Association, 53(284): 789&#x2013;798, 1958. <a href="https://doi.org/10.1080/01621459.1958.10501479" target="_blank" rel="noopener">doi:10.1080/01621459.1958.10501479</a></li>
+      <li>Jiang, B. <em>Head/Tail Breaks: A New Classification Scheme for Data with a Heavy-Tailed Distribution</em>. The Professional Geographer, 65(3): 482&#x2013;494, 2013. <a href="https://doi.org/10.1080/00330124.2012.700499" target="_blank" rel="noopener">doi:10.1080/00330124.2012.700499</a></li>
+      <li>Heckbert, P. S. <em>Nice Numbers for Graph Labels</em>. Graphics Gems, Academic Press, pp. 61&#x2013;63, 1990.</li>
+      <li>Slocum, T. A., McMaster, R. B., Kessler, F. C., &amp; Howard, H. H. <em>Thematic Cartography and Geovisualization</em> (3rd ed.). Pearson, 2009. ISBN 978-0132298346.</li>
+    </ol>
+  </section>
+
+  <!-- ═══════════════ ALGORITHM 2 ═══════════════ -->
+  <section class="algo-section" id="algo2">
+    <span class="algo-id">bivariate_choropleth</span>
+    <span class="algo-group">Thematic Mapping</span>
+    <h2>2. Bivariate Choropleth Map</h2>
+
+    <h3>Theoretical Background</h3>
+    <p>
+      Bivariate choropleth maps encode the relationship between two spatially
+      coincident variables within a single areal symbolisation. Unlike side-by-side
+      univariate maps, a bivariate matrix forces the reader to perceive co-variation as
+      a single visual gestalt. The technique was formalised by the U.S. Census Bureau
+      in the 1970s and refined by Olson (1981), who demonstrated that spectrally
+      encoded two-variable maps could be read accurately when the colour space is
+      perceptually orthogonal.
+    </p>
+    <p>
+      The CartoLab implementation classifies each of two numeric fields independently
+      into $N$ bins using the selected method (Geometric Interval or Fisher-Jenks),
+      producing an $N \times N$ grid of cross-classified observations. The colour for
+      each cell $(r, c)$ is computed via bilinear interpolation in RGB space between
+      four user-specified corner colours: Low-Low $(C_{LL})$, Low-High $(C_{LH})$,
+      High-Low $(C_{HL})$, and High-High $(C_{HH})$. This interpolation produces a
+      perceptually smooth colour surface that preserves the logical ordering of both
+      variables. The output layer receives an auto-generated categorised renderer with
+      $N^2$ legend entries, each displaying a swatch from the colour matrix.
+    </p>
+    <p>
+      The theoretical underpinning draws on colour-order systems developed by Eyton
+      (1984) for complementary-colour maps and Leonowicz (2006) for two-variable
+      choropleth cartography. Care is taken to ensure the diagonal (equal-class cells)
+      is visually coherent and that off-diagonal cells maintain sufficient
+      discriminability. For $N \geq 5$, the matrix produces 25 classes, at which point
+      individual cell discrimination becomes challenging; the recommended grid size is
+      3 or 4.
+    </p>
+
+    <h3>Mathematical Formulation</h3>
+
+    <div class="eq-block">
+      <strong>Bilinear colour interpolation in RGB space.</strong>
+      $$ \mathbf{C}(r, c) =
+         (1 - \hat{y})(1 - \hat{x})\,\mathbf{C}_{LL}
+         + (1 - \hat{y})\,\hat{x}\,\mathbf{C}_{LH}
+         + \hat{y}(1 - \hat{x})\,\mathbf{C}_{HL}
+         + \hat{y}\,\hat{x}\,\mathbf{C}_{HH} $$
+      where $\hat{x} = c/(N-1)$ and $\hat{y} = r/(N-1)$ are the normalised class
+      indices (0 to 1), and each $\mathbf{C}$ is an RGB vector.
+      \tag{1}
+    </div>
+
+    <div class="eq-block">
+      <strong>Independently classified axes.</strong>
+      $$ x_i^{\text{class}} = \operatorname{classify}(x_i; N, \text{method}), \qquad
+         y_i^{\text{class}} = \operatorname{classify}(y_i; N, \text{method}) $$
+      The composite bivariate class index is $b_i = x_i^{\text{class}} \cdot N + y_i^{\text{class}}$
+      (0-indexed).
+      \tag{2}
+    </div>
+
+    <div class="eq-block">
+      <strong>Class boundary recovery.</strong>
+      For each axis, class breaks $\{b_0, b_1, \ldots, b_N\}$ are computed via the
+      selected classification method. A feature is assigned to class $k$ if
+      $b_k \leq x_i < b_{k+1}$.
+      \tag{3}
+    </div>
+
+    <div class="eq-block">
+      <strong>Matrix cell assignment.</strong>
+      $$ M[r][c] = \{\,i \mid x_i \in \text{class } c,\; y_i \in \text{class } r\,\} $$
+      where $r, c \in \{0, \ldots, N-1\}$ and $M[r][c]$ is the set of feature indices
+      in that matrix cell.
+      \tag{4}
+    </div>
+
+    <h3>Parameters</h3>
+    <table>
+      <thead>
+        <tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Input layer</td><td>Polygon vector</td><td>&mdash;</td><td>Contains both variables to cross-classify</td></tr>
+        <tr><td>X-axis variable</td><td>Numeric field</td><td>&mdash;</td><td>Horizontal axis in the colour matrix</td></tr>
+        <tr><td>Y-axis variable</td><td>Numeric field</td><td>&mdash;</td><td>Vertical axis in the colour matrix</td></tr>
+        <tr><td>Grid size</td><td>Integer</td><td>3</td><td>$N$ (2&#x2013;7); produces $N^2$ classes</td></tr>
+        <tr><td>Classification method</td><td>Enum</td><td>Geometric Interval</td><td>Applied independently to both variables</td></tr>
+        <tr><td>4 corner colours</td><td>Colour (RGBA)</td><td>teal/gold/blue/copper</td><td>User-adjustable LL, LH, HL, HH corner anchors</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Output Description</h3>
+    <p>
+      The output polygon layer carries three new fields: <code>bivar_x_class</code>
+      (integer, 0-indexed X-axis bin), <code>bivar_y_class</code> (integer, 0-indexed
+      Y-axis bin), and <code>bivar_class</code> (integer, 0 to $N^2-1$, the composite
+      colour-matrix cell index). The layer is auto-styled with a categorised renderer
+      using the $N^2$ bilinearly interpolated colours.
+    </p>
+
+    <h3>Interpretation Guide</h3>
+    <div class="interpret-box">
+      <strong>Interpretation</strong>
+      Read the matrix diagonally (bottom-left to top-right): features on the diagonal
+      have concordant rankings on both variables. Off-diagonal cells indicate discordance.
+      The LL corner (bottom-left) represents low values on both variables; HH (top-right)
+      is high on both. Use $N = 3$ for a clean, readable 9-class legend; $N = 4$ for
+      finer discrimination in a publication figure. Always pair with a bivariate legend
+      (CartoLab dashboard can generate one) because the colour semantics are not
+      self-evident to map readers unfamiliar with the technique.
+    </div>
+
+    <h3>References</h3>
+    <ol class="ref-list">
+      <li>Olson, J. M. <em>Spectrally Encoded Two-Variable Maps</em>. Annals of the Association of American Geographers, 71(2): 259&#x2013;276, 1981. <a href="https://doi.org/10.1111/j.1467-8306.1981.tb01352.x" target="_blank" rel="noopener">doi:10.1111/j.1467-8306.1981.tb01352.x</a></li>
+      <li>Eyton, J. R. <em>Complementary-Color Two-Variable Maps</em>. Annals of the Association of American Geographers, 74(3): 477&#x2013;490, 1984.</li>
+      <li>Leonowicz, A. <em>Two-Variable Choropleth Maps as a Useful Tool for Visualization of Geographical Relationship</em>. Geografija, 42(1): 33&#x2013;37, 2006.</li>
+      <li>Brewer, C. A. <em>Designing Better Maps: A Guide for GIS Users</em> (2nd ed.). ESRI Press, 2015. ISBN 978-1589484405.</li>
+      <li>Carstensen, L. W. <em>Bivariate Choropleth Mapping: The Effects of Axis Scaling</em>. The American Cartographer, 13(1): 27&#x2013;41, 1986.</li>
+      <li>Dunn, R. <em>A Dynamic Approach to Two-Variable Color Mapping</em>. The American Statistician, 43(4): 245&#x2013;252, 1989.</li>
+      <li>Elmer, M. E. <em>Symbol Considerations for Bivariate Thematic Maps</em>. Cartography and Geographic Information Science, 39(3): 140&#x2013;150, 2012.</li>
+    </ol>
+  </section>
+
+  <!-- ═══════════════ ALGORITHM 3 ═══════════════ -->
+  <section class="algo-section" id="algo3">
+    <span class="algo-id">hexbin_aggregate</span>
+    <span class="algo-group">Aggregation</span>
+    <h2>3. Hexbin Aggregation</h2>
+
+    <h3>Theoretical Background</h3>
+    <p>
+      Hexagonal binning is a spatial aggregation technique that partitions a
+      two-dimensional point set into a regular tessellation of regular hexagons. The
+      method was popularised in statistical graphics by Carr et al. (1987) as a
+      solution to overplotting in large scatterplots and later extended to
+      geographical space. Hexagons offer several advantages over square grids: each
+      cell has six equidistant neighbours (versus four orthogonal plus four diagonal
+      for squares), producing smoother density estimates; the circular packing of
+      hexagons reduces sampling bias from edge effects; and the regular tessellation
+      avoids the directional artefacts that rectangular grids can introduce.
+    </p>
+    <p>
+      The CartoLab implementation uses a pointy-top hexagonal lattice in axial
+      coordinates $(q, r)$, derived from the standard cube-coordinate system
+      $(x, y, z)$ where $x + y + z = 0$. The conversion from geographic coordinates
+      to axial coordinates uses the hexagon circumradius $R$ (distance from centre to
+      vertex). Cube rounding ensures that each point is assigned to the nearest hexagon
+      centre. Unlike some implementations that emit a full grid, CartoLab only emits
+      cells that contain at least one point, conserving output size for sparse datasets.
+    </p>
+    <p>
+      The method aggregates a user-selectable statistic: <em>count</em> (the number of
+      points falling in each cell), <em>sum</em> (the total of an optional weight
+      field), or <em>mean</em> (sum divided by count). The output hexagons are rendered
+      as flat-topped (rotated 90&#x00B0; from the internal pointy-top computation) for
+      consistency with common cartographic convention. Each hexagon is represented as a
+      regular polygon with six vertices computed at 60&#x00B0; intervals.
+    </p>
+
+    <h3>Mathematical Formulation</h3>
+
+    <div class="eq-block">
+      <strong>Point to axial coordinates (pointy-top).</strong>
+      $$ q = \frac{\frac{\sqrt{3}}{3}\,x - \frac{1}{3}\,y}{R}, \qquad
+         r = \frac{\frac{2}{3}\,y}{R} $$
+      where $(x, y)$ are map coordinates relative to the layer CRS origin and $R$ is
+      the hexagon circumradius.
+      \tag{1}
+    </div>
+
+    <div class="eq-block">
+      <strong>Cube rounding to nearest hex cell.</strong>
+      $$ x_q = q,\quad x_r = r,\quad x_s = -q - r $$
+      Round each coordinate: $\hat{x}_q = \lfloor x_q \rceil$, etc. If
+      $\hat{x}_q + \hat{x}_r + \hat{x}_s \neq 0$, correct the coordinate with the
+      largest rounding residual:
+      $$ \text{reassign the component with max } |x_k - \hat{x}_k| \text{ to restore } \hat{x}_q + \hat{x}_r + \hat{x}_s = 0 $$
+      Final axial: $(\hat{q}, \hat{r}) = (\hat{x}_q, \hat{x}_r)$.
+      \tag{2}
+    </div>
+
+    <div class="eq-block">
+      <strong>Hexagon centre from axial coordinates (pointy-top).</strong>
+      $$ x_{\text{ctr}} = R \cdot \left( \sqrt{3}\,q + \frac{\sqrt{3}}{2}\,r \right), \qquad
+         y_{\text{ctr}} = R \cdot \left( \frac{3}{2}\,r \right) $$
+      \tag{3}
+    </div>
+
+    <div class="eq-block">
+      <strong>Vertex positions at 60&#x00B0; intervals (pointy-top).</strong>
+      $$ v_k = \left(x_{\text{ctr}} + R\cos\theta_k,\; y_{\text{ctr}} + R\sin\theta_k\right), \qquad
+         \theta_k = \frac{\pi}{6} + \frac{k\pi}{3},\; k = 0, \ldots, 5 $$
+      \tag{4}
+    </div>
+
+    <div class="eq-block">
+      <strong>Aggregation statistics per cell $c$.</strong>
+      $$ n_c = |\{i \mid \operatorname{cell}(p_i) = c\}|, \qquad
+         s_c = \sum_{\operatorname{cell}(p_i) = c} w_i, \qquad
+         \bar{w}_c = s_c / n_c $$
+      \tag{5}
+    </div>
+
+    <h3>Parameters</h3>
+    <table>
+      <thead>
+        <tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Input point layer</td><td>Point vector</td><td>&mdash;</td><td>Points to bin</td></tr>
+        <tr><td>Hexagon radius</td><td>Float</td><td>1000</td><td>Circumradius in map units (CRS-dependent)</td></tr>
+        <tr><td>Weight field</td><td>Numeric field (optional)</td><td>&mdash;</td><td>Used for sum and mean statistics</td></tr>
+        <tr><td>Statistic</td><td>Enum</td><td>Count</td><td>0 = Count, 1 = Sum, 2 = Mean</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Output Description</h3>
+    <p>
+      The output is a polygon layer of regular hexagons. Non-empty cells carry
+      <code>hex_q</code> and <code>hex_r</code> (axial coordinates),
+      <code>hex_count</code> (integer, always populated), <code>hex_sum</code>
+      (weight-field sum, present if sum or mean selected), and <code>hex_mean</code>
+      (present if mean selected). The layer is auto-graduated with the Viridis colour
+      ramp on the active statistic field.
+    </p>
+
+    <h3>Interpretation Guide</h3>
+    <div class="interpret-box">
+      <strong>Interpretation</strong>
+      Choose the radius to balance spatial resolution against visual clarity: a good
+      starting point is 1/30th to 1/50th of the map extent diagonal. The hexbin map
+      reveals spatial density gradients that point maps obscure. Hex grids with a
+      Viridis ramp produce continuous-looking surfaces suitable for publication.
+      Because only occupied cells are emitted, large gaps in the grid indicate
+      genuinely empty regions, not missing data.
+    </div>
+
+    <h3>References</h3>
+    <ol class="ref-list">
+      <li>Carr, D. B., Littlefield, R. J., Nicholson, W. L., &amp; Littlefield, J. S. <em>Scatterplot Matrix Techniques for Large N</em>. Journal of the American Statistical Association, 82(398): 424&#x2013;436, 1987. <a href="https://doi.org/10.1080/01621459.1987.10478445" target="_blank" rel="noopener">doi:10.1080/01621459.1987.10478445</a></li>
+      <li>Carr, D. B., Olsen, A. R., &amp; White, D. <em>Hexagon Mosaic Maps for Display of Univariate and Bivariate Geographical Data</em>. Cartography and Geographic Information Systems, 19(4): 228&#x2013;236, 1992. <a href="https://doi.org/10.1559/152304092783721231" target="_blank" rel="noopener">doi:10.1559/152304092783721231</a></li>
+      <li>Birch, C. P. D., Oom, S. P., &amp; Beecham, J. A. <em>Rectangular and Hexagonal Grids Used for Observation, Experiment and Simulation in Ecology</em>. Ecological Modelling, 206(3&#x2013;4): 347&#x2013;359, 2007.</li>
+      <li>Battersby, S. E., Strebe, D., &amp; Finn, M. P. <em>Shapes on a Plane: Evaluating Hexagonal Binning and Other Tessellation Strategies</em>. Cartographic Perspectives, 85: 27&#x2013;40, 2017.</li>
+      <li>Lewin-Koh, N. <em>Hexagon Binning: An Overview</em>. R package hexbin vignette, 2011.</li>
+      <li>Red Blob Games (Patel, A.). <em>Hexagonal Grids</em>. 2013 (revised 2023). Interactive exposition of axial/cube coordinate systems.</li>
+      <li>Scott, D. W. <em>Multivariate Density Estimation: Theory, Practice, and Visualization</em> (2nd ed.). Wiley, 2015. ISBN 978-0471697558.</li>
+    </ol>
+  </section>
+
+  <!-- ═══════════════ ALGORITHM 4 ═══════════════ -->
+  <section class="algo-section" id="algo4">
+    <span class="algo-id">dot_density</span>
+    <span class="algo-group">Thematic Mapping</span>
+    <h2>4. Dot-Density Map</h2>
+
+    <h3>Theoretical Background</h3>
+    <p>
+      The dot-density map is one of the oldest thematic mapping techniques, dating to
+      the earliest demographic atlases of the 19th century. Each dot represents a fixed
+      number of units (e.g., one dot = 500 persons), and dots are placed within
+      enumeration areas to convey both the magnitude and the approximate spatial
+      distribution of a phenomenon. Unlike a choropleth map, which forces the reader to
+      infer density from colour intensity across administrative boundaries, a
+      dot-density map shows within-unit variation that can reveal settlement patterns,
+      ecological distributions, and other spatially heterogeneous phenomena.
+    </p>
+    <p>
+      The CartoLab implementation generates dots via seeded random stratified sampling
+      within each polygon's bounding box, rejecting dots that fall outside the polygon
+      (hole-aware with OGC-compliant point-in-polygon testing). The number of dots per
+      feature is $n_{\text{dots}} = \lfloor v_i / d \rfloor$ where $v_i$ is the count
+      field value and $d$ is the user-specified value per dot. Each feature uses a
+      deterministic pseudo-random seed derived from the user seed and the feature's
+      row index ($\text{seed}_i = \text{seed} \times 1{,}000{,}003 + i$), ensuring
+      reproducible dot placement across runs.
+    </p>
+    <p>
+      Robinson et al. (1984) recommend limiting dot density to approximately 200
+      dots/cm&#x00B2; in print to avoid coalescence; for screen display, a lower
+      threshold applies. CartoLab scales $d$ automatically if $n_{\text{dots}}$ would
+      exceed a performance ceiling, and reports the adjustment. Lavin (1986) explored
+      the perceptual accuracy of dot-density maps and found that random placement
+      within enumeration areas is visually acceptable when the dot value is small
+      relative to the feature size, which is the typical use case.
+    </p>
+
+    <h3>Mathematical Formulation</h3>
+
+    <div class="eq-block">
+      <strong>Number of dots per feature.</strong>
+      $$ n_i^{\text{dots}} = \left\lfloor \frac{v_i}{d} \right\rfloor $$
+      where $v_i$ is the count-field value for feature $i$ and $d$ is the
+      user-specified value per dot. Remainder rounding is truncated.
+      \tag{1}
+    </div>
+
+    <div class="eq-block">
+      <strong>Seeded deterministic random placement.</strong>
+      $$ \text{seed}_i = S \times 1{,}000{,}003 + i $$
+      where $S$ is the user seed and $i$ is the 0-indexed feature row number.
+      This produces a repeatable pseudo-random sequence per feature across runs.
+      \tag{2}
+    </div>
+
+    <div class="eq-block">
+      <strong>Bounding-box stratified sampling.</strong>
+      For each of $n_i^{\text{dots}}$ trials, generate a candidate point
+      $$ p_{\text{cand}} = \bigl( x_{\min} + u \cdot w,\; y_{\min} + v \cdot h \bigr) $$
+      where $u, v \sim \mathcal{U}(0, 1)$ (derived from the PRNG), $w = x_{\max} - x_{\min}$,
+      $h = y_{\max} - y_{\min}$. Accept $p_{\text{cand}}$ iff
+      $\operatorname{contains}(\text{geom}_i, p_{\text{cand}}) = \text{true}$.
+      \tag{3}
+    </div>
+
+    <div class="eq-block">
+      <strong>Point-in-polygon (ray-casting).</strong>
+      For a candidate point $p$, cast a horizontal ray to $+\infty$. Count
+      intersections with polygon edges. $p$ is inside iff the count is odd,
+      with special handling for edge-on-vertex and colinear edge cases per
+      the even-odd rule (OGC Simple Features specification).
+      \tag{4}
+    </div>
+
+    <h3>Parameters</h3>
+    <table>
+      <thead>
+        <tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Input polygon layer</td><td>Polygon vector</td><td>&mdash;</td><td>Enumeration areas containing the count field</td></tr>
+        <tr><td>Count field</td><td>Numeric field</td><td>&mdash;</td><td>The magnitude to represent as dots</td></tr>
+        <tr><td>Value per dot</td><td>Float</td><td>1</td><td>Each dot represents this many units</td></tr>
+        <tr><td>Random seed</td><td>Integer</td><td>42</td><td>Deterministic seed for reproducible placement</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Output Description</h3>
+    <p>
+      The output is a point layer where each dot is a single point geometry. Each dot
+      inherits all attributes from its source polygon, enabling multi-group dot maps
+      (e.g., race/ethnicity categories) by filtering on a category field after
+      generation. No new fields are added to the dot layer beyond the source attributes.
+    </p>
+
+    <h3>Interpretation Guide</h3>
+    <div class="interpret-box">
+      <strong>Interpretation</strong>
+      Dot-density maps excel at conveying the <em>texture</em> of a distribution:
+      clusters, voids, and gradients are visible at a glance. Choose the dot value such
+      that the densest polygon receives roughly 20&#x2013;50 dots, ensuring individual
+      dots remain distinguishable. For multi-group maps, generate separate dot layers
+      and stack them, using distinct hues. Always note the dot value prominently in the
+      legend, as readers have no visual anchor for absolute magnitudes without it.
+    </div>
+
+    <h3>References</h3>
+    <ol class="ref-list">
+      <li>Robinson, A. H., Sale, R. D., Morrison, J. L., &amp; Muehrcke, P. C. <em>Elements of Cartography</em> (6th ed.). Wiley, 1995. ISBN 978-0471555797.</li>
+      <li>Lavin, S. J. <em>Mapping Continuous Geographical Distributions Using Dot-Density Shading</em>. The American Cartographer, 13(2): 140&#x2013;150, 1986.</li>
+      <li>Dent, B. D., Torguson, J. S., &amp; Hodler, T. W. <em>Cartography: Thematic Map Design</em> (6th ed.). McGraw-Hill, 2009. ISBN 978-0072943825.</li>
+      <li>Mackay, J. R. <em>An Analysis of Isopleth and Dot Maps</em>. Annals of the Association of American Geographers, 45(3): 296&#x2013;297, 1955.</li>
+      <li>Heywood, I., Cornelius, S., &amp; Carver, S. <em>An Introduction to Geographical Information Systems</em> (4th ed.). Pearson, 2011. ISBN 978-0273722595.</li>
+      <li>Krygier, J. &amp; Wood, D. <em>Making Maps: A Visual Guide to Map Design for GIS</em> (3rd ed.). Guilford Press, 2016. ISBN 978-1462509980.</li>
+    </ol>
+  </section>
+
+  <!-- ═══════════════ ALGORITHM 5 ═══════════════ -->
+  <section class="algo-section" id="algo5">
+    <span class="algo-id">compute_cartogram</span>
+    <span class="algo-group">Cartogram</span>
+    <h2>5. Continuous-Area Cartogram (Diffusion)</h2>
+
+    <h3>Theoretical Background</h3>
+    <p>
+      A continuous-area cartogram distorts the geometry of enumeration units so that
+      each unit's area is proportional to a selected variable (e.g., population, GDP)
+      while preserving, as far as possible, the contiguity and shape of the original
+      map. The technique has a long pre-computational history but was rendered
+      practical for arbitrary datasets by Gastner and Newman's (2004) diffusion method,
+      which treats the map as a physical medium in which a "density" flows from
+      regions of excess area to regions of deficit until the area error is eliminated.
+    </p>
+    <p>
+      The CartoLab implementation follows the Gastner&#x2013;Newman algorithm closely.
+      Each polygon $i$ has a target area $A_i^{\text{target}}$ proportional to its
+      variable value. The current "mass" $m_i$ is defined as the discrepancy between
+      the current equivalent radius and the target radius. A Gaussian-weighted force
+      kernel distributes this mass to neighbouring boundaries, displacing vertices
+      in the direction that reduces area discrepancy. The process iterates until either
+      the mean size error (the ratio of max to min of current and target area) falls
+      below a threshold or the maximum iteration count is reached.
+    </p>
+    <p>
+      The algorithm employs a spatial hash grid for $\mathcal{O}(n)$ neighbour lookup,
+      replacing the na&#x00EF;ve $\mathcal{O}(n^2)$ search. Displacement per iteration
+      is clamped to 30% of the polygon's equivalent radius to prevent topology-breaking
+      jumps. Tobler (2004) reviewed the broader cartogram tradition and placed the
+      diffusion method alongside Dorling's (1996) circular cartograms as the two most
+      computationally tractable approaches.
+    </p>
+
+    <h3>Mathematical Formulation</h3>
+
+    <div class="eq-block">
+      <strong>Target area proportional to variable value.</strong>
+      $$ A_i^{\text{target}} = v_i \cdot \frac{\sum_j A_j}{\sum_j v_j} $$
+      where $A_i$ is the current polygon area and $v_i$ is the area-representation
+      field value.
+      \tag{1}
+    </div>
+
+    <div class="eq-block">
+      <strong>Mass as equivalent-radius discrepancy.</strong>
+      $$ r_i = \sqrt{\frac{A_i}{\pi}}, \qquad
+         r_i^{\text{target}} = \sqrt{\frac{A_i^{\text{target}}}{\pi}}, \qquad
+         m_i = r_i^{\text{target}} - r_i $$
+      Positive mass indicates the polygon needs to expand; negative mass indicates
+      contraction.
+      \tag{2}
+    </div>
+
+    <div class="eq-block">
+      <strong>Size error metric.</strong>
+      $$ e_i = \frac{\max(A_i,\; A_i^{\text{target}})}{\min(A_i,\; A_i^{\text{target}})} $$
+      A value of 1.0 indicates exact area match. The algorithm halts when
+      $\text{mean}(e_i) \leq \text{threshold}$.
+      \tag{3}
+    </div>
+
+    <div class="eq-block">
+      <strong>Gaussian force kernel.</strong>
+      $$ \mathbf{F}_{i \to j} = m_j \cdot r_j \cdot \gamma \cdot \exp\!\left(-\frac{d_{ij}^2}{2\sigma^2}\right) \cdot \hat{\mathbf{u}}_{ij} $$
+      where $d_{ij}$ is the distance between polygon centroids, $\sigma$ is the kernel
+      bandwidth, $\gamma$ is a damping factor, and $\hat{\mathbf{u}}_{ij}$ is the unit
+      vector from centroid $i$ to centroid $j$.
+      \tag{4}
+    </div>
+
+    <div class="eq-block">
+      <strong>Displacement clamping.</strong>
+      $$ \Delta_{\max} = r_i \cdot 0.3 $$
+      Per-iteration vertex displacement is capped at 30&#x0025; of the polygon's
+      equivalent radius to prevent topology tearing.
+      \tag{5}
+    </div>
+
+    <h3>Parameters</h3>
+    <table>
+      <thead>
+        <tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Input polygon layer</td><td>Polygon vector</td><td>&mdash;</td><td>Enumeration areas to distort</td></tr>
+        <tr><td>Area-representation field</td><td>Numeric field</td><td>&mdash;</td><td>The variable area should represent</td></tr>
+        <tr><td>Max iterations</td><td>Integer</td><td>100</td><td>Range 1&#x2013;200; higher = more precise</td></tr>
+        <tr><td>Max avg error %</td><td>Float</td><td>5.0</td><td>Range 0.1&#x2013;100; halt criterion</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Output Description</h3>
+    <p>
+      The output polygon layer contains the distorted geometries. Two metadata fields
+      are appended: <code>cartogram_error_pct</code> (the final mean size error,
+      expressed as a percentage of the target) and the algorithm log reports the number
+      of iterations actually run. All original attributes are preserved.
+    </p>
+
+    <h3>Interpretation Guide</h3>
+    <div class="interpret-box">
+      <strong>Interpretation</strong>
+      A continuous-area cartogram replaces the "land area" mental model with a
+      "variable weight" model: expanded regions indicate over-representation of the
+      mapped variable relative to geographic area; shrunken regions indicate under-
+      representation. The map remains topologically recognisable if the variable is
+      at least loosely correlated with geographic area. For highly skewed variables
+      (e.g., GDP where one city dominates), expect extreme distortion of the
+      dominant unit. Pair the cartogram with a standard choropleth to help the
+      reader calibrate their spatial expectations.
+    </div>
+
+    <h3>References</h3>
+    <ol class="ref-list">
+      <li>Gastner, M. T. &amp; Newman, M. E. J. <em>Diffusion-Based Method for Producing Density-Equalizing Maps</em>. Proceedings of the National Academy of Sciences, 101(20): 7499&#x2013;7504, 2004. <a href="https://doi.org/10.1073/pnas.0400280101" target="_blank" rel="noopener">doi:10.1073/pnas.0400280101</a></li>
+      <li>Tobler, W. R. <em>Thirty Five Years of Computer Cartograms</em>. Annals of the Association of American Geographers, 94(1): 58&#x2013;73, 2004. <a href="https://doi.org/10.1111/j.1467-8306.2004.09401004.x" target="_blank" rel="noopener">doi:10.1111/j.1467-8306.2004.09401004.x</a></li>
+      <li>Dorling, D. <em>Area Cartograms: Their Use and Creation</em>. Concepts and Techniques in Modern Geography, 59. University of East Anglia, 1996.</li>
+      <li>Gusein-Zade, S. M. &amp; Tikunov, V. S. <em>A New Technique for Constructing Continuous Cartograms</em>. Cartography and Geographic Information Systems, 20(3): 167&#x2013;173, 1993.</li>
+      <li>Dougenik, J. A., Chrisman, N. R., &amp; Niemeyer, D. R. <em>An Algorithm to Construct Continuous Area Cartograms</em>. The Professional Geographer, 37(1): 75&#x2013;81, 1985.</li>
+      <li>Henriques, R., Ba&#x00E7;&#x00E3;o, F., &amp; Lobo, V. <em>Carto-SOM: Cartogram Creation Using Self-Organizing Maps</em>. International Journal of Geographical Information Science, 23(4): 483&#x2013;511, 2009.</li>
+      <li>Nusrat, S. &amp; Kobourov, S. <em>The State of the Art in Cartograms</em>. Computer Graphics Forum, 35(3): 619&#x2013;642, 2016.</li>
+    </ol>
+  </section>
+
+  <!-- ═══════════════ ALGORITHM 6 ═══════════════ -->
+  <section class="algo-section" id="algo6">
+    <span class="algo-id">graticule_grid</span>
+    <span class="algo-group">Map Reference</span>
+    <h2>6. Graticule / Reference Grid</h2>
+
+    <h3>Theoretical Background</h3>
+    <p>
+      A graticule is the network of meridians and parallels that provides the
+      coordinate reference frame for a map. Its correct construction is foundational:
+      the spacing, labelling, and visual hierarchy of grid lines directly affect the
+      map reader's ability to locate features and estimate distances. Robinson et al.
+      (1995) devoted a full chapter to the graticule as a map element, emphasising
+      that the interval should be chosen so that the grid is visible but not dominant,
+      typically producing 6&#x2013;10 lines across the map extent.
+    </p>
+    <p>
+      The CartoLab implementation generates a vector line layer of meridians and
+      parallels on "nice" intervals&#x2014;round numbers drawn from the set
+      $\{1, 2, 5\} \times 10^k$ that divide the coordinate space into visually
+      manageable segments. When the user leaves an interval at 0, the algorithm
+      computes the span of the extent in decimal degrees, divides by a target of
+      approximately 8 lines, and normalises the result to the nearest nice number.
+      Each line is tagged with its orientation (meridian/parallel), its constant
+      coordinate value, and a formatted human-readable label. Lines are aligned to
+      the global coordinate origin (multiples of the interval starting from
+      $\lfloor x_{\min} / \Delta x \rfloor \cdot \Delta x$), ensuring that adjacent
+      map sheets will share coincident grid lines.
+    </p>
+
+    <h3>Mathematical Formulation</h3>
+
+    <div class="eq-block">
+      <strong>Nice interval algorithm.</strong>
+      $$ \text{nice}(s) = \min_{k \in \mathbb{Z}}\; \min_{b \in \{1,2,5\}}\;
+         \left| b \times 10^{\lfloor \log_{10} s \rfloor + k} - s \right| $$
+      where $s = \text{span} / \text{target\_lines}$. The algorithm searches for the
+      nearest round number in the geometric sequence $\{1, 2, 5\} \times 10^n$.
+      \tag{1}
+    </div>
+
+    <div class="eq-block">
+      <strong>Aligned meridian positions.</strong>
+      $$ x_k = \left\lceil \frac{x_{\min}}{\Delta x} \right\rceil \cdot \Delta x $$
+      for $k = 0, 1, \ldots$ while $x_k \leq x_{\max}$.
+      \tag{2}
+    </div>
+
+    <div class="eq-block">
+      <strong>Parallel positions.</strong>
+      $$ y_k = \left\lceil \frac{y_{\min}}{\Delta y} \right\rceil \cdot \Delta y $$
+      for $k = 0, 1, \ldots$ while $y_k \leq y_{\max}$.
+      \tag{3}
+    </div>
+
+    <div class="eq-block">
+      <strong>Auto-interval computation.</strong>
+      $$ \Delta x_{\text{auto}} = \operatorname{nice}\!\left( \frac{x_{\max} - x_{\min}}{8} \right), \qquad
+         \Delta y_{\text{auto}} = \operatorname{nice}\!\left( \frac{y_{\max} - y_{\min}}{8} \right) $$
+      \tag{4}
+    </div>
+
+    <h3>Parameters</h3>
+    <table>
+      <thead>
+        <tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Grid extent</td><td>Extent (xmin, xmax, ymin, ymax)</td><td>Canvas extent</td><td>CRS-dependent; in degrees for geographic CRS</td></tr>
+        <tr><td>X interval</td><td>Float</td><td>0 (auto)</td><td>Meridian spacing in CRS units; 0 = auto</td></tr>
+        <tr><td>Y interval</td><td>Float</td><td>0 (auto)</td><td>Parallel spacing in CRS units; 0 = auto</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Output Description</h3>
+    <p>
+      A line layer where each feature is a single meridian or parallel spanning the
+      full extent. Attributes include <code>orientation</code> (string:
+      &ldquo;meridian&rdquo; or &ldquo;parallel&rdquo;), <code>coord</code> (float,
+      the constant coordinate value), and <code>label</code> (string, formatted with
+      degree symbols and hemisphere suffix where appropriate). Lines are styled with a
+      thin, low-opacity stroke suitable for map overlay.
+    </p>
+
+    <h3>Interpretation Guide</h3>
+    <div class="interpret-box">
+      <strong>Interpretation</strong>
+      The graticule is a reference element, not a data layer. Keep the stroke thin
+      (0.15&#x2013;0.3 pt) and colour neutral (grey or muted tone from the map
+      palette). The auto-interval produces grids with roughly 8&#x2013;10 lines across
+      the map, which strikes a good balance for A4/letter layouts. For inset maps or
+      overview maps, manually set larger intervals to avoid clutter. The grid should
+      always be the bottom-most layer in the map stack so that data layers draw on top.
+    </div>
+
+    <h3>References</h3>
+    <ol class="ref-list">
+      <li>Robinson, A. H., Morrison, J. L., Muehrcke, P. C., Kimerling, A. J., &amp; Guptill, S. C. <em>Elements of Cartography</em> (6th ed.). Wiley, 1995. ISBN 978-0471555797.</li>
+      <li>Snyder, J. P. <em>Map Projections&mdash;A Working Manual</em>. U.S. Geological Survey Professional Paper 1395, 1987.</li>
+      <li>Canters, F. &amp; Decleir, H. <em>The World in Perspective: A Directory of World Map Projections</em>. Wiley, 1989. ISBN 978-0471921479.</li>
+      <li>Iliffe, J. &amp; Lott, R. <em>Datums and Map Projections for Remote Sensing, GIS, and Surveying</em> (2nd ed.). Whittles Publishing, 2008. ISBN 978-1904445470.</li>
+      <li>Krygier, J. &amp; Wood, D. <em>Making Maps: A Visual Guide to Map Design for GIS</em> (3rd ed.). Guilford Press, 2016. ISBN 978-1462509980.</li>
+      <li>Slocum, T. A. et al. <em>Thematic Cartography and Geovisualization</em> (3rd ed.). Pearson, 2009. ISBN 978-0132298346.</li>
+    </ol>
+  </section>
+
+  <!-- ═══════════════ ALGORITHM 7 ═══════════════ -->
+  <section class="algo-section" id="algo7">
+    <span class="algo-id">value_by_alpha</span>
+    <span class="algo-group">Thematic Mapping</span>
+    <h2>7. Value-by-Alpha (VbA) Map</h2>
+
+    <h3>Theoretical Background</h3>
+    <p>
+      The Value-by-Alpha (VbA) map, introduced by Roth, Woodruff, and Johnson (2010),
+      addresses a persistent cartographic tension: how to encode two variables on a
+      choropleth when one variable represents the <em>magnitude</em> of a phenomenon
+      and the other represents the <em>reliability</em> or <em>confidence</em> in that
+      measurement. Traditional bivariate maps treat both variables symmetrically, but
+      reliability is not a symmetric partner to magnitude&#x2014;it is a
+      meta-property that should qualify, not compete with, the primary signal.
+    </p>
+    <p>
+      The VbA solution encodes the primary variable through colour (hue and saturation)
+      and the reliability variable through opacity (alpha channel). High-reliability
+      features are rendered fully opaque, drawing the reader's attention with saturated
+      colour; low-reliability features are partially transparent, visually receding
+      into the background. This perceptual hierarchy mirrors the information hierarchy:
+      the reader should first notice the pattern of the primary variable and then
+      adjust their confidence based on the visibility of each unit.
+    </p>
+    <p>
+      CartoLab implements VbA by classifying the reliability variable into $n$ bins
+      using Fisher-Jenks natural breaks (to respect the distributional structure of
+      reliability), then mapping class bins linearly to an alpha range specified by
+      the user. The primary variable is styled independently (graduated colour); the
+      VbA alpha field is added as a data-defined opacity override in the renderer.
+      MacEachren (1995) and Bertin (1967/1983) provided the theoretical foundation for
+      visual variables and their perceptual ordering, of which the CartoLab
+      implementation directly applies the hierarchy of colour over transparency.
+    </p>
+
+    <h3>Mathematical Formulation</h3>
+
+    <div class="eq-block">
+      <strong>Alpha mapping from reliability bins.</strong>
+      $$ \alpha_i = \alpha_{\min} + b_i \cdot \frac{\alpha_{\max} - \alpha_{\min}}{n_{\text{bins}} - 1} $$
+      where $b_i \in \{0, 1, \ldots, n_{\text{bins}}-1\}$ is the reliability bin index
+      (0 = least reliable / lowest alpha) and $\alpha \in [0, 255]$ is the 8-bit alpha
+      channel.
+      \tag{1}
+    </div>
+
+    <div class="eq-block">
+      <strong>Fisher-Jenks classification of reliability.</strong>
+      $$ \{t_0, t_1, \ldots, t_K\} = \operatorname{argmin} \sum_{k=1}^{K} \sum_{x_i \in [t_{k-1}, t_k)} (x_i - \bar{x}_k)^2 $$
+      where $t_0 = \min(x)$, $t_K = \max(x)$, and $K = n_{\text{bins}}$ is the number
+      of alpha bins.
+      \tag{2}
+    </div>
+
+    <div class="eq-block">
+      <strong>Opacity percentage (human-readable).</strong>
+      $$ \alpha_i^{\text{pct}} = \frac{\alpha_i}{255} \times 100 $$
+      Rounded to one decimal place for the <code>vba_alpha_pct</code> output field.
+      \tag{3}
+    </div>
+
+    <div class="eq-block">
+      <strong>Visual variable hierarchy (Bertin, 1967).</strong>
+      The VbA map exploits the ordered visual variables: colour saturation $\succ$
+      transparency $\succ$ size $\succ$ orientation. By assigning the primary variable
+      to saturation/hue (high in the perceptual hierarchy) and reliability to
+      transparency (lower), the map respects the intended information priority.
+      \tag{4}
+    </div>
+
+    <h3>Parameters</h3>
+    <table>
+      <thead>
+        <tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Input layer</td><td>Polygon vector</td><td>&mdash;</td><td>Must contain both primary and reliability fields</td></tr>
+        <tr><td>Primary variable (colour)</td><td>Numeric field</td><td>&mdash;</td><td>Encoded through hue/saturation</td></tr>
+        <tr><td>Reliability variable (opacity)</td><td>Numeric field</td><td>&mdash;</td><td>Higher = more opaque (typically)</td></tr>
+        <tr><td>Alpha min</td><td>Integer</td><td>40</td><td>Range 0&#x2013;255; opacity for the least reliable bin</td></tr>
+        <tr><td>Alpha max</td><td>Integer</td><td>255</td><td>Range 0&#x2013;255; opacity for the most reliable bin</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Output Description</h3>
+    <p>
+      The output polygon layer retains all original fields and adds
+      <code>vba_alpha</code> (integer, 0&#x2013;255, the computed alpha channel value)
+      and <code>vba_alpha_pct</code> (float, 0&#x2013;100, the same value as a
+      human-readable percentage). These fields can be used as data-defined overrides
+      for the opacity property in any QGIS renderer.
+    </p>
+
+    <h3>Interpretation Guide</h3>
+    <div class="interpret-box">
+      <strong>Interpretation</strong>
+      VbA maps require an explicit legend that explains both channels, ideally a
+      two-part legend: a graduated colour ramp for the primary variable and a graduated
+      alpha strip for reliability. Alpha min should not fall below 40 (0&#x2013;255
+      scale) or features become effectively invisible. For print, test the minimum
+      alpha on the target paper stock and press, as ink gain can alter the perceived
+      transparency. The technique is most effective when reliability varies
+      meaningfully across the map; if all units have similar reliability, the map
+      reduces to an ordinary choropleth.
+    </div>
+
+    <h3>References</h3>
+    <ol class="ref-list">
+      <li>Roth, R. E., Woodruff, A. W., &amp; Johnson, Z. F. <em>Value-by-Alpha Maps: An Alternative Technique to the Cartogram</em>. The Cartographic Journal, 47(2): 130&#x2013;140, 2010. <a href="https://doi.org/10.1179/000870409X12488753453372" target="_blank" rel="noopener">doi:10.1179/000870409X12488753453372</a></li>
+      <li>MacEachren, A. M. <em>How Maps Work: Representation, Visualization, and Design</em>. Guilford Press, 1995 (revised 2004). ISBN 978-1572300408.</li>
+      <li>Bertin, J. <em>Semiology of Graphics: Diagrams, Networks, Maps</em>. University of Wisconsin Press, 1983. (Original French edition 1967.) ISBN 978-0299090603.</li>
+      <li>Sun, H. &amp; Li, Z. <em>Effectiveness of Cartogram for the Representation of Spatial Data</em>. The Cartographic Journal, 47(1): 12&#x2013;21, 2010.</li>
+      <li>Garlandini, S. &amp; Fabrikant, S. I. <em>Evaluating the Effectiveness and Efficiency of Visual Variables for Geographic Information Visualization</em>. In: Spatial Information Theory (COSIT), LNCS 5756: 195&#x2013;211. Springer, 2009.</li>
+      <li>Brewer, C. A. &amp; Pickle, L. <em>Evaluation of Methods for Classifying Epidemiological Data on Choropleth Maps in a Series</em>. Annals of the Association of American Geographers, 92(4): 662&#x2013;681, 2002.</li>
+      <li>Robinson, A. C. <em>Visual Highlighting Methods for Geovisualization</em>. Cartography and Geographic Information Science, 38(4): 373&#x2013;383, 2011.</li>
+    </ol>
+  </section>
+
+  <!-- ═══════════════ ALGORITHM 8 ═══════════════ -->
+  <section class="algo-section" id="algo8">
+    <span class="algo-id">quick_style</span>
+    <span class="algo-group">Quick Style</span>
+    <h2>8. Quick Style</h2>
+
+    <h3>Theoretical Background</h3>
+    <p>
+      Map styling is the bridge between data and visual communication, yet the
+      default single-symbol renderer in GIS software forces the analyst to manually
+      configure classification, colour ramps, and legend formatting before any
+      meaningful pattern is visible. Quick Style automates this pipeline with
+      cartographically informed defaults, applying Harrower and Brewer's (2003)
+      ColorBrewer palettes for categorical data and the perceptually uniform Viridis
+      family for sequential numeric data. The goal is to produce a publication-ready
+      styled layer in a single operation.
+    </p>
+    <p>
+      The algorithm detects the field type (numeric or string) and auto-selects a
+      graduated or categorised renderer accordingly, with a force-mode override for
+      cases where coded integers should be treated as categories. For graduated
+      renderers, the user selects from three break methods: quantile (equal count per
+      class), equal interval (equal data range per class), or geometric interval
+      (optimal for skewed distributions, as described in Algorithm 1). The quantile
+      method is the default for choropleth mapping per Brewer's (1994) recommendation
+      for ordinal color schemes, as it ensures each colour class contains approximately
+      the same number of observations.
+    </p>
+    <p>
+      The output includes a thin white outline (0.15 mm) that visually separates
+      adjacent polygons without drawing attention to boundaries&#x2014;a technique
+      borrowed from print cartography where a hairline gap between fill areas improves
+      figure-ground discrimination. The style summary string provides a compact report
+      of the applied configuration for reproducibility.
+    </p>
+
+    <h3>Mathematical Formulation</h3>
+
+    <div class="eq-block">
+      <strong>Quantile breaks.</strong>
+      Given sorted values $x_{(1)} \leq x_{(2)} \leq \cdots \leq x_{(n)}$,
+      class boundaries are
+      $$ b_k = x_{(\lceil k \cdot n / K \rceil)}, \qquad k = 1, \ldots, K-1 $$
+      with $b_0 = x_{(1)}$ and $b_K = x_{(n)}$. Each class contains $\lfloor n/K \rfloor$
+      or $\lceil n/K \rceil$ observations.
+      \tag{1}
+    </div>
+
+    <div class="eq-block">
+      <strong>Equal-interval breaks.</strong>
+      $$ b_k = x_{\min} + k \cdot \frac{x_{\max} - x_{\min}}{K}, \qquad k = 0, \ldots, K $$
+      \tag{2}
+    </div>
+
+    <div class="eq-block">
+      <strong>Geometric interval (as in Algorithm 1).</strong>
+      $$ C_k = a \cdot r^k, \qquad
+         (r^*, a^*) = \operatorname{argmin}_{r,a} \sum_{j=1}^{K} \left( f_j - \frac{n}{K} \right)^2 $$
+      \tag{3}
+    </div>
+
+    <div class="eq-block">
+      <strong>ColorBrewer palette assignment.</strong>
+      For a categorical field with $m$ unique values, the first $m$ colours from the
+      selected ColorBrewer qualitative palette are mapped 1:1 to the sorted unique
+      values. For sequential data, $K$ colours are linearly interpolated from the
+      selected sequential or diverging scheme.
+      \tag{4}
+    </div>
+
+    <h3>Parameters</h3>
+    <table>
+      <thead>
+        <tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Vector layer</td><td>Loaded vector layer</td><td>&mdash;</td><td>Must be loaded in the current QGIS project</td></tr>
+        <tr><td>Field</td><td>Any field</td><td>&mdash;</td><td>Numeric triggers graduated; text triggers categorised</td></tr>
+        <tr><td>Mode</td><td>Enum</td><td>Auto</td><td>Auto / Graduated / Categorised</td></tr>
+        <tr><td>Classes</td><td>Integer</td><td>5</td><td>Range 2&#x2013;12</td></tr>
+        <tr><td>Break method</td><td>Enum</td><td>Quantile</td><td>Quantile / Equal Interval / Geometric Interval</td></tr>
+        <tr><td>Palette</td><td>Enum</td><td>Viridis</td><td>ColorBrewer or Viridis family palette</td></tr>
+        <tr><td>Reverse</td><td>Boolean</td><td>False</td><td>Invert the colour ramp direction</td></tr>
+        <tr><td>Thin white outline</td><td>Boolean</td><td>True</td><td>Adds a 0.15 mm white stroke to polygon fills</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Output Description</h3>
+    <p>
+      The output is an in-place styled layer: no new layer is created; the existing
+      layer's renderer is replaced with the computed graduated or categorised renderer.
+      The algorithm returns a summary string (e.g., &ldquo;Graduated: pop_density,
+      5 quantile classes, Viridis&rdquo;). The legend is automatically populated with
+      formatted class labels.
+    </p>
+
+    <h3>Interpretation Guide</h3>
+    <div class="interpret-box">
+      <strong>Interpretation</strong>
+      Quick Style is a productivity tool, not a classification tool. For exploratory
+      analysis, accept the auto defaults; for publication, use Quick Style to establish
+      a baseline and then refine the renderer in the layer styling panel. The thin
+      white outline is especially valuable for dark fills and when the map will be
+      reproduced in greyscale, where adjacent polygons of similar value can merge.
+    </div>
+
+    <h3>References</h3>
+    <ol class="ref-list">
+      <li>Harrower, M. &amp; Brewer, C. A. <em>ColorBrewer.org: An Online Tool for Selecting Colour Schemes for Maps</em>. The Cartographic Journal, 40(1): 27&#x2013;37, 2003. <a href="https://doi.org/10.1179/000870403235002042" target="_blank" rel="noopener">doi:10.1179/000870403235002042</a></li>
+      <li>Brewer, C. A. <em>Color Use Guidelines for Mapping and Visualization</em>. In: MacEachren, A. M. &amp; Taylor, D. R. F. (eds.) <em>Visualization in Modern Cartography</em>. Pergamon, 1994: 123&#x2013;147.</li>
+      <li>Brewer, C. A. <em>Designing Better Maps: A Guide for GIS Users</em> (2nd ed.). ESRI Press, 2015. ISBN 978-1589484405.</li>
+      <li>Smith, R. M. <em>Comparing Traditional Methods for Selecting Class Intervals on Choropleth Maps</em>. The Professional Geographer, 38(1): 62&#x2013;67, 1986.</li>
+      <li>Monmonier, M. <em>How to Lie with Maps</em> (3rd ed.). University of Chicago Press, 2018. ISBN 978-0226435923.</li>
+      <li>Kimerling, A. J., Buckley, A. R., Muehrcke, P. C., &amp; Muehrcke, J. O. <em>Map Use: Reading, Analysis, Interpretation</em> (8th ed.). ESRI Press, 2016. ISBN 978-1589484429.</li>
+    </ol>
+  </section>
+
+  <!-- ═══════════════ ALGORITHM 9 ═══════════════ -->
+  <section class="algo-section" id="algo9">
+    <span class="algo-id">proportional_symbols</span>
+    <span class="algo-group">Thematic Mapping</span>
+    <h2>9. Proportional Symbols (Flannery)</h2>
+
+    <h3>Theoretical Background</h3>
+    <p>
+      Proportional symbol maps encode a quantitative variable through the size of a
+      point symbol placed at each feature's centroid. The technique is particularly
+      suited to count or magnitude data where the absolute value, rather than the
+      density, is the quantity of interest. The central perceptual challenge is that
+      map readers systematically underestimate the area of larger circles: Flannery
+      (1971) demonstrated experimentally that the perceived size $S_p$ follows
+      Stevens' (1957) power law, $S_p \propto S^{k}$ with $k \approx 0.8747$, rather
+      than the geometric $S_p \propto S^{1.0}$ or $S_p \propto S^{0.5}$ (radius
+      scaling). The common Flannery compensation exponent of $k = 0.5716$ adjusts the
+      area scaling so that the reader's <em>perceived</em> ratio between symbols
+      approximates the true data ratio.
+    </p>
+    <p>
+      The CartoLab implementation scales symbol size (in map millimetres) from the
+      user-specified minimum and maximum, applying either Flannery-compensated scaling
+      ($k = 0.5716$) or true area scaling ($k = 0.5$, i.e., radius $\propto \sqrt{v}$).
+      The algorithm also computes suggested legend values at geometrically spaced
+      intervals rounded to nice numbers (1, 2, 5 $\times 10^m$), providing the map
+      author with a ready-made set of reference symbols. Cleveland and McGill (1984)
+      ranked position along a common scale as the most accurate visual variable, but
+      among area-based encodings, circle size is the most accurate and the most
+      commonly used.
+    </p>
+
+    <h3>Mathematical Formulation</h3>
+
+    <div class="eq-block">
+      <strong>Size mapping with Flannery compensation.</strong>
+      $$ s_i = s_{\min} + (s_{\max} - s_{\min}) \cdot \left( \frac{v_i}{v_{\max}} \right)^k $$
+      where $s_i$ is the symbol size in millimetres, $k = 0.5716$ (Flannery) or
+      $k = 0.5$ (true area scale). When $k = 0.5$, the symbol <em>area</em> is
+      linearly proportional to the data value.
+      \tag{1}
+    </div>
+
+    <div class="eq-block">
+      <strong>Nice legend values (geometric spacing).</strong>
+      Legend values $\{v_0, v_1, \ldots, v_{L-1}\}$ are chosen such that
+      $$ v_j = \operatorname{nice}\!\left( v_{\max} \cdot g^{\,j - L + 1} \right), \qquad
+         g = \left( \frac{v_{\max}}{v_{\min}} \right)^{1/(L-1)} $$
+      where $\operatorname{nice}(x)$ rounds $x$ to the nearest number of the form
+      $d \times 10^m$ with $d \in \{1, 2, 5\}$.
+      \tag{2}
+    </div>
+
+    <div class="eq-block">
+      <strong>Stevens' power law for perceived area.</strong>
+      $$ \psi(S) = k \cdot S^{\,n}, \qquad n \approx 0.7 \text{ (for area perception)} $$
+      where $\psi$ is the perceived magnitude and $S$ is the physical stimulus
+      magnitude. The Flannery exponent combines the area-perception exponent with the
+      radius-to-area relationship.
+      \tag{3}
+    </div>
+
+    <div class="eq-block">
+      <strong>The perceived ratio under Flannery compensation.</strong>
+      $$ \frac{\psi(s_i)}{\psi(s_j)} \approx \frac{v_i}{v_j} $$
+      for any pair of symbols $(i, j)$, correcting the systematic underestimation of
+      large circle areas relative to small ones.
+      \tag{4}
+    </div>
+
+    <h3>Parameters</h3>
+    <table>
+      <thead>
+        <tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Input layer</td><td>Any vector</td><td>&mdash;</td><td>A point symbol is placed at each feature's centroid</td></tr>
+        <tr><td>Magnitude field</td><td>Numeric field</td><td>&mdash;</td><td>Drives the symbol size; must be positive</td></tr>
+        <tr><td>Max symbol size (mm)</td><td>Float</td><td>10.0</td><td>Symbol size for the maximum value</td></tr>
+        <tr><td>Min symbol size (mm)</td><td>Float</td><td>2.0</td><td>Symbol size for the minimum value</td></tr>
+        <tr><td>Flannery compensation</td><td>Boolean</td><td>True</td><td>Apply $k = 0.5716$; false uses $k = 0.5$</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Output Description</h3>
+    <p>
+      The output is a point layer with one point per input feature (at its centroid).
+      New fields: <code>psym_value</code> (the original magnitude value, echoed for
+      reference), <code>psym_size</code> (float, symbol diameter in millimetres). The
+      layer is auto-styled with a data-defined marker size using <code>psym_size</code>.
+      The algorithm log prints suggested legend values for manual legend construction.
+    </p>
+
+    <h3>Interpretation Guide</h3>
+    <div class="interpret-box">
+      <strong>Interpretation</strong>
+      Enable Flannery compensation for maps intended for a general audience, as it
+      compensates for the well-documented tendency to underestimate large-circle areas.
+      For scientific and professional audiences who may mentally calibrate against the
+      legend, the true-area ($k = 0.5$) option is defensible. Always include at least
+      three reference circles in the legend (minimum, median, maximum); the suggested
+      legend values printed in the log provide geometrically spaced intermediate
+      references. Overlapping symbols are a known limitation: for densely packed
+      features, consider using a smaller maximum size or a cartogram approach instead.
+    </div>
+
+    <h3>References</h3>
+    <ol class="ref-list">
+      <li>Flannery, J. J. <em>The Relative Effectiveness of Some Common Graduated Point Symbols in the Presentation of Quantitative Data</em>. The Canadian Cartographer, 8(2): 96&#x2013;109, 1971.</li>
+      <li>Stevens, S. S. <em>On the Psychophysical Law</em>. Psychological Review, 64(3): 153&#x2013;181, 1957. <a href="https://doi.org/10.1037/h0046162" target="_blank" rel="noopener">doi:10.1037/h0046162</a></li>
+      <li>Cleveland, W. S. &amp; McGill, R. <em>Graphical Perception: Theory, Experimentation, and Application to the Development of Graphical Methods</em>. Journal of the American Statistical Association, 79(387): 531&#x2013;554, 1984. <a href="https://doi.org/10.1080/01621459.1984.10478080" target="_blank" rel="noopener">doi:10.1080/01621459.1984.10478080</a></li>
+      <li>Chang, K. <em>Visualizing Geometric Uncertainty of Proportional Symbol Maps</em>. Cartography and Geographic Information Science, 36(4): 349&#x2013;365, 2009.</li>
+      <li>Groop, R. E. &amp; Cole, D. <em>Overlapping Graduated Circles: Magnitude Estimation and Method of Portrayal</em>. The Canadian Cartographer, 15(2): 114&#x2013;122, 1978.</li>
+      <li>Slocum, T. A. et al. <em>Thematic Cartography and Geovisualization</em> (3rd ed.). Pearson, 2009. ISBN 978-0132298346.</li>
+      <li>Tanimura, S., Kuroiwa, C., &amp; Mizota, T. <em>Proportional Symbol Mapping in R</em>. Journal of Statistical Software, 15(5): 1&#x2013;7, 2006.</li>
+    </ol>
+  </section>
+
+  <!-- ═══════════════ ALGORITHM 10 ═══════════════ -->
+  <section class="algo-section" id="algo10">
+    <span class="algo-id">ridge_map</span>
+    <span class="algo-group">Thematic Mapping</span>
+    <h2>10. Ridge Map (Joy Division Style)</h2>
+
+    <h3>Theoretical Background</h3>
+    <p>
+      The ridge map, sometimes called a Joy Division map after Peter Saville's iconic
+      album cover design for <em>Unknown Pleasures</em> (which itself adapted a plot of
+      radio pulsar CP 1919), transforms a raster surface into a set of vertically
+      deformed scanlines. Each scanline is a horizontal transect across the raster;
+      pixel values displace the line vertically, creating an overlapping sequence of
+      wave-like profiles. The resulting graphic encodes elevation, density, or any
+      continuous raster variable as a rhythmic spatial texture that is immediately
+      legible as topography.
+    </p>
+    <p>
+      The technique owes its intellectual lineage to Tufte's (1983) principle of
+      data-ink maximisation and Imhof's (1982) cartographic relief presentation, both
+      of which argue that surface representation should reveal the underlying data
+      structure with minimal decorative intervention. The ridge map's aesthetic of
+      overlapping transparent lines produces a figure-ground effect where crests
+      (high pixel values) visually advance and troughs (low values) recede, mimicking
+      shaded relief despite using only vector linework.
+    </p>
+    <p>
+      CartoLab implements ridge mapping by sampling the input raster along equally
+      spaced horizontal scanlines, deforming each $y$-coordinate by the pixel value
+      multiplied by a user-specified vertical exaggeration. An optional Laplacian
+      smoothing pass (averaging each vertex with its two neighbours) reduces
+      high-frequency noise from the raster. The scanlines are clipped to an optional
+      user-supplied polygon extent. The output is a vector line layer suitable for
+      rendering with dark-background and transparency for the overlapping ridge effect.
+    </p>
+
+    <h3>Mathematical Formulation</h3>
+
+    <div class="eq-block">
+      <strong>Scanline deformation.</strong>
+      $$ y'(x) = y_{\text{baseline}} + z(x, y_{\text{baseline}}) \cdot \lambda $$
+      where $z(x, y)$ is the raster pixel value at column $x$, row $y$, and $\lambda$
+      is the vertical exaggeration factor. $y_{\text{baseline}}$ is the un-deformed
+      scanline $y$-coordinate.
+      \tag{1}
+    </div>
+
+    <div class="eq-block">
+      <strong>Laplacian smoothing (one pass).</strong>
+      $$ p_i' = \frac{p_{i-1} + p_i + p_{i+1}}{3} $$
+      Applied along the scanline vertex sequence. Repeated $m$ times for $m$ smoothing
+      passes (0&#x2013;20).
+      \tag{2}
+    </div>
+
+    <div class="eq-block">
+      <strong>Scanline spacing.</strong>
+      $$ \Delta y_{\text{line}} = \frac{y_{\max} - y_{\min}}{n_{\text{lines}} - 1} $$
+      where $n_{\text{lines}}$ is the user-specified number of scanlines spanning the
+      raster's vertical extent.
+      \tag{3}
+    </div>
+
+    <div class="eq-block">
+      <strong>Raster value sampling (bilinear interpolation).</strong>
+      $$ z(x, y) = (1 - u)(1 - w)\,z_{00} + u(1 - w)\,z_{10} + (1 - u)w\,z_{01} + u w\,z_{11} $$
+      where $u, w \in [0, 1]$ are the fractional column and row offsets within the
+      enclosing four-pixel neighbourhood.
+      \tag{4}
+    </div>
+
+    <h3>Parameters</h3>
+    <table>
+      <thead>
+        <tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Input raster (single-band)</td><td>Raster layer</td><td>&mdash;</td><td>Single-band; multi-band uses the first band</td></tr>
+        <tr><td>Number of scanlines</td><td>Integer</td><td>100</td><td>Range 5&#x2013;500; more = denser ridge pattern</td></tr>
+        <tr><td>Vertical exaggeration</td><td>Float</td><td>1.0</td><td>Multiplier on pixel values in map units</td></tr>
+        <tr><td>Line spacing</td><td>Float</td><td>0</td><td>0 = auto (equal spacing); manual override in map units</td></tr>
+        <tr><td>Smoothing passes</td><td>Integer</td><td>1</td><td>Range 0&#x2013;20; 0 = raw raster values</td></tr>
+        <tr><td>Clip extent</td><td>Polygon (optional)</td><td>&mdash;</td><td>Restricts output to a specific region</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Output Description</h3>
+    <p>
+      A LineString vector layer with <code>line_id</code> (integer, scanline index
+      from top to bottom). Each line contains the deformed vertex sequence. The
+      recommended styling uses a dark background (#132025 or similar), a light stroke
+      (white or pale colour), low opacity (10&#x2013;40%), and no fill. The line_id
+      field enables per-line styling, e.g., data-defined colour ramps.
+    </p>
+
+    <h3>Interpretation Guide</h3>
+    <div class="interpret-box">
+      <strong>Interpretation</strong>
+      Ridge maps work best with continuous raster surfaces: DEMs, density rasters, and
+      kernel-density outputs. The visual effect relies on overlapping transparent lines:
+      on a dark background, light lines accumulate brightness in valleys (where many
+      lines converge at similar $y'$) and remain dim on ridges (where lines diverge).
+      Start with 100 scanlines and 10% stroke opacity; increase scanlines for smoother
+      surfaces and decrease for a sparser, more "drawn" aesthetic. Smoothing above 5
+      passes begins to suppress real topographic features; use sparingly.
+    </div>
+
+    <h3>References</h3>
+    <ol class="ref-list">
+      <li>Tufte, E. R. <em>The Visual Display of Quantitative Information</em>. Graphics Press, 1983 (2nd ed. 2001). ISBN 978-1930824133.</li>
+      <li>Imhof, E. <em>Cartographic Relief Presentation</em>. De Gruyter, 1982 (English ed. 2007, edited by H. J. Steward). ISBN 978-1589484580.</li>
+      <li>Wood, D. <em>The Power of Maps</em>. Guilford Press, 1992. ISBN 978-0898624922.</li>
+      <li>Lobeck, A. K. <em>Block Diagrams and Other Graphic Methods Used in Geology and Geography</em>. Emerson-Trussell, 1924 (2nd ed. 1958).</li>
+      <li>Tanaka, K. <em>The Relief Contour Method of Representing Topography on Maps</em>. Geographical Review, 40(3): 444&#x2013;456, 1950.</li>
+      <li>Kennelly, P. J. &amp; Kimerling, A. J. <em>Desktop Hachure Maps from Digital Elevation Models</em>. Cartographic Perspectives, 37: 78&#x2013;81, 2000.</li>
+      <li>Brewer, C. A. <em>Designing Better Maps: A Guide for GIS Users</em> (2nd ed.). ESRI Press, 2015. ISBN 978-1589484405.</li>
+    </ol>
+  </section>
+
+  <!-- ═══════════════ ALGORITHM 11 ═══════════════ -->
+  <section class="algo-section" id="algo11">
+    <span class="algo-id">building_25d_style</span>
+    <span class="algo-group">2.5D Styling</span>
+    <h2>11. Building 2.5D Style</h2>
+
+    <h3>Theoretical Background</h3>
+    <p>
+      The 2.5D representation bridges the gap between two-dimensional planimetric maps
+      and full three-dimensional scenes. By extruding polygon footprints vertically and
+      rendering them with an isometric or pseudo-3D projection, the technique conveys
+      building height, massing, and urban form while retaining the precision and
+      measurability of a 2D map. QGIS' native 2.5D renderer, introduced in version 3.x,
+      applies an isometric affine transformation to extruded geometry and renders walls
+      and roofs with user-configurable materials and lighting.
+    </p>
+    <p>
+      The CartoLab implementation offers two modes: the native QGIS 2.5D renderer
+      (configuring angle, height scale, shadow, wall colour, and roof colour via a
+      live preset system) and the per-floor colour-band mode. The per-floor mode
+      divides the building height into floor-height increments and applies a repeating
+      colour palette to each floor band, producing a legend-friendly single-symbol
+      renderer where each floor is a separate symbol layer. This approach, inspired by
+      Jenny et al.'s (2010) design principles for Swiss-style rock drawing, uses
+      systematic colour coding to reveal floor patterns across an urban landscape.
+    </p>
+    <p>
+      The visual presets (Warm Civic, Cool Slate, Limestone &amp; Teal, Night Copper,
+      Urban Core Gold, Suburban Pastoral, Cyberpunk Night, Nordic Minimalist, Emerald Metropolis,
+      and Terracotta Mediterranean) apply pre-tuned combinations of roof colour,
+      wall colour, shadow strength, and material style. The height can be supplied in
+      metres (direct field value) or in floor count (field value $\times$ floor
+      height in metres). An optional height clamp caps extreme outliers, and stepped
+      extrusion toggles between smooth (continuous extrusion) and stepped (floor-level
+      increments) wall profiles.
+    </p>
+
+    <h3>Mathematical Formulation</h3>
+
+    <div class="eq-block">
+      <strong>Height computation.</strong>
+      $$ h_i = \begin{cases}
+         v_i, & \text{metres mode} \\[4pt]
+         v_i \cdot h_{\text{floor}}, & \text{floors mode}
+         \end{cases} $$
+      where $v_i$ is the height field value for feature $i$ and $h_{\text{floor}}$ is
+      the floor height in metres.
+      \tag{1}
+    </div>
+
+    <div class="eq-block">
+      <strong>2.5D isometric projection.</strong>
+      $$ \mathbf{T} = \begin{bmatrix}
+         \cos\theta & -\cos\theta & 0 \\
+         -\sin\theta \cdot \sin\phi & -\sin\theta \cdot \sin\phi & \cos\phi
+         \end{bmatrix} $$
+      where $\theta$ is the rotation angle (user-specified, typically 45&#x00B0; or
+      30&#x00B0;), and $\phi$ is the pitch (typically 45&#x00B0; for isometric).
+      \tag{2}
+    </div>
+
+    <div class="eq-block">
+      <strong>Floor band height assignment.</strong>
+      $$ n_i^{\text{floors}} = \left\lceil \frac{h_i}{h_{\text{floor}}} \right\rceil $$
+      Each floor $k \in \{1, \ldots, n_i^{\text{floors}}\}$ receives colour
+      $\text{palette}[k \bmod |\text{palette}|]$ from repeating palettes (Civic Spectrum, Planning Bands, Soft Atlas, Turbo Height, or Viridis Height).
+      \tag{3}
+    </div>
+
+    <div class="eq-block">
+      <strong>Height clamp.</strong>
+      $$ h_i' = \min(h_i, h_{\max}) $$
+      Applied after height mode computation; features exceeding $h_{\max}$ are capped.
+      \tag{4}
+    </div>
+
+    <div class="eq-block">
+      <strong>Shadow offset (pseudo-lighting).</strong>
+      A parallel shadow polygon is displaced by $\Delta x = s \cdot \cos\theta_s$,
+      $\Delta y = s \cdot \sin\theta_s$, where $s$ is the shadow distance (typically
+      proportional to building height) and $\theta_s$ is the light azimuth.
+      \tag{5}
+    </div>
+
+    <h3>Parameters</h3>
+    <table>
+      <thead>
+        <tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Polygon layer</td><td>Loaded polygon vector</td><td>&mdash;</td><td>Building footprint layer</td></tr>
+        <tr><td>Height field</td><td>Numeric field</td><td>&mdash;</td><td>Height in metres or floor count</td></tr>
+        <tr><td>Height mode</td><td>Enum</td><td>Metres</td><td>Metres (direct value) or Floors (count * floor height)</td></tr>
+        <tr><td>Floor height</td><td>Float</td><td>3.0</td><td>Metres per floor; used in floors mode and floor-band renderer</td></tr>
+        <tr><td>Renderer style</td><td>Enum</td><td>2.5D</td><td>Native 2.5D renderer or Per-floor colour bands</td></tr>
+        <tr><td>Floor palette</td><td>Enum</td><td>Civic Spectrum</td><td>Civic Spectrum, Planning Bands, Soft Atlas, Turbo Height, Viridis Height</td></tr>
+        <tr><td>Max floors</td><td>Integer</td><td>30</td><td>Maximum number of symbol layers generated</td></tr>
+        <tr><td>Visual preset</td><td>Enum</td><td>Warm Civic</td><td>Warm Civic, Cool Slate, Limestone &amp; Teal, Night Copper, Urban Gold, Suburban Pastoral, Cyberpunk, Nordic, Emerald Metropolis, Terracotta Mediterranean</td></tr>
+        <tr><td>Angle</td><td>Float</td><td>110.0</td><td>Viewing azimuth in degrees</td></tr>
+        <tr><td>Height scale</td><td>Float</td><td>1.0</td><td>Vertical exaggeration multiplier</td></tr>
+        <tr><td>Max height clamp</td><td>Float</td><td>0 (off)</td><td>Cap extreme heights; 0 = no clamp</td></tr>
+        <tr><td>Stepped</td><td>Boolean</td><td>False</td><td>Stepped extrusion at floor intervals</td></tr>
+        <tr><td>Shadow</td><td>Boolean</td><td>True</td><td>Cast shadow from a 315&#x00B0; light source</td></tr>
+        <tr><td>Wall shading</td><td>Boolean</td><td>True</td><td>Darken walls facing away from the light</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Output Description</h3>
+    <p>
+      The output is an in-place styled layer: the existing layer's renderer is replaced.
+      A summary string describes the applied configuration (e.g., &ldquo;2.5D:
+      Warm Civic preset, 110&#x00B0; angle, height_metres, shadow on&rdquo;). For the
+      floor-band mode, a separate symbol layer is created for each floor level up to
+      Max Floors, each with a data-defined height filter.
+    </p>
+
+    <h3>Interpretation Guide</h3>
+    <div class="interpret-box">
+      <strong>Interpretation</strong>
+      The 2.5D view is a qualitative representation; do not use it for precise height
+      measurement. The floor-band mode excels at visualising building-height policy
+      zones (e.g., where 2&#x2013;4 floor buildings abut 10+ floor towers) and works
+      well in print layouts. Choose a preset that contrasts with the basemap:
+      Emerald Metropolis for environmental and eco-district master plans, Terracotta Mediterranean for historic old town quarters, and Cool Slate for general architectural master plans.
+    </div>
+
+    <h3>References</h3>
+    <ol class="ref-list">
+      <li>QGIS Development Team. <em>QGIS 2.5D Renderer Documentation</em>. QGIS User Manual, 2024. <a href="https://docs.qgis.org/latest/en/docs/user_manual/style_library/3d_symbols.html" target="_blank" rel="noopener">qgis.org/docs</a></li>
+      <li>Jenny, B., Gilgen, J., Geisth&#x00F6;vel, R., Marston, B. E., &amp; Hurni, L. <em>Design Principles for Swiss-Style Rock Drawing</em>. The Cartographic Journal, 47(4): 323&#x2013;332, 2010.</li>
+      <li>Kraak, M. J. &amp; Ormeling, F. <em>Cartography: Visualization of Geospatial Data</em> (3rd ed.). Guilford Press, 2011. ISBN 978-1609181949.</li>
+      <li>Haeberling, C., B&#x00E4;r, H., &amp; Hurni, L. <em>Proposed Cartographic Design Principles for 3D Maps</em>. Cartography and Geographic Information Science, 35(4): 309&#x2013;324, 2008.</li>
+      <li>D&#x00F6;llner, J. &amp; Buchholz, H. <em>Continuous Level-of-Detail Modeling of Buildings in 3D City Models</em>. Proceedings of ACM GIS, 2005.</li>
+      <li>Jobst, M. &amp; D&#x00F6;llner, J. <em>Better Perception of 3D-Spatial Relations by View-Dependent Mixed-Mode Rendering of 2D and 3D Maps</em>. International Journal of Geographical Information Science, 22(10): 1085&#x2013;1103, 2008.</li>
+      <li>Kwan, M. P. &amp; Lee, J. <em>Geovisualization of Human Activity Patterns Using 3D GIS: A Time-Geographic Approach</em>. In: Goodchild, M. F. &amp; Janelle, D. G. (eds.) <em>Spatially Integrated Social Science</em>. Oxford University Press, 2004.</li>
+    </ol>
+  </section>
+
+  <!-- ═══════════════ ALGORITHM 12 ═══════════════ -->
+  <section class="algo-section" id="algo12">
+    <span class="algo-id">label_points</span>
+    <span class="algo-group">Labeling</span>
+    <h2>12. Visual-Center Label Points</h2>
+
+    <h3>Theoretical Background</h3>
+    <p>
+      The visual centre of a polygon&#x2014;the point from which a label appears most
+      naturally to belong to the enclosing area&#x2014;is not the centroid. Centroids
+      can fall outside their polygon for concave shapes (e.g., C-shaped administrative
+      units, crescent-shaped lakes, doughnut polygons with interior holes). The
+      cartographic requirement is for a point that is guaranteed to lie inside the
+      polygon and is as far as possible from any edge, maximising the available space
+      for a label.
+    </p>
+    <p>
+      The <strong>polylabel</strong> algorithm, developed by Mapbox (2016), solves
+      this problem efficiently using a quad-tree search with a priority queue. The
+      algorithm maintains a max-heap ordered by each cell's <em>potential</em>: the
+      distance from the cell centre to the nearest polygon edge plus the cell's
+      half-diagonal (the maximum possible improvement from subdividing that cell). At
+      each step, the cell with the highest potential is subdivided into four children,
+      and the candidate point is updated whenever a cell centre has a larger signed
+      distance than the current best. The search terminates when the best cell's
+      potential falls within the specified precision of the best known distance.
+    </p>
+    <p>
+      The signed distance uses ray-casting to determine whether a point is inside the
+      polygon; points outside receive a negative distance. This approach generalises
+      to polygons with holes, multi-part geometries, and complex concavities.
+      Garcia-Castellanos and Lombardo (2007) provided the theoretical analogue for
+      the "pole of inaccessibility" on Earth's land surface; the polylabel algorithm
+      adapts the quad-tree search for the vector case.
+    </p>
+
+    <h3>Mathematical Formulation</h3>
+
+    <div class="eq-block">
+      <strong>Signed distance to polygon boundary.</strong>
+      $$ d(p) = \begin{cases}
+         +\min_{e \in E} \operatorname{dist}(p, e), & \text{if } p \text{ is inside the polygon} \\[4pt]
+         -\min_{e \in E} \operatorname{dist}(p, e), & \text{if } p \text{ is outside}
+         \end{cases} $$
+      where $E$ is the set of boundary edges and inside/outside is determined by
+      ray-casting (even-odd rule).
+      \tag{1}
+    </div>
+
+    <div class="eq-block">
+      <strong>Point-to-segment distance squared.</strong>
+      For edge $e$ from $a$ to $b$, the squared distance to point $p$ is:
+      $$ d^2(p, e) = \begin{cases}
+         |p - a|^2, & \text{if } (p-a)\cdot(b-a) \leq 0 \\[4pt]
+         |p - b|^2, & \text{if } (p-b)\cdot(a-b) \leq 0 \\[4pt]
+         \dfrac{|(p-a) \times (b-a)|^2}{|b-a|^2}, & \text{otherwise}
+         \end{cases} $$
+      where $\times$ denotes the 2D cross product.
+      \tag{2}
+    </div>
+
+    <div class="eq-block">
+      <strong>Cell potential (quad-tree priority).</strong>
+      $$ \operatorname{potential}(C) = d(\text{centre}_C) + h_C \cdot \sqrt{2} $$
+      where $h_C$ is the half-side length of cell $C$. This is the maximum possible
+      signed distance achievable by any point within the cell.
+      \tag{3}
+    </div>
+
+    <div class="eq-block">
+      <strong>Quad-tree termination condition.</strong>
+      The search halts when
+      $$ \max_{C \in Q} \operatorname{potential}(C) - d(p^*) \leq \varepsilon $$
+      where $p^*$ is the current best point, $Q$ is the priority queue, and
+      $\varepsilon$ is the precision parameter.
+      \tag{4}
+    </div>
+
+    <div class="eq-block">
+      <strong>Auto-precision scaling.</strong>
+      $$ \varepsilon = \frac{\max(w, h)}{100} $$
+      where $w$ and $h$ are the width and height of the polygon's bounding box.
+      \tag{5}
+    </div>
+
+    <div class="eq-block">
+      <strong>Principal Inertia Orientation Angle ($\text{lbl\_angle}$).</strong>
+      $$ M_{xx} = \frac{1}{m}\sum_{i=1}^m (x_i - \bar{x})^2, \quad M_{yy} = \frac{1}{m}\sum_{i=1}^m (y_i - \bar{y})^2, \quad M_{xy} = \frac{1}{m}\sum_{i=1}^m (x_i - \bar{x})(y_i - \bar{y}) $$
+      $$ \theta_{\text{orient}} = \frac{1}{2}\operatorname{atan2}\bigl(2 M_{xy}, \, M_{xx} - M_{yy}\bigr) \times \frac{180^\circ}{\pi} \in [-90^\circ, +90^\circ] $$
+      Determines the dominant longitudinal elongation axis of parcels, river corridors, and elongated polygons for aligned text placement.
+      \tag{6}
+    </div>
+
+    <h3>Parameters</h3>
+    <table>
+      <thead>
+        <tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Input polygon layer</td><td>Polygon vector</td><td>&mdash;</td><td>Polygons for which to compute label points</td></tr>
+        <tr><td>Precision</td><td>Float</td><td>0 (auto)</td><td>Search precision in map units; 0 auto-scales from bbox/100</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Output Description</h3>
+    <p>
+      A point layer with one point per input polygon. Each point carries:
+      <ul>
+        <li><code>lbl_dist</code> (float, the inscribed circle radius / distance to nearest boundary in map units).</li>
+        <li><code>lbl_angle</code> (float, principal spatial inertia orientation angle in degrees, $[-90^\circ, +90^\circ]$).</li>
+      </ul>
+      These fields enable data-defined label sizing and automatic shape-aligned rotation.
+    </p>
+
+    <h3>Interpretation Guide</h3>
+    <div class="interpret-box">
+      <strong>Interpretation</strong>
+      The label point's <code>lbl_dist</code> is the key quality metric: a value less
+      than approximately 2 mm in map units at the target scale suggests that the
+      polygon is too narrow for a readable label and should be labelled with a leader
+      line or left unlabelled. The <code>lbl_angle</code> field provides the exact angle to align map labels with elongated parcels, building wings, or river segments.
+    </div>
+
+    <h3>References</h3>
+    <ol class="ref-list">
+      <li>Mapbox. <em>Polylabel: A Fast Algorithm for Finding the Pole of Inaccessibility of a Polygon</em>. GitHub/mapbox/polylabel, 2016.</li>
+      <li>Garcia-Castellanos, D. &amp; Lombardo, U. <em>Poles of Inaccessibility: A Calculation Algorithm for the Remotest Places on Earth</em>. Scottish Geographical Journal, 123(3): 227&#x2013;233, 2007. <a href="https://doi.org/10.1080/14702540801897856" target="_blank" rel="noopener">doi:10.1080/14702540801897856</a></li>
+      <li>de Berg, M., Cheong, O., van Kreveld, M., &amp; Overmars, M. <em>Computational Geometry: Algorithms and Applications</em> (3rd ed.). Springer, 2008. ISBN 978-3540779735.</li>
+      <li>Edmondson, S., Christensen, J., Marks, J., &amp; Shieber, S. <em>A General Cartographic Labelling Algorithm</em>. Cartographica, 33(4): 13&#x2013;23, 1996.</li>
+    </ol>
+  </section>
+
+  <!-- ═══════════════ ALGORITHM 13 ═══════════════ -->
+  <section class="algo-section" id="algo13">
+    <span class="algo-id">normalize_field</span>
+    <span class="algo-group">Data Preparation</span>
+    <h2>13. Choropleth Normalization &amp; Rates</h2>
+
+    <h3>Theoretical Background</h3>
+    <p>
+      Raw counts are nearly always the wrong variable for a choropleth map. Plotting
+      total population, total crime incidents, or total disease cases on a map of
+      unequal-area enumeration units produces a map of the size of the units, not
+      the intensity of the phenomenon. Normalisation transforms a raw magnitude into
+      a rate, density, index, or relative score that is comparable across spatial
+      units. Monmonier (1991) devoted an entire chapter to the dangers of mapping
+      un-normalised counts, and the American Cartographic Association's (Dent et al.,
+      2009) guidelines consider normalisation a prerequisite for any choropleth
+      intended for comparison.
+    </p>
+    <p>
+      CartoLab implements six normalisation methods spanning the principal use cases:
+      (1) <strong>Rate</strong> divides a numerator by a denominator and scales the
+      result, producing a density or proportion; (2) <strong>Z-score</strong>
+      standardises to zero mean and unit variance, suitable for statistical
+      comparison; (3) <strong>Robust z</strong> uses median and MAD (median absolute
+      deviation) instead of mean and standard deviation, resisting the influence of
+      outliers; (4) <strong>Min-max</strong> scales to the range $[0, 1]$, useful for
+      input to multi-criteria analysis; (5) <strong>Percentile rank</strong> maps
+      each value to its empirical cumulative probability $\times 100$, providing a
+      purely ordinal scale; (6) <strong>$\log_{10}$</strong> compresses the dynamic
+      range of power-law or log-normal data, with an automatic shift to handle zero
+      and negative values.
+    </p>
+    <p>
+      The choice of normalisation method is as consequential as the choice of
+      classification. Krygier and Wood (2016) advise matching the normalisation to the
+      analytical question: rates for comparisons of intensity, z-scores for
+      identifying outliers, percentile ranks for ordinal rankings, and log transforms
+      for visualising data spanning multiple orders of magnitude. The CartoLab
+      implementation auto-graduates the output with the Viridis colour ramp and records
+      the method in the output field for transparency.
+    </p>
+
+    <h3>Mathematical Formulation</h3>
+
+    <div class="eq-block">
+      <strong>1. Rate normalisation.</strong>
+      $$ n_i = \frac{x_i}{d_i} \times S $$
+      where $d_i$ is the denominator (e.g., area, population) and $S$ is the rate
+      scale (e.g., 100 for per cent, 1000 for per mille, 100000 for per 100k).
+      \tag{1}
+    </div>
+
+    <div class="eq-block">
+      <strong>2. Z-score standardisation.</strong>
+      $$ z_i = \frac{x_i - \mu}{\sigma}, \qquad
+         \mu = \frac{1}{n}\sum_{i} x_i, \qquad
+         \sigma = \sqrt{\frac{1}{n}\sum_{i} (x_i - \mu)^2} $$
+      \tag{2}
+    </div>
+
+    <div class="eq-block">
+      <strong>3. Robust z-score (median/MAD).</strong>
+      $$ z_i^{\text{rob}} = \frac{x_i - \operatorname{median}(x)}{1.4826 \cdot \operatorname{MAD}}, \qquad
+         \operatorname{MAD} = \operatorname{median}(|x_i - \operatorname{median}(x)|) $$
+      The constant $1.4826$ makes MAD a consistent estimator of $\sigma$ for normally
+      distributed data.
+      \tag{3}
+    </div>
+
+    <div class="eq-block">
+      <strong>4. Min-max normalisation.</strong>
+      $$ n_i = \frac{x_i - x_{\min}}{x_{\max} - x_{\min}} \in [0, 1] $$
+      \tag{4}
+    </div>
+
+    <div class="eq-block">
+      <strong>5. Percentile rank.</strong>
+      $$ p_i = 100 \times \frac{\operatorname{count}(x_j < x_i) + 0.5 \cdot \operatorname{count}(x_j = x_i)}{n} $$
+      Ties are handled by mid-rank assignment, producing values in $[0, 100]$.
+      \tag{5}
+    </div>
+
+    <div class="eq-block">
+      <strong>6. Log-10 transform with shift.</strong>
+      $$ n_i = \log_{10}(x_i + \delta), \qquad
+         \delta = \begin{cases}
+         0, & \text{if } x_{\min} > 0 \\[4pt]
+         |x_{\min}| + 1, & \text{if } x_{\min} \leq 0
+         \end{cases} $$
+      \tag{6}
+    </div>
+
+    <div class="eq-block">
+      <strong>7. Location Quotient (LQ / Specialisation Index).</strong>
+      $$ LQ_i = \frac{e_i / E_i}{\sum_{k=1}^n e_k / \sum_{k=1}^n E_k} $$
+      where $e_i$ is local subsector activity and $E_i$ is total local employment or population. Values $> 1.0$ indicate regional concentration / competitive specialization.
+      \tag{7}
+    </div>
+
+    <div class="eq-block">
+      <strong>8. Winsorized Min-Max Normalisation (Outlier-Clamped).</strong>
+      $$ x_i^{\text{win}} = \max\bigl(P_5, \min(x_i, P_{95})\bigr), \qquad
+         n_i = \frac{x_i^{\text{win}} - P_5}{P_{95} - P_5} \in [0, 1] $$
+      Clamps extreme $5^{\text{th}}$ and $95^{\text{th}}$ percentiles to prevent statistical blowout of map color gradients.
+      \tag{8}
+    </div>
+
+    <div class="eq-block">
+      <strong>9. Decile Rank Normalisation ($1-10$).</strong>
+      $$ D_i = \min\left(10, \left\lfloor 1 + \frac{10 \times \operatorname{rank}(x_i)}{n} \right\rfloor\right) \in \{1, 2, \dots, 10\} $$
+      Divides observations into 10 equal-frequency classes for socioeconomic ranking and indexing.
+      \tag{9}
+    </div>
+
+    <h3>Parameters</h3>
+    <table>
+      <thead>
+        <tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Input layer</td><td>Vector (any geometry)</td><td>&mdash;</td><td>Layer containing the field to normalise</td></tr>
+        <tr><td>Value field</td><td>Numeric field</td><td>&mdash;</td><td>Raw count or magnitude to transform</td></tr>
+        <tr><td>Method</td><td>Enum</td><td>Rate</td><td>0 = Rate, 1 = Z-score, 2 = Robust z, 3 = Min-max, 4 = Percentile rank, 5 = Log10, 6 = Location Quotient, 7 = Winsorized Min-Max, 8 = Decile Rank</td></tr>
+        <tr><td>Denominator field</td><td>Numeric field</td><td>&mdash;</td><td>Required for Rate and Location Quotient methods; ignored for others</td></tr>
+        <tr><td>Rate scale</td><td>Float</td><td>100</td><td>Multiplier applied to the ratio; e.g., 100 = %</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Output Description</h3>
+    <p>
+      The output layer is a copy of the input with two new fields: <code>norm_value</code>
+      (float, the transformed value) and <code>norm_method</code> (string, the method
+      name applied, e.g., &ldquo;location_quotient&rdquo;). The layer is auto-graduated with the
+      Viridis colour ramp. For the Rate and Location Quotient methods, denominator metrics are recorded
+      in the processing log for scientific provenance.
+    </p>
+
+    <h3>Interpretation Guide</h3>
+    <div class="interpret-box">
+      <strong>Interpretation</strong>
+      Never map a raw count without a normalisation step. Rate is the standard default for
+      choropleth mapping. Use Location Quotient ($LQ > 1$) to identify industrial clusters, creative clusters, and regional economic specialisation. Use Winsorized Min-Max when severe outliers compress the visual range of the remaining 90% of features. Use Decile Rank ($1-10$) for public policy and socio-economic deprivation indices.
+    </div>
+
+    <h3>References</h3>
+    <ol class="ref-list">
+      <li>Monmonier, M. <em>How to Lie with Maps</em> (3rd ed.). University of Chicago Press, 2018. ISBN 978-0226435923.</li>
+      <li>Dent, B. D., Torguson, J. S., &amp; Hodler, T. W. <em>Cartography: Thematic Map Design</em> (6th ed.). McGraw-Hill, 2009. ISBN 978-0072943825.</li>
+      <li>Isard, W. <em>Methods of Regional Analysis: An Introduction to Regional Science</em>. MIT Press, 1960.</li>
+      <li>Tukey, J. W. <em>Exploratory Data Analysis</em>. Addison-Wesley, 1977.</li>
+      <li>Rousseeuw, P. J. &amp; Croux, C. <em>Alternatives to the Median Absolute Deviation</em>. Journal of the American Statistical Association, 88(424): 1273&#x2013;1283, 1993.</li>
+    </ol>
+  </section>
+
+  <!-- ═══════════════ ALGORITHM 14 ═══════════════ -->
+  <section class="algo-section" id="algo14">
+    <span class="algo-id">bivariate_studio</span>
+    <span class="algo-group">Interactive Studio</span>
+    <h2>14. Interactive Bivariate Studio &amp; Color Matrix Widget</h2>
+
+    <h3>Theoretical Background</h3>
+    <p>
+      The Interactive Bivariate Studio provides real-time exploration of 2D spatial relationships directly inside QGIS. By combining two continuous variables into an $N \times N$ matrix ($3\times3$ or $4\times4$), it reveals spatial correlations, spatial mismatches, and trade-offs (such as Social Vulnerability vs. Flood Hazard, or Public Transit Accessibility vs. Land Value).
+    </p>
+
+    <h3>Color Matrix Interpolation</h3>
+    <div class="eq-block">
+      <strong>Bilinear RGB blending in unit square $(u, v) \in [0, 1]^2$.</strong>
+      $$ C(u, v) = (1-u)(1-v)C_{LL} + u(1-v)C_{HL} + (1-u)vC_{LH} + uvC_{HH} $$
+      where $C_{LL}$ is low-low (neutral grey), $C_{HL}$ is high-variable-1, $C_{LH}$ is high-variable-2, and $C_{HH}$ is high-high (convergent chromatic accent).
+      \tag{1}
+    </div>
+
+    <h3>Curated Palette Themes</h3>
+    <table>
+      <thead>
+        <tr><th>Preset</th><th>$C_{LL}$</th><th>$C_{LH}$</th><th>$C_{HL}$</th><th>$C_{HH}$</th><th>Cartographic Use Case</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Classic Brown-Teal</td><td>#e8e8e8</td><td>#5ab4ac</td><td>#d8b365</td><td>#8c510a</td><td>General socio-economic &amp; environmental mapping</td></tr>
+        <tr><td>Pink-Blue (Robin)</td><td>#e8e8e8</td><td>#64acbe</td><td>#c85a5a</td><td>#574249</td><td>Urban vulnerability &amp; demographic shifts</td></tr>
+        <tr><td>Purple-Green</td><td>#e8e8e8</td><td>#7b3294</td><td>#008837</td><td>#2c103b</td><td>Land use &amp; ecological suitability</td></tr>
+        <tr><td>Warm Orange-Cyan</td><td>#e8e8e8</td><td>#2b83ba</td><td>#fdae61</td><td>#d7191c</td><td>Heat island vs. green canopy coverage</td></tr>
+        <tr><td>Sunset Purple-Gold</td><td>#e8e8e8</td><td>#7b2cbf</td><td>#f4a261</td><td>#e76f51</td><td>Housing affordability vs. employment access</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ═══════════════ ALGORITHM 15 ═══════════════ -->
+  <section class="algo-section" id="algo15">
+    <span class="algo-id">print_layout_suite</span>
+    <span class="algo-group">Layout Studio</span>
+    <h2>15. Print Layout Studio Suite</h2>
+
+    <h3>Theoretical Background</h3>
+    <p>
+      The Print Layout Studio automates high-end cartographic layout production, eliminating tedious manual drafting while enforcing strict ISO page geometry, Swiss typography hierarchies, optical margins, and harmonious spatial balance.
+    </p>
+
+    <h3>Key Capabilities</h3>
+    <ul>
+      <li><strong>Map Sheet Generator:</strong> Automated single and multi-sheet map production with standard ISO paper sizes ($A0-A4$) in portrait or landscape orientations, calculating exact map scales ($1:S$) with dynamic bounding extents.</li>
+      <li><strong>Contextual Overview Locator Inset:</strong> Automatically positions an overview inset map at $4\times$ smaller scale in a user-chosen corner, complete with dynamic red extent indicators.</li>
+      <li><strong>Isometric 3D Layer Stacking:</strong> Generates multi-layer axonometric $30^\circ$ perspective layouts with adjustable layer offsets ($\Delta z$) and vertical dashed alignment lines.</li>
+      <li><strong>Paper Canvas Themes:</strong> Velvet Dark (<code>#0B0F19</code>), Warm Editorial (<code>#FDFBF7</code>), Technical Blueprint (<code>#0C2340</code>), Antique Parchment (<code>#F4ECD8</code>), Japanese Washi (<code>#FAF8F5</code>), and Clean White (<code>#FFFFFF</code>).</li>
+      <li><strong>Publication Typography Hierarchy:</strong> Swiss Modern (Inter/Helvetica), Academic Serif (Merriweather/Times), Technical Blueprint (Roboto Mono), and Editorial Warm (Lora/Georgia).</li>
+      <li><strong>Modern Chevron North Needle (<code>modern_arrow</code>):</strong> Architectural chevron needle with vertical meridian baseline.</li>
+    </ul>
+  </section>
+
+  <!-- ═══════════════ ALGORITHM 16 ═══════════════ -->
+  <section class="algo-section" id="algo16">
+    <span class="algo-id">color_accessibility</span>
+    <span class="algo-group">Accessibility</span>
+    <h2>16. Color Accessibility &amp; CVD Simulation Engine</h2>
+
+    <h3>Theoretical Background</h3>
+    <p>
+      Ensures maps comply with WCAG 2.1 AAA accessibility standards and remain legible for individuals with Color Vision Deficiencies (CVD / Daltonism: Deuteranopia, Protanopia, Tritanopia).
+    </p>
+
+    <div class="eq-block">
+      <strong>Relative Luminance (sRGB).</strong>
+      $$ L = 0.2126 R' + 0.7152 G' + 0.0722 B' $$
+      $$ C' = \begin{cases} \frac{C}{12.92}, & C \leq 0.04045 \\[4pt] \left(\frac{C + 0.055}{1.055}\right)^{2.4}, & C > 0.04045 \end{cases} \quad \text{for } C \in \{R, G, B\} / 255 $$
+      \tag{1}
+    </div>
+
+    <div class="eq-block">
+      <strong>WCAG Contrast Ratio.</strong>
+      $$ CR = \frac{L_1 + 0.05}{L_2 + 0.05} \ge 7.0 \quad (\text{WCAG AAA for normal text}) $$
+      \tag{2}
+    </div>
+  </section>
+
+  <!-- ═══════════════ ALGORITHM 17 ═══════════════ -->
+  <section class="algo-section" id="algo17">
+    <span class="algo-id">sun_lighting</span>
+    <span class="algo-group">Solar Lighting</span>
+    <h2>17. Solar Position &amp; Sun Angle Calculator</h2>
+
+    <h3>Theoretical Background</h3>
+    <p>
+      Computes real astronomical solar altitude and azimuth based on geographic latitude ($\phi$), day of year ($n$), and solar hour ($H$) to generate accurate 2.5D building shadows and daylight analysis.
+    </p>
+
+    <div class="eq-block">
+      <strong>Solar Declination &amp; Altitude Equations.</strong>
+      $$ \delta = 23.45^\circ \sin\left(\frac{360^\circ}{365}(284 + n)\right) $$
+      $$ \sin \alpha = \sin \phi \sin \delta + \cos \phi \cos \delta \cos H $$
+      $$ \cos \gamma = \frac{\sin \alpha \sin \phi - \sin \delta}{\cos \alpha \cos \phi} $$
+      where $\alpha$ is the solar altitude angle above the horizon and $\gamma$ is the solar azimuth angle.
+      \tag{1}
+    </div>
+  </section>
+
+  <!-- ═══════════════ ALGORITHM 18 ═══════════════ -->
+  <section class="algo-section" id="algo18">
+    <span class="algo-id">scientific_palettes</span>
+    <span class="algo-group">Cartographic Palettes</span>
+    <h2>18. Perceptual Scientific &amp; Topographic Color Ramps Library</h2>
+
+    <h3>Curated Scientific Ramps</h3>
+    <table>
+      <thead>
+        <tr><th>Palette</th><th>Type</th><th>Colorblind Safe</th><th>Primary Use Case</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Turbo</strong></td><td>Sequential Multi-Hue</td><td>Partial</td><td>High-contrast continuous density &amp; urban heat islands</td></tr>
+        <tr><td><strong>Mako</strong></td><td>Sequential Monotonic</td><td>Yes</td><td>Water depth, marine morphology &amp; wetlands</td></tr>
+        <tr><td><strong>Rocket</strong></td><td>Sequential Hot</td><td>Yes</td><td>Fire risk, building density &amp; traffic congestion</td></tr>
+        <tr><td><strong>Earth</strong></td><td>Topographic Diverging</td><td>Yes</td><td>Elevation gradients, land-use zoning &amp; soil moisture</td></tr>
+        <tr><td><strong>Bathymetry</strong></td><td>Marine Sequential</td><td>Yes</td><td>Coastal bathymetry &amp; flood inundation levels</td></tr>
+        <tr><td><strong>IceFire</strong></td><td>Cyclic / Diverging</td><td>Yes</td><td>Temperature anomalies, thermal stress &amp; solar radiation</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+</main>
+
+<!-- ═══════════════ SEARCH SCRIPT ═══════════════ -->
+<script>
+  (function() {
+    const searchInput = document.getElementById('algoSearch');
+    const sections = document.querySelectorAll('.algo-section');
+    const noResults = document.getElementById('no-results-msg');
+
+    if (!searchInput || sections.length === 0) return;
+
+    searchInput.addEventListener('input', function() {
+      const query = this.value.trim().toLowerCase();
+      let anyVisible = false;
+
+      sections.forEach(function(section) {
+        if (!query) {
+          section.classList.remove('hidden');
+          anyVisible = true;
+          return;
+        }
+
+        const text = section.textContent.toLowerCase();
+        if (text.indexOf(query) !== -1) {
+          section.classList.remove('hidden');
+          anyVisible = true;
+        } else {
+          section.classList.add('hidden');
+        }
+      });
+
+      if (noResults) {
+        noResults.classList.toggle('visible', !anyVisible && query.length > 0);
+      }
+    });
+  })();
+</script>
+
+
+<!-- PDF PRINT BUTTON -->
+<style>
+#print-pdf-btn {
+  position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+  background: #13a0a0; color: white; border: none; border-radius: 8px;
+  padding: 10px 18px; font-size: 14px; font-weight: 600; cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0,0,0,.2); transition: all .2s;
+  display: flex; align-items: center; gap: 8px;
+}
+#print-pdf-btn:hover { background: #0d7a7a; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,.25); }
+@media print { #print-pdf-btn { display: none !important; } }
+@media (max-width: 768px) { #print-pdf-btn { bottom: 12px; right: 12px; padding: 8px 14px; font-size: 12px; } }
+</style>
+<button id="print-pdf-btn" onclick="window.print()" title="Save as PDF / Print">🖨️ Save as PDF</button>
+
+</body>
+</html>

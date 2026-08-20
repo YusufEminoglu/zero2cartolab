@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  /* Minimal PlanX embedded chart styling — self-contained, no network calls */
+  :root {
+    --planx-bg: #ffffff;
+    --planx-fg: #1a1a2e;
+    --planx-accent: #e94560;
+    --planx-muted: #66788a;
+    --planx-grid: #e2e8f0;
+    --font-stack: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--font-stack);
+    background: #fcfdfe;
+    color: var(--planx-fg);
+    padding: 10px;
+  }
+  .chart-container {
+    position: relative;
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    padding: 16px;
+  }
+  canvas { display: block; width: 100%; }
+  .chart-title { font-size: 14px; font-weight: 600; text-align: center; margin-bottom: 8px; }
+  .chart-subtitle { font-size: 11px; color: var(--planx-muted); text-align: center; margin-bottom: 4px; }
+  .legend { display: flex; justify-content: center; gap: 12px; margin-top: 6px; font-size: 10px; }
+  .legend-item { display: flex; align-items: center; gap: 4px; }
+  .legend-swatch { width: 10px; height: 10px; border-radius: 2px; }
+</style>
+</head>
+<body>
+<div class="chart-container">
+  <div class="chart-title" id="chartTitle">Indicator Profile</div>
+  <div class="chart-subtitle" id="chartSubtitle"></div>
+  <canvas id="planxChart" width="360" height="220"></canvas>
+  <div class="legend" id="chartLegend"></div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  var canvas = document.getElementById('planxChart');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+
+  // Data injected by Python at render time via query params or postMessage
+  var defaultLabels = ['Exp.', 'Sens.', 'A.C.', 'Risk', 'Pop.'];
+  var defaultValues = [0.65, 0.42, 0.78, 0.55, 0.31];
+  var defaultColor = '#e94560';
+
+  try {
+    var params = new URLSearchParams(window.location.search);
+    var labels = JSON.parse(params.get('labels') || 'null') || defaultLabels;
+    var values = JSON.parse(params.get('values') || 'null') || defaultValues;
+    var title = params.get('title') || 'Indicator Profile';
+    var color = params.get('color') || defaultColor;
+  } catch(e) {
+    var labels = defaultLabels;
+    var values = defaultValues;
+    var title = 'Indicator Profile';
+    var color = defaultColor;
+  }
+
+  document.getElementById('chartTitle').textContent = title;
+
+  var n = labels.length;
+  var W = canvas.width, H = canvas.height;
+  var cx = W / 2, cy = H / 2;
+  var maxR = Math.min(cx, cy) - 30;
+  var maxVal = Math.max.apply(null, values.concat([0.1]));
+
+  function drawRadar() {
+    ctx.clearRect(0, 0, W, H);
+
+    // Grid
+    for (var level = 1; level <= 4; level++) {
+      var r = maxR * level / 4;
+      ctx.beginPath();
+      for (var i = 0; i <= n; i++) {
+        var angle = Math.PI * 2 * i / n - Math.PI / 2;
+        var x = cx + r * Math.cos(angle);
+        var y = cy + r * Math.sin(angle);
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.strokeStyle = '#e8e8e8';
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    }
+
+    // Axes
+    for (var i = 0; i < n; i++) {
+      var angle = Math.PI * 2 * i / n - Math.PI / 2;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + maxR * Math.cos(angle), cy + maxR * Math.sin(angle));
+      ctx.strokeStyle = '#ddd';
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+    }
+
+    // Data
+    ctx.beginPath();
+    for (var i = 0; i < n; i++) {
+      var angle = Math.PI * 2 * i / n - Math.PI / 2;
+      var r = maxR * values[i] / maxVal;
+      var x = cx + r * Math.cos(angle);
+      var y = cy + r * Math.sin(angle);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fillStyle = color.replace(')', ', 0.2)').replace('rgb', 'rgba');
+    if (color.startsWith('#')) ctx.fillStyle = 'rgba(233,69,96,0.2)';
+    ctx.fill();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Dots
+    for (var i = 0; i < n; i++) {
+      var angle = Math.PI * 2 * i / n - Math.PI / 2;
+      var r = maxR * values[i] / maxVal;
+      ctx.beginPath();
+      ctx.arc(cx + r * Math.cos(angle), cy + r * Math.sin(angle), 3, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+    }
+
+    // Labels
+    ctx.fillStyle = '#333';
+    ctx.font = '10px Inter, Segoe UI, sans-serif';
+    ctx.textAlign = 'center';
+    for (var i = 0; i < n; i++) {
+      var angle = Math.PI * 2 * i / n - Math.PI / 2;
+      var tx = cx + (maxR + 16) * Math.cos(angle);
+      var ty = cy + (maxR + 16) * Math.sin(angle) + 4;
+      ctx.fillText(labels[i], tx, ty);
+    }
+  }
+
+  drawRadar();
+})();
+</script>
+</body>
+</html>

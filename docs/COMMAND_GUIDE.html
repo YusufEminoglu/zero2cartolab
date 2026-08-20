@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>PlanX CartoLab — Command Guide</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: "Segoe UI", Arial, sans-serif; margin: 24px; color: #102a2f; background: #f4faf9; }
+    h1, h2 { color: #0f4c5c; }
+    .card { background: #fff; border: 1px solid #d7e8e5; border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+    code { background: #edf4f2; padding: 2px 6px; border-radius: 6px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+    th, td { border: 1px solid #d7e8e5; padding: 8px; text-align: left; }
+    th { background: #e6f3f0; }
+  </style>
+</head>
+<body>
+  <h1>PlanX CartoLab — Command Guide v1.4</h1>
+  <p>All 12 Processing algorithms in the <strong>PlanX CartoLab</strong> provider. Each entry includes the algorithm ID (for PyQGIS) and its purpose.</p>
+
+  <h2>Classification</h2>
+  <div class="card">
+    <p><code>geometric_interval_classification</code></p>
+    <p>Classify a numeric field using one of three advanced algorithms: Adaptive GIC (optimal for skewed continuous data), Head/Tail Breaks (heavy-tailed / power-law distributions), or Fisher-Jenks natural breaks. Adds <code>gic_class</code> and <code>gic_label</code> fields.</p>
+  </div>
+
+  <h2>Thematic Mapping</h2>
+  <div class="card">
+    <p><code>bivariate_choropleth</code></p>
+    <p>Create a bivariate choropleth map by classifying two numeric fields into an N×N colour matrix. Adds <code>bivar_x_class</code>, <code>bivar_y_class</code> and <code>bivar_class</code> fields. Output is auto-styled with the computed bivariate colour matrix.</p>
+  </div>
+  <div class="card">
+    <p><code>ridge_map</code></p>
+    <p>Generate a ridge-line (Joy Division style) vector layer from a single-band raster. Raster values deform scanlines vertically, producing overlapping wave profiles. Best with transparency and a dark canvas background.</p>
+  </div>
+  <div class="card">
+    <p><code>value_by_alpha</code></p>
+    <p>Encode uncertainty / reliability as opacity (alpha channel). Primary variable drives colour; secondary reliability variable controls opacity. Adds <code>vba_alpha</code> (0–255) and <code>vba_alpha_pct</code> (0–100) fields.</p>
+  </div>
+  <div class="card">
+    <p><code>dot_density</code></p>
+    <p>Scatter dots inside each polygon, one dot per N units of a count field. Placement is seeded and hole-aware. Each dot inherits source polygon attributes for multi-group dot maps.</p>
+  </div>
+  <div class="card">
+    <p><code>proportional_symbols</code></p>
+    <p>Place a point at each feature centroid whose symbol size is proportional to a numeric field. Flannery compensation corrects perceptual area under-estimation. Adds <code>psym_size</code> (mm) for data-defined marker size.</p>
+  </div>
+
+  <h2>Cartogram</h2>
+  <div class="card">
+    <p><code>compute_cartogram</code></p>
+    <p>Distort polygon areas to be proportional to a numeric field using the diffusion method (Gastner &amp; Newman). Iteratively displaces polygon boundaries until each region's area represents its field value.</p>
+  </div>
+
+  <h2>2.5D Styling</h2>
+  <div class="card">
+    <p><code>building_25d_style</code></p>
+    <p>Apply a polished native QGIS 2.5D renderer to a loaded polygon layer. Controls roof/wall colour, shadow, viewing angle, height clamp, stepped extrusion, and per-floor colour bands. Supports height-in-metres or floor-count modes.</p>
+  </div>
+
+  <h2>Aggregation</h2>
+  <div class="card">
+    <p><code>hexbin_aggregate</code></p>
+    <p>Aggregate a point layer into a pointy-top hexagonal grid. Only occupied hexagons are emitted. Statistic: count, sum, or mean of a weight field. Output carries <code>hex_count</code>, <code>hex_sum</code> and <code>hex_mean</code>.</p>
+  </div>
+
+  <h2>Labeling</h2>
+  <div class="card">
+    <p><code>label_points</code></p>
+    <p>Compute each polygon's pole of inaccessibility (polylabel) — the interior point furthest from any edge. Always falls inside the polygon, even for C-shaped or doughnut features. Adds <code>lbl_dist</code> (inscribed-circle radius).</p>
+  </div>
+
+  <h2>Map Reference</h2>
+  <div class="card">
+    <p><code>graticule_grid</code></p>
+    <p>Generate a line layer of meridians and parallels across an extent, on nice round coordinate intervals. Each line carries its orientation, constant coordinate and a formatted label. Leave interval at 0 to auto-pick.</p>
+  </div>
+
+  <h2>Data Preparation</h2>
+  <div class="card">
+    <p><code>normalize_field</code></p>
+    <p>Turn a raw field into a map-ready value: Rate (numerator / denominator × scale), z-score, robust z (median-MAD), min-max (0–1), percentile rank (0–100), or log₁₀. Writes <code>norm_value</code> and <code>norm_method</code> fields.</p>
+  </div>
+
+  <h2>Help URLs</h2>
+  <p>Every algorithm's <code>helpUrl()</code> points to <a href="https://github.com/YusufEminoglu/planx_cartolab#module-catalog">github.com/YusufEminoglu/planx_cartolab#module-catalog</a> — click the help icon in the Processing dialog.</p>
+</body>
+</html>

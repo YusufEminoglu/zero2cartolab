@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: "Eminoglu"
+    given-names: "Yusuf"
+    email: "yusuf.eminoglu@deu.edu.tr"
+    orcid: "https://orcid.org/0009-0005-6000-2934"
+title: "0202CartoLab"
+version: "1.3.0"
+doi: "10.5281/zenodo.20753138"
+date-released: "2026-06-18"
+url: "https://github.com/YusufEminoglu/zero2cartolab"
+abstract: "Advanced cartography suite: native 2.5D building styling, bivariate choropleths, cartograms, ridge maps, Value-by-Alpha, dot-density and proportional symbols, hexbin aggregation, polylabel labels, graticules, choropleth normalization, and layout automation for QGIS."

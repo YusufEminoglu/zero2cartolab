@@ -1,0 +1,30 @@
+[general]
+name=02CartoLab
+version=1.0.0
+hasProcessingProvider=yes
+
+category=Vector
+tags=cartography, thematic map, choropleth, layout, print layout, atlas, map book, bivariate, 2.5d, buildings, cartogram, dot-density, hexbin, value-by-alpha, ridge-maps, legend, north arrow, scale bar, graticule, palettes, accessibility, cvd, colorbrewer, export, zero2
+
+description=Unified cartographic studio and print layout automation for QGIS: publication-grade thematic styling, bivariate maps, 2.5D extrusion, and one-click layout generation with template gallery, custom graticules, and map book atlas automation.
+about=02CartoLab is a unified thematic mapping and print layout automation studio for QGIS. It bridges map symbology and publication print layouts in one cohesive workflow: builds publication-ready choropleths (including bivariate and Value-by-Alpha), continuous-area cartograms, ridge-line relief maps, dot-density and Flannery proportional-symbol maps, hexbin aggregation, and native 2.5D building styling - then assembles complete print layouts (with template gallery, legend, scale bar, north arrow, coordinate graticules, and credits) in one click. Includes an embedded Layout Designer studio dock, automated multi-page map book atlas engine, CVD accessibility inspector, and a comprehensive Processing provider. No external dependencies - pure QGIS. Online Documentation: https://yusufeminoglu.github.io/zero2cartolab/ | Repository: https://github.com/YusufEminoglu/zero2cartolab
+
+homepage=https://yusufeminoglu.github.io/zero2cartolab/
+repository=https://github.com/YusufEminoglu/zero2cartolab
+tracker=https://github.com/YusufEminoglu/zero2cartolab/issues
+
+author=Yusuf Eminoglu
+email=yusuf.eminoglu@deu.edu.tr
+
+icon=icons/icon.png
+
+qgisMinimumVersion=3.28
+qgisMaximumVersion=4.99
+
+changelog=
+    02CartoLab 1.0.0 - Initial release: Unified cartographic studio and print layout automation for QGIS. Includes Publication Layout Template Gallery (Report Figure, Academic Journal, Exhibition Poster, Fact Sheet, Comparative Diptych), Palette & Accessibility Inspector with 5-mode CVD simulation, 14 Processing algorithms, and embedded Print Layout Designer studio dock.
+
+experimental=False
+deprecated=False
+license=GPL-3
+
