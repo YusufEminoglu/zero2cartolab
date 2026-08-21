@@ -1,6 +1,6 @@
 [general]
 name=02CartoLab
-version=1.0.0
+version=1.0.1
 hasProcessingProvider=yes
 
 category=Vector
@@ -22,9 +22,9 @@ qgisMinimumVersion=3.28
 qgisMaximumVersion=4.99
 
 changelog=
+    02CartoLab 1.0.1 - Fixed Isometric Layer Stacker selection when projects contain duplicate layer names by resolving stable QGIS layer IDs in user-selected order. Replaced the main plugin icon with a new text-free, transparent, full-bleed cartographic studio mark.
     02CartoLab 1.0.0 - Initial release: Unified cartographic studio and print layout automation for QGIS. Includes Publication Layout Template Gallery (Report Figure, Academic Journal, Exhibition Poster, Fact Sheet, Comparative Diptych), Palette & Accessibility Inspector with 5-mode CVD simulation, 14 Processing algorithms, and embedded Print Layout Designer studio dock.
 
 experimental=False
 deprecated=False
 license=GPL-3
-

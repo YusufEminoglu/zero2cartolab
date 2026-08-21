@@ -69,6 +69,7 @@ from ..core.qgis_25d_style import (
     looks_like_floor_count_field,
     normalise_hex_color,
 )
+from ..core.utils import resolve_layers_by_id
 
 
 IS_QGIS4 = int(getattr(Qgis, "QGIS_VERSION_INT", 0)) >= 40000
@@ -2949,12 +2950,20 @@ class CartoLabDashboard(_QDialogBase):
                 "Select at least 2 layers from the list above.",
             )
             return
-        selected_names = [item.text() for item in selected_items]
+        selected_ids = [
+            item.data(Qt.ItemDataRole.UserRole) for item in selected_items]
         all_layers = QgsProject.instance().mapLayers()
-        layers = [lyr for name, lyr in all_layers.items() if lyr.name() in selected_names]
+        layers = resolve_layers_by_id(selected_ids, all_layers, limit=8)
+        if len(layers) < 2:
+            QMessageBox.warning(
+                self, "Isometric Stack",
+                "Two selected layers are no longer available. Refresh the "
+                "project layers and select them again.",
+            )
+            return
         try:
             from ..layout.isometric_stacker import create_isometric_stack_layout
-            layout = create_isometric_stack_layout(layers[:8])
+            layout = create_isometric_stack_layout(layers)
             self._refresh_layout_combo()
             self.layout_combo.setCurrentText(layout.name())
             self._open_in_designer(layout)
@@ -3044,7 +3053,9 @@ class CartoLabDashboard(_QDialogBase):
         if hasattr(self, "iso_layer_list"):
             self.iso_layer_list.clear()
             for layer in layers:
-                self.iso_layer_list.addItem(layer.name())
+                item = QListWidgetItem(layer.name())
+                item.setData(Qt.ItemDataRole.UserRole, layer.id())
+                self.iso_layer_list.addItem(item)
         if hasattr(self, "layout_combo"):
             self._refresh_layout_combo()
         if hasattr(self, "qs_layer_combo"):

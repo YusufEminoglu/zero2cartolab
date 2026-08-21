@@ -11,6 +11,32 @@ import math
 from typing import Any, Optional
 
 
+def resolve_layers_by_id(
+        layer_ids: list[str], layer_lookup: dict, limit: int = 8) -> list:
+    """Resolve a UI layer selection without relying on non-unique names.
+
+    QGIS permits several project layers to share the same display name.  UI
+    controls must therefore carry layer IDs and preserve the user's selected
+    order.  Stale IDs are ignored because layers may be removed while a dialog
+    remains open.
+    """
+    if limit <= 0:
+        return []
+    resolved = []
+    seen = set()
+    for layer_id in layer_ids:
+        if layer_id in seen:
+            continue
+        layer = layer_lookup.get(layer_id)
+        if layer is None:
+            continue
+        resolved.append(layer)
+        seen.add(layer_id)
+        if len(resolved) >= limit:
+            break
+    return resolved
+
+
 def safe_float(val: Any, default: Optional[float] = None) -> Optional[float]:
     """
     Safely convert any input (QVariant, PyQGIS NULL, str, int, float, None)

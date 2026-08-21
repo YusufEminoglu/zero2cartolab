@@ -996,10 +996,29 @@ check("25D preset terracotta_mediterranean exists", "terracotta_mediterranean" i
 check("25D floor palette turbo_height exists", "turbo_height" in q25.FLOOR_BAND_PALETTES)
 check("25D floor palette viridis_height exists", "viridis_height" in q25.FLOOR_BAND_PALETTES)
 
-from zero2cartolab.core.utils import safe_float, safe_int
+from zero2cartolab.core.utils import (
+    resolve_layers_by_id,
+    safe_float,
+    safe_int,
+)
 check("safe_float cleans meter suffix '8 m'", safe_float("8 m") == 8.0)
 check("safe_float cleans area suffix '15.5 sqm'", safe_float("15.5 sqm") == 15.5)
 check("safe_int cleans floor suffix '4 floors'", safe_int("4 floors") == 4)
+
+_same_name_a = object()
+_same_name_b = object()
+_resolved = resolve_layers_by_id(
+    ["layer-b", "stale", "layer-a", "layer-b"],
+    {"layer-a": _same_name_a, "layer-b": _same_name_b},
+)
+check(
+    "isometric selection resolves IDs, ignores stale/duplicate IDs and keeps order",
+    _resolved == [_same_name_b, _same_name_a],
+)
+check(
+    "isometric selection respects a zero layer limit",
+    resolve_layers_by_id(["layer-a"], {"layer-a": _same_name_a}, limit=0) == [],
+)
 
 from zero2cartolab.layout import map_sheet as ms
 check("create_map_sheet is callable", callable(ms.create_map_sheet))

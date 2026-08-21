@@ -4,6 +4,21 @@ All notable changes to the **02CartoLab** plugin will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-08-21
+
+### Fixed
+
+- Fixed Isometric Layer Stacker resolving selected layers by non-unique display
+  names. Selections now carry stable QGIS layer IDs, preserve the user's order,
+  ignore stale/duplicate IDs, and never pull in an unselected same-name layer.
+- Corrected the stale `CITATION.cff` release version and date.
+
+### Changed
+
+- Replaced the main plugin icon with a new text-free cartographic studio mark:
+  four interlocking thematic-map tiles, contour lines and a bivariate matrix,
+  with a transparent background and zero-margin `512 x 512` alpha bounds.
+
 ## [1.0.0] - 2026-08-20
 
 ### Initial Release
