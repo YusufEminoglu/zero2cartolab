@@ -50,6 +50,14 @@ def add_locator_inset_map(
     if layout is None or QgsLayoutItemMap is None:
         return None
 
+    # Treat the locator as a singleton decorator. Re-running the command
+    # refreshes it instead of silently stacking multiple inset maps.
+    for generated_id in ("cartolab_locator_inset", "cartolab_locator_header"):
+        with suppress(Exception):
+            existing = layout.itemById(generated_id)
+            if existing is not None:
+                layout.removeLayoutItem(existing)
+
     # Find primary map item if not provided
     if main_map is None:
         for item in layout.items():
@@ -133,6 +141,7 @@ def add_locator_inset_map(
 
     if add_header and QgsLayoutItemLabel:
         tag = QgsLayoutItemLabel(layout)
+        tag.setId("cartolab_locator_header")
         tag.setText("LOCATOR OVERVIEW")
         tag.setBackgroundEnabled(False)
         tag.setFrameEnabled(False)

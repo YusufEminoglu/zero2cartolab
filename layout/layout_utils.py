@@ -9,6 +9,7 @@ map items, finding a bundled north-arrow SVG, and exporting to PNG/PDF.
 from __future__ import annotations
 
 import os
+import uuid
 from contextlib import suppress
 from typing import List, Optional
 
@@ -113,38 +114,47 @@ def export_layout(layout: QgsLayout, path: str, dpi: int = 300) -> bool:
 
     PDF and SVG are vector formats (``dpi`` affects only rasterised effects);
     any other extension is treated as a raster image at ``dpi``. Returns
-    ``True`` on success. A pre-existing target file is removed first so raster
-    drivers do not refuse to overwrite.
+    ``True`` on success. Export is written beside the destination and atomically
+    replaced, so a failed render never destroys a previous successful export.
     """
     if layout is None or QgsLayoutExporter is None:
         return False
     exporter = QgsLayoutExporter(layout)
     ext = os.path.splitext(path)[1].lower()
-    with suppress(OSError):
-        if os.path.exists(path):
-            os.remove(path)
+    stem, suffix = os.path.splitext(path)
+    temp_path = f"{stem}.cartolab-{uuid.uuid4().hex}{suffix or '.png'}"
 
     clear_layout_render_cache(layout)
     try:
         if ext == ".pdf":
             settings = QgsLayoutExporter.PdfExportSettings()
             settings.dpi = dpi
-            result = exporter.exportToPdf(path, settings)
+            result = exporter.exportToPdf(temp_path, settings)
         elif ext == ".svg":
             settings = QgsLayoutExporter.SvgExportSettings()
             settings.dpi = dpi
-            result = exporter.exportToSvg(path, settings)
-        elif ext in (".tif", ".tiff"):
-            settings = QgsLayoutExporter.ImageExportSettings()
-            settings.dpi = dpi
-            result = exporter.exportToImage(path, settings)
+            result = exporter.exportToSvg(temp_path, settings)
         else:
             settings = QgsLayoutExporter.ImageExportSettings()
             settings.dpi = dpi
-            result = exporter.exportToImage(path, settings)
+            # Publication PNGs are self-contained; do not create world-file
+            # sidecars next to the atomic temporary destination.
+            with suppress(Exception):
+                settings.generateWorldFile = False
+            result = exporter.exportToImage(temp_path, settings)
+    except Exception:
+        with suppress(OSError):
+            os.remove(temp_path)
+        raise
     finally:
         clear_layout_render_cache(layout)
-    return result == QgsLayoutExporter.ExportResult.Success
+    success = result == QgsLayoutExporter.ExportResult.Success and os.path.exists(temp_path)
+    if success:
+        os.replace(temp_path, path)
+    else:
+        with suppress(OSError):
+            os.remove(temp_path)
+    return success
 
 
 def copy_layout_to_clipboard(layout: QgsLayout, dpi: int = 300) -> bool:

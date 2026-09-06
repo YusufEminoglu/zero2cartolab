@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import datetime
 from typing import List, Optional
+from contextlib import suppress
 
 try:
     from qgis.core import (
@@ -20,11 +21,13 @@ try:
         QgsLayoutSize,
         QgsUnitTypes,
     )
-    from qgis.PyQt.QtGui import QColor, QFont
+    from qgis.PyQt.QtGui import QColor
 except ImportError:
-    QgsLayout = QgsLayoutItemGroup = QgsLayoutItemLabel = QgsLayoutItemShape = QgsUnitTypes = QgsFillSymbol = QColor = QFont = None
+    QgsLayout = QgsLayoutItemGroup = QgsLayoutItemLabel = QgsLayoutItemShape = QgsUnitTypes = QgsFillSymbol = QColor = None
 
 _MM = QgsUnitTypes.LayoutUnit.LayoutMillimeters if QgsUnitTypes else 0
+
+from .map_sheet import _font
 
 
 def add_publication_title_block(
@@ -46,17 +49,21 @@ def add_publication_title_block(
 
     # Background Panel Shape
     panel = QgsLayoutItemShape(layout)
-    if hasattr(QgsLayoutItemShape, "Rectangle"):
-        panel.setShapeType(QgsLayoutItemShape.Rectangle)
-    elif hasattr(QgsLayoutItemShape, "ShapeRect"):
-        panel.setShapeType(QgsLayoutItemShape.ShapeRect)
+    panel.setId("cartolab_title_block_panel")
+    rectangle = getattr(
+        getattr(QgsLayoutItemShape, "Shape", QgsLayoutItemShape),
+        "Rectangle",
+        getattr(QgsLayoutItemShape, "Rectangle", None),
+    )
+    if rectangle is not None:
+        panel.setShapeType(rectangle)
     panel.attemptMove(QgsLayoutPoint(x0, y0, _MM))
     panel.attemptResize(QgsLayoutSize(width_mm, 28.0, _MM))
 
     symbol = QgsFillSymbol.createSimple({
         "color": "#ffffff",
-        "color_border": "#0f172a",
-        "width_border": "0.4",
+        "outline_color": "#0f172a",
+        "outline_width": "0.4",
     })
     panel.setSymbol(symbol)
     layout.addLayoutItem(panel)
@@ -64,9 +71,9 @@ def add_publication_title_block(
 
     # Title Label
     title_label = QgsLayoutItemLabel(layout)
+    title_label.setId("cartolab_title")
     title_label.setText(title.upper())
-    if QFont is not None:
-        title_label.setFont(QFont("Inter", 12, QFont.Weight.Bold))
+    title_label.setFont(_font(12, bold=True))
     title_label.setFontColor(QColor("#0f172a"))
     title_label.attemptMove(QgsLayoutPoint(x0 + 4.0, y0 + 3.0, _MM))
     title_label.adjustSizeToText()
@@ -75,9 +82,9 @@ def add_publication_title_block(
 
     # Subtitle Label
     sub_label = QgsLayoutItemLabel(layout)
+    sub_label.setId("cartolab_subtitle")
     sub_label.setText(subtitle)
-    if QFont is not None:
-        sub_label.setFont(QFont("Inter", 8, QFont.Weight.Normal))
+    sub_label.setFont(_font(8))
     sub_label.setFontColor(QColor("#475569"))
     sub_label.attemptMove(QgsLayoutPoint(x0 + 4.0, y0 + 11.0, _MM))
     sub_label.adjustSizeToText()
@@ -88,9 +95,9 @@ def add_publication_title_block(
     now_str = datetime.date.today().strftime("%Y-%m-%d")
     meta_text = f"AUTHOR: {author}  |  DATE: {now_str}  |  PLANX CARTOLAB"
     meta_label = QgsLayoutItemLabel(layout)
+    meta_label.setId("cartolab_title_metadata")
     meta_label.setText(meta_text)
-    if QFont is not None:
-        meta_label.setFont(QFont("IBM Plex Mono", 7, QFont.Weight.Normal))
+    meta_label.setFont(_font(7, family="Consolas"))
     meta_label.setFontColor(QColor("#64748b"))
     meta_label.attemptMove(QgsLayoutPoint(x0 + 4.0, y0 + 19.0, _MM))
     meta_label.adjustSizeToText()
@@ -98,5 +105,7 @@ def add_publication_title_block(
     items.append(meta_label)
 
     group = layout.groupItems(items)
+    with suppress(Exception):
+        group.setId("cartolab_title_block")
     layout.refresh()
     return group

@@ -114,6 +114,42 @@ def nice_scalebar_segments(map_w_km: float, target_segments: int = 3) -> Tuple[f
     return (seg_km, max(3, target_segments), 0)
 
 
+def fitted_scalebar_segments(
+    map_w_km: float,
+    map_frame_width_mm: float,
+    max_bar_width_mm: float,
+    target_segments: int = 3,
+) -> Tuple[float, int, int]:
+    """Return a nice scale plan which fits a physical layout-width budget.
+
+    ``nice_scalebar_segments`` targets a fraction of map distance, but a scale
+    bar placed in a narrow sidebar may have much less room than the linked map
+    frame. This variant also constrains the represented distance using the
+    map-frame-to-bar physical width ratio. The returned segment distance is in
+    kilometres.
+    """
+    segments = max(2, int(target_segments))
+    if (
+        map_w_km <= 0
+        or map_frame_width_mm <= 0
+        or max_bar_width_mm <= 0
+        or not all(math.isfinite(v) for v in (map_w_km, map_frame_width_mm, max_bar_width_mm))
+    ):
+        return (5.0, segments, 0)
+
+    available_fraction = min(0.40, max_bar_width_mm / map_frame_width_mm)
+    target_total_km = map_w_km * min(0.25, available_fraction * 0.82)
+    raw_segment_km = target_total_km / segments
+    if raw_segment_km <= 0:
+        return (5.0, segments, 0)
+
+    exponent = math.floor(math.log10(raw_segment_km))
+    fraction = raw_segment_km / (10 ** exponent)
+    nice_fraction = 5.0 if fraction >= 5.0 else 2.0 if fraction >= 2.0 else 1.0
+    segment_km = nice_fraction * (10 ** exponent)
+    return (segment_km, segments, 0)
+
+
 def map_width_to_km(map_width_units: float, unit_to_km: float = 0.001) -> float:
     """
     Convert a map-frame width to kilometres using a caller-supplied unit factor.

@@ -11,7 +11,6 @@ from __future__ import annotations
 import math
 import os
 from contextlib import suppress
-from typing import Optional
 
 try:
     from qgis.core import QgsProject, QgsLayoutItemMap
@@ -434,6 +433,28 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
     btn_dock_balance.clicked.connect(_dock_balance)
     fl_typo.addRow(btn_dock_balance)
 
+    btn_dock_preflight = QPushButton("Run Print Preflight")
+    btn_dock_preflight.setObjectName("ghost")
+    btn_dock_preflight.setIcon(_get_cartolab_icon("layout.png"))
+
+    def _dock_preflight():
+        layout = _get_designer_layout(designer)
+        if not layout:
+            return
+        try:
+            from .preflight import format_preflight_report, preflight_layout
+            issues = preflight_layout(layout)
+            report = format_preflight_report(layout, issues)
+            if any(issue["severity"] == "error" for issue in issues):
+                QMessageBox.warning(parent_win, "Print Preflight", report)
+            else:
+                QMessageBox.information(parent_win, "Print Preflight", report)
+        except Exception as exc:
+            QMessageBox.critical(parent_win, "Print Preflight Error", str(exc))
+
+    btn_dock_preflight.clicked.connect(_dock_preflight)
+    fl_typo.addRow(btn_dock_preflight)
+
     lyt_canvas.addWidget(gb_typo)
     lyt_canvas.addStretch()
 
@@ -689,29 +710,39 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
     btn_dock_filter_legend.clicked.connect(_dock_filter_legend)
     fl_elem.addRow(btn_dock_filter_legend)
 
-    btn_dock_locator = QPushButton("Add Locator / Inset Map")
-    btn_dock_locator.setIcon(_get_cartolab_icon("grid.png"))
-
-    def _dock_locator():
-        layout = _get_designer_layout(designer)
-        if not layout:
-            return
-        try:
-            from .locator_map import add_locator_inset_map
-            add_locator_inset_map(layout)
-            if hasattr(iface, "messageBar"):
-                iface.messageBar().pushSuccess("CartoLab", "Locator inset map frame added to layout.")
-        except Exception as exc:
-            QMessageBox.critical(parent_win, "Locator Map Error", str(exc))
-
-    btn_dock_locator.clicked.connect(_dock_locator)
-    fl_elem.addRow(btn_dock_locator)
-
     lyt_dec.addWidget(gb_map_elem)
 
     # Dedicated Publication Coordinate Grid Group
     gb_grid = QGroupBox("Publication Coordinate Grid")
     fl_grid = QFormLayout(gb_grid)
+
+    grid_preset_combo = QComboBox()
+    from .grid_presets import list_grid_presets
+    for preset_meta in list_grid_presets():
+        grid_preset_combo.addItem(
+            f"{preset_meta['name']} · {preset_meta['category']}", preset_meta["id"]
+        )
+    fl_grid.addRow("Preset Gallery:", grid_preset_combo)
+
+    btn_apply_grid_preset = QPushButton("Apply Selected Grid Composition")
+    btn_apply_grid_preset.setIcon(_get_cartolab_icon("grid.png"))
+
+    def _dock_grid_preset():
+        layout = _get_designer_layout(designer)
+        if not layout:
+            return
+        try:
+            from .grid_presets import apply_grid_preset
+            grids = apply_grid_preset(layout, grid_preset_combo.currentData())
+            if hasattr(iface, "messageBar"):
+                iface.messageBar().pushSuccess(
+                    "CartoLab", f"Applied {len(grids)} grid layer(s): {grid_preset_combo.currentText()}"
+                )
+        except Exception as exc:
+            QMessageBox.critical(parent_win, "Grid Preset Error", str(exc))
+
+    btn_apply_grid_preset.clicked.connect(_dock_grid_preset)
+    fl_grid.addRow(btn_apply_grid_preset)
 
     grid_density_combo = QComboBox()
     grid_density_combo.addItem("Standard (5-6 divisions)", (6, 5))
@@ -731,7 +762,7 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
     grid_frame_combo.addItem("Frame-Free (Minimal)", "NoFrame")
     fl_grid.addRow("Frame Border:", grid_frame_combo)
 
-    btn_dock_grid = QPushButton("Apply Publication Grid")
+    btn_dock_grid = QPushButton("Apply Custom Grid Settings")
     btn_dock_grid.setIcon(_get_cartolab_icon("grid.png"))
 
     def _dock_grid():

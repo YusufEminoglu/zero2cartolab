@@ -9,7 +9,6 @@ dot density, proportional symbols, graticules, label points, and 2.5D massing).
 from __future__ import annotations
 
 from contextlib import suppress
-from typing import Optional, List, Dict
 
 try:
     from qgis.core import (

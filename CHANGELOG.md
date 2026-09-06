@@ -4,6 +4,61 @@ All notable changes to the **02CartoLab** plugin will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-09-06
+
+### Fixed
+
+- Made automatic scale bars geodesic for geographic CRS maps, unit-aware for
+  projected maps, and physically fit their allotted layout space using readable
+  metre or kilometre segments.
+- Resolved template CRS and combined extents from their actual layers, including
+  coordinate transformation for mixed-CRS inputs, instead of inheriting an empty
+  headless project CRS.
+- Made the Square map-sheet option create a genuinely square page.
+- Corrected atlas filtering and sorting, which previously used a nonexistent QGIS
+  sort method and could silently leave sorting disabled.
+- Made repeated locator and atlas decoration idempotent, preventing duplicate
+  generated furniture.
+- Preserved map extent during layout optimization, recognized drawn north arrows,
+  and constrained oversized legends.
+- Made PNG, PDF, and SVG export atomic so a failed render cannot destroy an
+  existing destination file.
+- Corrected projected coordinate-grid detection for small extents and made grid
+  annotation precision CRS-aware.
+- Moved the Fact Sheet scale bar into a dedicated footer and tightened Report,
+  Poster, Academic, and Diptych furniture sizing after live visual QA.
+- Fixed a bare Qt cursor enum that crashed Dashboard construction on QGIS 4.
+- Added dependency-aware QPT inspection that blocks unsafe Designer import when
+  templates call unavailable external expression functions.
+- Made sparse Value-by-Alpha inputs tolerate null and non-numeric reliability
+  values consistently with larger datasets.
+- Made the QGIS end-to-end harness portable and restored its missing exception
+  suppression import.
+- Corrected stale product naming, documentation links, branch names, and
+  algorithm counts.
+
+### Changed
+
+- Added non-mutating Print Preflight actions to the Dashboard and Layout Designer
+  dock, reporting duplicate IDs, page overflow, empty/tiny frames, broken map
+  links, and other publication blockers.
+- Added stable item IDs across templates, map sheets, title blocks, locator maps,
+  legends, scale bars, and atlas furniture for reliable editing and automation.
+- Expanded the gallery from 5 to 10 complete layouts with UTM Field Sheet,
+  Planning Review Board, Spatial Data Story, Atlas Production Sheet, and
+  Emergency Operations Brief workflows.
+- Added 7 idempotent grid compositions: Minimal, UTM Engineering, layered UTM
+  Field, Survey Crosshair, Marginal Ticks, WGS 84 Graticule, and dual UTM plus
+  geographic reference.
+- Added a full Grid and QPT Studio with automatic/manual intervals, annotation
+  and replacement controls, QPT structural reports, guarded import, and one-click
+  dependency-free UTM migration.
+- Removed unused imports, variables, and a no-op compatibility branch from the
+  shipped plugin and test harness.
+- Added QGIS 3/4 live regression and screenshot coverage for all ten publication
+  archetypes, preflight, layer CRS resolution, scale semantics, atlas behavior,
+  geographic scale sizing, and sparse Value-by-Alpha null handling.
+
 ## [1.0.1] - 2026-08-21
 
 ### Fixed

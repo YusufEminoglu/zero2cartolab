@@ -8,6 +8,11 @@ Provides distinct, publication-grade print layout templates:
   - "poster_exhibition": Large-format A1/A2 landscape presentation poster with bold banner & insets.
   - "fact_sheet": A4 portrait executive 1-pager with top KPI metric cards & analytical narrative.
   - "side_by_side_diptych": A4/A3 landscape comparative layout with paired synchronized map frames.
+  - "utm_field_sheet": dependency-free projected coordinate field sheet.
+  - "planning_board": decision-ready masterplan review board.
+  - "data_story": portrait editorial spatial narrative.
+  - "atlas_production": standardized map-book production page.
+  - "emergency_brief": high-clarity operational situation map.
 
 Author: Yusuf Eminoğlu
 """
@@ -15,7 +20,7 @@ from __future__ import annotations
 
 import datetime
 from contextlib import suppress
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 try:
     from qgis.PyQt.QtCore import QPointF, Qt
@@ -49,10 +54,17 @@ except ImportError:
     QgsLayoutMeasurement = QgsLayoutPoint = QgsLayoutSize = QgsPrintLayout = QgsProject = QgsRectangle = QgsUnitTypes = None
     _MM = 0
 
-from ..core.layout_math import page_size_mm, nice_scalebar_segments
-from .layout_utils import north_arrow_svg_path, unique_layout_name
+from ..core.layout_math import page_size_mm
+from .layout_utils import unique_layout_name
 from .locator_map import add_locator_inset_map
-from .map_sheet import _add_north_arrow, _font, _resolve_extent, _resolve_layers
+from .map_sheet import (
+    _add_north_arrow,
+    _font,
+    _configure_scalebar,
+    _resolve_crs,
+    _resolve_extent,
+    _resolve_layers,
+)
 from .paper_themes import apply_paper_theme
 from .typography_engine import apply_typography_hierarchy
 
@@ -181,12 +193,15 @@ def _create_label(
     color: str = "#0f172a",
     family: Optional[str] = None,
     h_align: str = "left",
+    item_id: str = "",
 ) -> Optional[QgsLayoutItemLabel]:
     """Create and position a text label item."""
     if layout is None or QgsLayoutItemLabel is None:
         return None
 
     label = QgsLayoutItemLabel(layout)
+    if item_id:
+        label.setId(item_id)
     label.setText(text)
     label.setBackgroundEnabled(False)
     label.setFrameEnabled(False)
@@ -233,6 +248,7 @@ def _create_legend(
         return None
 
     legend = QgsLayoutItemLegend(layout)
+    legend.setId(f"{linked_map.id()}_legend" if linked_map is not None else "cartolab_legend")
     if linked_map is not None:
         legend.setLinkedMap(linked_map)
         legend.setLegendFilterByMapEnabled(True)
@@ -264,33 +280,34 @@ def _create_scalebar(
     x: float,
     y: float,
     style: str = "Line Ticks Up",
-    segments: int = 2,
+    segments: int = 3,
+    max_width_mm: float = 65.0,
 ) -> Optional[QgsLayoutItemScaleBar]:
     """Create and position an executive scale bar."""
     if layout is None or QgsLayoutItemScaleBar is None:
         return None
 
     scalebar = QgsLayoutItemScaleBar(layout)
+    scalebar.setId(
+        f"{linked_map.id()}_scalebar" if linked_map is not None else "cartolab_scalebar"
+    )
     if linked_map is not None:
         scalebar.setLinkedMap(linked_map)
     scalebar.applyDefaultSettings()
     scalebar.setStyle(style)
     scalebar.applyDefaultSize()
 
-    unit_km = getattr(QgsUnitTypes, "DistanceKilometers", getattr(getattr(QgsUnitTypes, "DistanceUnit", None), "DistanceKilometers", 1))
-    scalebar.setUnits(unit_km)
-    scalebar.setUnitLabel("km")
-    num_segs = max(3, segments)
+    num_segs = max(2, segments)
     scalebar.setNumberOfSegments(num_segs)
     scalebar.setNumberOfSegmentsLeft(0)
     if linked_map is not None:
-        ext = linked_map.extent()
-        if ext and not ext.isEmpty():
-            map_w_km = ext.width() / 1000.0 if (hasattr(linked_map, "crs") and linked_map.crs().isValid() and not linked_map.crs().isGeographic()) else 10.0
-            seg_km, n_right, n_left = nice_scalebar_segments(map_w_km, target_segments=num_segs)
-            scalebar.setNumberOfSegments(n_right)
-            scalebar.setNumberOfSegmentsLeft(n_left)
-            scalebar.setUnitsPerSegment(seg_km)
+        _configure_scalebar(
+            scalebar,
+            linked_map,
+            layout.project() if hasattr(layout, "project") else QgsProject.instance(),
+            max_width_mm=max_width_mm,
+            target_segments=num_segs,
+        )
     scalebar.setBackgroundEnabled(False)
     scalebar.setFrameEnabled(False)
     with suppress(Exception):
@@ -331,13 +348,10 @@ def create_report_figure_layout(
     """
     proj = project or (QgsProject.instance() if QgsProject else None)
     res_layers = layers if layers is not None else _resolve_layers(iface, proj)
-    res_extent = extent if extent is not None else _resolve_extent(iface, res_layers)
-
-    if crs is None and iface is not None:
-        with suppress(Exception):
-            crs = iface.mapCanvas().mapSettings().destinationCrs()
-    if crs is None and proj is not None:
-        crs = proj.crs()
+    crs = crs or _resolve_crs(iface, proj, res_layers)
+    res_extent = extent if extent is not None else _resolve_extent(
+        iface, res_layers, target_crs=crs, project=proj
+    )
 
     if page_size == "16:9":
         page_w, page_h = (338.7, 190.5) if landscape else (190.5, 338.7)
@@ -355,9 +369,9 @@ def create_report_figure_layout(
     # 1. Prominent Figure Title Header
     tag_text = "FIGURE 1.0"
     _create_label(layout, tag_text, margin, margin, 50.0, 5.0, font_size=8.0, bold=True, color="#2563eb")
-    _create_label(layout, title, margin, margin + 4.5, page_w - 2 * margin, 9.0, font_size=15.0, bold=True, color="#0f172a")
+    _create_label(layout, title, margin, margin + 4.5, page_w - 2 * margin, 9.0, font_size=15.0, bold=True, color="#0f172a", item_id="cartolab_title")
     if subtitle:
-        _create_label(layout, subtitle, margin, margin + 13.5, page_w - 2 * margin, 5.5, font_size=8.5, color="#64748b")
+        _create_label(layout, subtitle, margin, margin + 13.5, page_w - 2 * margin, 5.5, font_size=8.5, color="#64748b", item_id="cartolab_subtitle")
 
     # 2. Geometry partitioning: Hero Map (Left/Center ~72%) + HUD Sidebar (Right ~28%)
     hud_w = 84.0
@@ -397,7 +411,10 @@ def create_report_figure_layout(
 
     # Scale Bar in HUD Bottom & North Arrow inside Map Frame
     if map_item is not None:
-        _create_scalebar(layout, map_item, hud_x + 4.0, hud_y + hud_h - 18.0, style="Line Ticks Up")
+        _create_scalebar(
+            layout, map_item, hud_x + 4.0, hud_y + hud_h - 18.0,
+            style="Line Ticks Up", max_width_mm=hud_w - 14.0,
+        )
     _add_north_arrow(layout, map_x + map_w - 16.0, map_y + 4.0, size=12.0)
 
     # 4. Bottom Footer Metadata Strip
@@ -446,13 +463,10 @@ def create_academic_journal_layout(
     """
     proj = project or (QgsProject.instance() if QgsProject else None)
     res_layers = layers if layers is not None else _resolve_layers(iface, proj)
-    res_extent = extent if extent is not None else _resolve_extent(iface, res_layers)
-
-    if crs is None and iface is not None:
-        with suppress(Exception):
-            crs = iface.mapCanvas().mapSettings().destinationCrs()
-    if crs is None and proj is not None:
-        crs = proj.crs()
+    crs = crs or _resolve_crs(iface, proj, res_layers)
+    res_extent = extent if extent is not None else _resolve_extent(
+        iface, res_layers, target_crs=crs, project=proj
+    )
 
     page_w, page_h = page_size_mm(page_size, landscape)  # A4 Portrait: 210 x 297 mm
     layout = _create_base_layout(proj, layout_name, page_w, page_h)
@@ -465,7 +479,7 @@ def create_academic_journal_layout(
 
     # 1. Top Journal Figure Header
     _create_label(layout, "RESEARCH ARTICLE — SPATIAL ANALYSIS & MORPHOLOGY", margin, margin, page_w - 2 * margin, 5.0, font_size=7.5, bold=True, color="#64748b")
-    _create_label(layout, title, margin, margin + 5.0, page_w - 2 * margin, 10.0, font_size=11.0, bold=True, color="#1e293b")
+    _create_label(layout, title, margin, margin + 5.0, page_w - 2 * margin, 10.0, font_size=11.0, bold=True, color="#1e293b", item_id="cartolab_title")
 
     # 2. Main Hero Map Frame (Double Column Width)
     map_x = margin
@@ -495,7 +509,10 @@ def create_academic_journal_layout(
 
     # Stepped Line Scale bar in Column 1 & North Arrow inside Map Frame
     if map_item is not None:
-        _create_scalebar(layout, map_item, col1_x, page_h - margin - 16.0, style="Stepped Line")
+        _create_scalebar(
+            layout, map_item, col1_x, page_h - margin - 16.0,
+            style="Stepped Line", max_width_mm=col_w - 8.0,
+        )
     _add_north_arrow(layout, map_x + map_w - 14.0, map_y + 4.0, size=11.0)
 
     # Column 2 (Right): Filtered Academic Legend & Formal Citation Box
@@ -547,13 +564,10 @@ def create_poster_exhibition_layout(
     """
     proj = project or (QgsProject.instance() if QgsProject else None)
     res_layers = layers if layers is not None else _resolve_layers(iface, proj)
-    res_extent = extent if extent is not None else _resolve_extent(iface, res_layers)
-
-    if crs is None and iface is not None:
-        with suppress(Exception):
-            crs = iface.mapCanvas().mapSettings().destinationCrs()
-    if crs is None and proj is not None:
-        crs = proj.crs()
+    crs = crs or _resolve_crs(iface, proj, res_layers)
+    res_extent = extent if extent is not None else _resolve_extent(
+        iface, res_layers, target_crs=crs, project=proj
+    )
 
     page_w, page_h = page_size_mm(page_size, landscape)  # A1: 841 x 594 mm or A2: 594 x 420 mm
     layout = _create_base_layout(proj, layout_name, page_w, page_h)
@@ -569,8 +583,8 @@ def create_poster_exhibition_layout(
     _create_card_shape(layout, margin, margin, banner_w, banner_h, bg_color="#0f172a", border_color="#2563eb", border_width_mm=0.6)
 
     # Banner Title & Subtitle (White / Ice-blue)
-    _create_label(layout, title.upper(), margin + 10.0, margin + 6.0, banner_w * 0.72, banner_h * 0.50, font_size=20.0, bold=True, color="#ffffff")
-    _create_label(layout, subtitle, margin + 10.0, margin + banner_h * 0.55, banner_w * 0.72, banner_h * 0.35, font_size=10.5, color="#94a3b8")
+    _create_label(layout, title.upper(), margin + 10.0, margin + 6.0, banner_w * 0.72, banner_h * 0.50, font_size=20.0, bold=True, color="#ffffff", item_id="cartolab_title")
+    _create_label(layout, subtitle, margin + 10.0, margin + banner_h * 0.55, banner_w * 0.72, banner_h * 0.35, font_size=10.5, color="#94a3b8", item_id="cartolab_subtitle")
 
     # Author / Institution badge on banner right
     _create_label(
@@ -624,7 +638,10 @@ def create_poster_exhibition_layout(
     _create_card_shape(layout, margin, bottom_y, banner_w, bottom_h, bg_color="#f8fafc", border_color="#e2e8f0", border_width_mm=0.3)
 
     if hero_map is not None:
-        _create_scalebar(layout, hero_map, margin + 8.0, bottom_y + 2.0, style="Double Box")
+        _create_scalebar(
+            layout, hero_map, margin + 8.0, bottom_y + 2.0,
+            style="Double Box", max_width_mm=78.0,
+        )
     _add_north_arrow(layout, margin + 95.0, bottom_y + 2.0, size=14.0)
 
     now_str = datetime.date.today().strftime("%Y-%m-%d")
@@ -670,13 +687,10 @@ def create_fact_sheet_layout(
     """
     proj = project or (QgsProject.instance() if QgsProject else None)
     res_layers = layers if layers is not None else _resolve_layers(iface, proj)
-    res_extent = extent if extent is not None else _resolve_extent(iface, res_layers)
-
-    if crs is None and iface is not None:
-        with suppress(Exception):
-            crs = iface.mapCanvas().mapSettings().destinationCrs()
-    if crs is None and proj is not None:
-        crs = proj.crs()
+    crs = crs or _resolve_crs(iface, proj, res_layers)
+    res_extent = extent if extent is not None else _resolve_extent(
+        iface, res_layers, target_crs=crs, project=proj
+    )
 
     page_w, page_h = page_size_mm(page_size, landscape)  # A4 Portrait: 210 x 297 mm
     layout = _create_base_layout(proj, layout_name, page_w, page_h)
@@ -689,10 +703,10 @@ def create_fact_sheet_layout(
 
     # 1. Executive Document Header
     _create_label(layout, "EXECUTIVE BRIEFING · SPATIAL FACT SHEET", margin, margin, content_w, 4.5, font_size=7.5, bold=True, color="#2563eb")
-    _create_label(layout, title, margin, margin + 4.5, content_w, 8.5, font_size=15.0, bold=True, color="#0f172a")
+    _create_label(layout, title, margin, margin + 4.5, content_w, 8.5, font_size=15.0, bold=True, color="#0f172a", item_id="cartolab_title")
     if subtitle:
         now_str = datetime.date.today().strftime("%Y-%m-%d")
-        _create_label(layout, f"{subtitle}  ·  {now_str}", margin, margin + 13.0, content_w, 4.5, font_size=8.0, color="#64748b")
+        _create_label(layout, f"{subtitle}  ·  {now_str}", margin, margin + 13.0, content_w, 4.5, font_size=8.0, color="#64748b", item_id="cartolab_subtitle")
 
     # 2. Top 4 KPI Metric Summary Cards
     cards_y = margin + 19.0
@@ -717,20 +731,24 @@ def create_fact_sheet_layout(
     map_x = margin
     map_y = cards_y + cards_h + gap
     map_w = content_w
-    map_h = 135.0
+    map_h = 121.0
+    map_footer_h = 14.0
 
     map_item = _create_map_frame(
         layout, "cartolab_factsheet_map", map_x, map_y, map_w, map_h,
         layers=res_layers, extent=res_extent, crs=crs, frame_color="#0f172a", frame_width_mm=0.35
     )
 
-    # In-map Scale bar & North Arrow
+    # A dedicated map footer keeps the scale bar clear of mapped features.
     if map_item is not None:
-        _create_scalebar(layout, map_item, map_x + 4.0, map_y + map_h - 14.0, style="Line Ticks Up")
+        _create_scalebar(
+            layout, map_item, map_x + 4.0, map_y + map_h + 2.0,
+            style="Line Ticks Up", max_width_mm=68.0,
+        )
     _add_north_arrow(layout, map_x + map_w - 16.0, map_y + 4.0, size=12.0)
 
     # 4. Bottom Analytical Narrative Block (Split: 60% Narrative + 40% Legend)
-    narrative_y = map_y + map_h + gap
+    narrative_y = map_y + map_h + map_footer_h + gap
     narrative_h = page_h - narrative_y - margin
     narrative_w = content_w * 0.60
     legend_col_w = content_w - narrative_w - gap
@@ -800,13 +818,11 @@ def create_side_by_side_diptych_layout(
     res_layers_b = layers_b if layers_b is not None else kwargs.get("scenario_b_layers", res_layers)
     lbl_a = kwargs.get("scenario_a_title", label_a)
     lbl_b = kwargs.get("scenario_b_title", label_b)
-    res_extent = extent if extent is not None else _resolve_extent(iface, res_layers_a or res_layers)
-
-    if crs is None and iface is not None:
-        with suppress(Exception):
-            crs = iface.mapCanvas().mapSettings().destinationCrs()
-    if crs is None and proj is not None:
-        crs = proj.crs()
+    context_layers = res_layers_a or res_layers
+    crs = crs or _resolve_crs(iface, proj, context_layers)
+    res_extent = extent if extent is not None else _resolve_extent(
+        iface, context_layers, target_crs=crs, project=proj
+    )
 
     page_w, page_h = page_size_mm(page_size, landscape)  # A4 Landscape: 297 x 210 mm
     layout = _create_base_layout(proj, layout_name, page_w, page_h)
@@ -819,9 +835,9 @@ def create_side_by_side_diptych_layout(
 
     # 1. Top Comparison Header
     _create_label(layout, "COMPARATIVE SPATIAL ANALYSIS", margin, margin, page_w - 2 * margin, 4.5, font_size=7.5, bold=True, color="#2563eb")
-    _create_label(layout, title, margin, margin + 4.5, page_w - 2 * margin, 7.5, font_size=13.0, bold=True, color="#0f172a")
+    _create_label(layout, title, margin, margin + 4.5, page_w - 2 * margin, 7.5, font_size=13.0, bold=True, color="#0f172a", item_id="cartolab_title")
     if subtitle:
-        _create_label(layout, subtitle, margin, margin + 11.5, page_w - 2 * margin, 4.5, font_size=7.5, color="#64748b")
+        _create_label(layout, subtitle, margin, margin + 11.5, page_w - 2 * margin, 4.5, font_size=7.5, color="#64748b", item_id="cartolab_subtitle")
 
     # 2. Dual Map Frames (Paired Side-by-Side)
     map_y = margin + header_h + gap
@@ -844,7 +860,7 @@ def create_side_by_side_diptych_layout(
     _create_card_shape(layout, map_b_x, map_y, single_w, 6.0, bg_color="#dcfce7", border_color="#86efac", border_width_mm=0.2)
     _create_label(layout, lbl_b, map_b_x + 4.0, map_y + 1.0, single_w - 8.0, 4.5, font_size=7.5, bold=True, color="#166534")
 
-    map_b = _create_map_frame(
+    _create_map_frame(
         layout, "cartolab_diptych_map_b", map_b_x, map_y + 6.0, single_w, map_h - 6.0,
         layers=res_layers_b, extent=res_extent, crs=crs, frame_color="#16a34a", frame_width_mm=0.35
     )
@@ -860,7 +876,10 @@ def create_side_by_side_diptych_layout(
 
     # Center Scale Bar & North Arrow
     if map_a is not None:
-        _create_scalebar(layout, map_a, margin + bar_w * 0.48, bar_y + 4.0, style="Line Ticks Up")
+        _create_scalebar(
+            layout, map_a, margin + bar_w * 0.48, bar_y + 4.0,
+            style="Line Ticks Up", segments=2, max_width_mm=bar_w * 0.20,
+        )
     _add_north_arrow(layout, margin + bar_w * 0.70, bar_y + 3.0, size=12.0)
 
     # Right metadata
@@ -881,6 +900,16 @@ def create_side_by_side_diptych_layout(
 # ===========================================================================
 # Template Registry & Factory
 # ===========================================================================
+
+# Imported here, after the shared builders above are defined, so advanced
+# workflow templates can reuse the same stable item and typography helpers.
+from .advanced_templates import (
+    create_atlas_production_layout,
+    create_data_story_layout,
+    create_emergency_brief_layout,
+    create_planning_board_layout,
+    create_utm_field_sheet_layout,
+)
 
 TEMPLATE_REGISTRY: Dict[str, Dict[str, Any]] = {
     "report_figure": {
@@ -963,6 +992,51 @@ TEMPLATE_REGISTRY: Dict[str, Dict[str, Any]] = {
         "icon": "layout.png",
         "builder": create_side_by_side_diptych_layout,
     },
+    "utm_field_sheet": {
+        "id": "utm_field_sheet",
+        "name": "UTM Field Reference Sheet",
+        "tagline": "Dependency-free projected grid for field and survey work",
+        "description": "A4 landscape field sheet with layered metric grid, full coordinate marginalia, reference sidebar, notes, scale and north arrow.",
+        "features": ["Layered UTM Grid", "Field Notes & CRS Panel", "Metric Scale", "No External Grid Plugin"],
+        "default_page": "A4", "default_landscape": True, "theme": "swiss_modern",
+        "category": "Survey & Field", "icon": "grid.png", "builder": create_utm_field_sheet_layout,
+    },
+    "planning_board": {
+        "id": "planning_board",
+        "name": "Planning Review Board",
+        "tagline": "Decision-ready masterplan board with metrics and approvals",
+        "description": "A3 landscape review composition combining a hero map, decision sidebar, plan legend, review status and four KPI cards.",
+        "features": ["Hero Masterplan Map", "Decision Record", "Review Status", "KPI Summary Cards"],
+        "default_page": "A3", "default_landscape": True, "theme": "swiss_modern",
+        "category": "Planning & Design", "icon": "layout.png", "builder": create_planning_board_layout,
+    },
+    "data_story": {
+        "id": "data_story",
+        "name": "Spatial Data Story",
+        "tagline": "Editorial map narrative from pattern to action",
+        "description": "A3 portrait story page with a dominant map, three-step finding narrative, method panel, legend and publication metadata.",
+        "features": ["Editorial Portrait Page", "Finding Narrative", "Methods & Legend", "Warm Newsprint Theme"],
+        "default_page": "A3", "default_landscape": False, "theme": "warm_editorial",
+        "category": "Editorial & Storytelling", "icon": "layout.png", "builder": create_data_story_layout,
+    },
+    "atlas_production": {
+        "id": "atlas_production",
+        "name": "Atlas Production Sheet",
+        "tagline": "Consistent district map-book page with atlas expressions",
+        "description": "A4 portrait map-book sheet with page counter expressions, area banner, fixed marginalia, legend, scale and production metadata.",
+        "features": ["Atlas Page Expressions", "Standardized Marginalia", "Coverage Banner", "Print-Safe Footer"],
+        "default_page": "A4", "default_landscape": False, "theme": "swiss_modern",
+        "category": "Atlas & Map Books", "icon": "layout.png", "builder": create_atlas_production_layout,
+    },
+    "emergency_brief": {
+        "id": "emergency_brief",
+        "name": "Emergency Operations Brief",
+        "tagline": "High-clarity situation map for operational decisions",
+        "description": "A4 landscape operations board with high-priority header, survey grid, access notes, status checklist and operational legend.",
+        "features": ["Operational Status Panel", "Crosshair Reference Grid", "Priority Notes", "High-Contrast Header"],
+        "default_page": "A4", "default_landscape": True, "theme": "swiss_modern",
+        "category": "Operations & Response", "icon": "grid.png", "builder": create_emergency_brief_layout,
+    },
 }
 
 TEMPLATE_GALLERY = TEMPLATE_REGISTRY
@@ -1000,6 +1074,11 @@ def create_template_layout(
       - 'poster_exhibition' (or 'exhibition_poster')
       - 'fact_sheet'
       - 'side_by_side_diptych' (or 'diptych')
+      - 'utm_field_sheet'
+      - 'planning_board'
+      - 'data_story'
+      - 'atlas_production'
+      - 'emergency_brief'
     """
     canonical_id = _ALIASES.get(template_id.lower(), template_id.lower())
     meta = TEMPLATE_REGISTRY.get(canonical_id)
@@ -1007,8 +1086,13 @@ def create_template_layout(
         valid_keys = list(TEMPLATE_REGISTRY.keys()) + list(_ALIASES.keys())
         raise ValueError(f"Unknown template archetype: '{template_id}'. Available: {valid_keys}")
 
+    grid_preset = kwargs.pop("grid_preset", None)
     builder_func = meta["builder"]
-    return builder_func(iface=iface, project=project, **kwargs)
+    layout = builder_func(iface=iface, project=project, **kwargs)
+    if layout is not None and grid_preset:
+        from .grid_presets import apply_grid_preset
+        apply_grid_preset(layout, grid_preset)
+    return layout
 
 
 # Convenience aliases for layout automation package
@@ -1017,3 +1101,8 @@ create_academic_journal = create_academic_journal_layout
 create_exhibition_poster = create_poster_exhibition_layout
 create_fact_sheet = create_fact_sheet_layout
 create_diptych = create_side_by_side_diptych_layout
+create_utm_field_sheet = create_utm_field_sheet_layout
+create_planning_board = create_planning_board_layout
+create_data_story = create_data_story_layout
+create_atlas_production = create_atlas_production_layout
+create_emergency_brief = create_emergency_brief_layout

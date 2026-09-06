@@ -16,10 +16,8 @@ from __future__ import annotations
 
 import math
 from bisect import bisect_left
-from collections import Counter
-from contextlib import suppress
 from itertools import accumulate
-from typing import List, Tuple, Optional, Union
+from typing import List, Optional
 
 from qgis.PyQt.QtGui import QColor
 
@@ -96,7 +94,7 @@ def geometric_interval_breaks(
     vmax_s += 1e-9
     mean_freq = n / n_classes
 
-    best_r, best_a, best_score = 1.5, vmin_s, float("inf")
+    best_r, best_score = 1.5, float("inf")
     candidate = [vmin_s + i * (vmax_s - vmin_s) / n_classes for i in range(n_classes + 1)]
 
     # coarse → fine search for optimal ratio
@@ -118,7 +116,7 @@ def geometric_interval_breaks(
             counts[idx] += 1
         score = sum((c - mean_freq) ** 2 for c in counts)
         if score < best_score:
-            best_score, best_r, best_a = score, r, a
+            best_score, best_r = score, r
             candidate = cand
             if score < tolerance * n:
                 break
@@ -574,17 +572,26 @@ def compute_alpha_values(
     if len(reliability_values) != len(primary_values):
         raise ValueError("Primary and reliability arrays must have same length.")
     clean_r = _validate_values(reliability_values)
-    n = len(reliability_values)
 
     if len(clean_r) < 4:
         # fallback: linear stretch
         rmin, rmax = clean_r[0], clean_r[-1]
         if rmax == rmin:
-            return [alpha_max] * n
-        return [
-            int(alpha_min + (v - rmin) / (rmax - rmin) * (alpha_max - alpha_min))
-            for v in reliability_values
-        ]
+            return [
+                alpha_max if safe_float(value) is not None else alpha_min
+                for value in reliability_values
+            ]
+        result = []
+        for value in reliability_values:
+            numeric = safe_float(value)
+            if numeric is None:
+                result.append(alpha_min)
+                continue
+            fraction = max(0.0, min(1.0, (numeric - rmin) / (rmax - rmin)))
+            result.append(
+                int(alpha_min + fraction * (alpha_max - alpha_min))
+            )
+        return result
 
     try:
         breaks = fisher_jenks_breaks(clean_r, 5)

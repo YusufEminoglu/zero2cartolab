@@ -28,7 +28,7 @@ Use the repository settings:
 ```text
 Settings > Pages
 Source: Deploy from a branch
-Branch: master
+Branch: main
 Folder: /docs
 ```
 

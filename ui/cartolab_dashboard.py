@@ -13,7 +13,6 @@ from __future__ import annotations
 import os
 from contextlib import suppress
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
 
 try:
     import processing
@@ -272,7 +271,8 @@ class CartoLabSubTabs(_QWidgetBase):
         btn = QPushButton(clean_text)
         btn.setCheckable(True)
         btn.setObjectName("subTabBtn")
-        btn.setCursor(Qt.PointingHandCursor if hasattr(Qt, "PointingHandCursor") else Qt.ArrowCursor)
+        cursor_shape = getattr(Qt, "CursorShape", Qt)
+        btn.setCursor(getattr(cursor_shape, "PointingHandCursor"))
         btn.clicked.connect(lambda checked, i=idx: self.setCurrentIndex(i))
 
         self._header_lyt.insertWidget(idx, btn)
@@ -1090,7 +1090,7 @@ class CartoLabDashboard(_QDialogBase):
             "OUTLINE": True,
         }
         try:
-            res = processing.run("zero2cartolab:quick_style", params)
+            processing.run("zero2cartolab:quick_style", params)
             with suppress(Exception):
                 if hasattr(self.iface, "layerTreeView"):
                     self.iface.layerTreeView().refreshLayerSymbology(layer.id())
@@ -2071,7 +2071,6 @@ class CartoLabDashboard(_QDialogBase):
 
     def _on_25d_auto_estimate_height(self) -> None:
         """Automatically detect floor count field and set floor mode with 3.2m default floor height."""
-        from ..core.qgis_25d_style import looks_like_floor_count_field, HEIGHT_MODE_FLOOR_COUNT
         field_name = self.height25d_combo.currentData() or ""
         idx = self.mode25d_combo.findData(HEIGHT_MODE_FLOOR_COUNT)
         if idx >= 0:
@@ -2376,10 +2375,17 @@ class CartoLabDashboard(_QDialogBase):
         self.layout_sub_tabs.addTab(mapsheet_widget, "Map Sheet Studio")
         self.layout_sub_tabs.setTabToolTip(1, "Auto Map Sheet Builder, Layout Manager & Decorators")
 
-        # Sub-tab 3: Isometric 3D Stacker
+        # Sub-tab 3: Grid presets, marginalia and external QPT inspection
+        grid_widget = self._build_grid_qpt_studio_subwidget()
+        self.layout_sub_tabs.addTab(grid_widget, "Grid + QPT Studio")
+        self.layout_sub_tabs.setTabToolTip(
+            2, "Apply layered grid presets, inspect QPT compatibility, or build a safe UTM field sheet"
+        )
+
+        # Sub-tab 4: Isometric 3D Stacker
         iso_widget = self._build_isometric_stacker_subwidget()
         self.layout_sub_tabs.addTab(iso_widget, "3D Isometric Stacker")
-        self.layout_sub_tabs.setTabToolTip(2, "3D Isometric Layer Stacker: Multi-layer perspective assembly")
+        self.layout_sub_tabs.setTabToolTip(3, "3D Isometric Layer Stacker: Multi-layer perspective assembly")
 
         layout.addWidget(self.layout_sub_tabs)
         self.stack.addWidget(studio_widget)
@@ -2406,8 +2412,21 @@ class CartoLabDashboard(_QDialogBase):
         lyt.addWidget(intro)
 
         self.template_card_inputs = {}
+        self.template_cards_by_id = {}
 
         from ..layout.template_gallery import TEMPLATE_GALLERY
+
+        filter_row = QHBoxLayout()
+        filter_row.addWidget(QLabel("Template category:"))
+        self.template_category_filter = QComboBox()
+        self.template_category_filter.addItem("All workflows", None)
+        for category in sorted({meta.get("category", "Layout") for meta in TEMPLATE_GALLERY.values()}):
+            self.template_category_filter.addItem(category, category)
+        filter_row.addWidget(self.template_category_filter, 1)
+        count_label = QLabel(f"{len(TEMPLATE_GALLERY)} layouts · 7 grid compositions")
+        count_label.setStyleSheet("color:#64748b; font-weight:600;")
+        filter_row.addWidget(count_label)
+        lyt.addLayout(filter_row)
 
         for tkey, tmeta in TEMPLATE_GALLERY.items():
             card = QGroupBox()
@@ -2501,6 +2520,14 @@ class CartoLabDashboard(_QDialogBase):
                 combo_theme.setCurrentIndex(t_idx)
             cfg_grid.addWidget(combo_theme, 4, 1, 1, 3)
 
+            cfg_grid.addWidget(QLabel("Coordinate Grid:"), 5, 0)
+            combo_grid = QComboBox()
+            combo_grid.addItem("Template default / no added grid", None)
+            from ..layout.grid_presets import list_grid_presets
+            for grid_meta in list_grid_presets():
+                combo_grid.addItem(grid_meta["name"], grid_meta["id"])
+            cfg_grid.addWidget(combo_grid, 5, 1, 1, 3)
+
             cv.addLayout(cfg_grid)
 
             # Action Button
@@ -2516,12 +2543,21 @@ class CartoLabDashboard(_QDialogBase):
                 "page_size": combo_size,
                 "orientation": combo_orient,
                 "theme": combo_theme,
+                "grid": combo_grid,
             }
+            self.template_cards_by_id[tkey] = card
 
             lyt.addWidget(card)
 
+        self.template_category_filter.currentIndexChanged.connect(self._filter_layout_templates)
         lyt.addStretch()
         return scroll
+
+    def _filter_layout_templates(self, _index: int = -1) -> None:
+        from ..layout.template_gallery import TEMPLATE_GALLERY
+        category = self.template_category_filter.currentData()
+        for template_id, card in self.template_cards_by_id.items():
+            card.setVisible(not category or TEMPLATE_GALLERY[template_id].get("category") == category)
 
     def _on_create_template_from_card(self, template_id: str) -> None:
         if not QgsProject.instance().mapLayers():
@@ -2537,6 +2573,7 @@ class CartoLabDashboard(_QDialogBase):
         page_size = inputs.get("page_size").currentText() if inputs.get("page_size") else "A4"
         landscape = (inputs.get("orientation").currentText() == "Landscape") if inputs.get("orientation") else True
         theme = inputs.get("theme").currentData() if inputs.get("theme") else "swiss_modern"
+        grid_preset = inputs.get("grid").currentData() if inputs.get("grid") else None
 
         try:
             from ..layout.template_gallery import create_template_layout
@@ -2550,6 +2587,7 @@ class CartoLabDashboard(_QDialogBase):
                 page_size=page_size,
                 landscape=landscape,
                 theme=theme,
+                grid_preset=grid_preset,
             )
             self._refresh_layout_combo()
             if hasattr(self, "layout_combo"):
@@ -2731,11 +2769,126 @@ class CartoLabDashboard(_QDialogBase):
         deco_row.addWidget(btn_grid)
         deco_row.addWidget(btn_balance)
         gd.addLayout(deco_row)
+        btn_preflight = QPushButton("Run Print Preflight")
+        btn_preflight.setIcon(_cartolab_icon("layout.png"))
+        btn_preflight.setToolTip("Check page bounds, map extents, linked furniture, and duplicate item IDs")
+        btn_preflight.clicked.connect(self._on_preflight_layout)
+        gd.addWidget(btn_preflight)
         lyt.addWidget(gb_dec)
 
-        for button in (btn_sheet, btn_legend, btn_typo, btn_grid, btn_balance):
+        for button in (btn_sheet, btn_legend, btn_typo, btn_grid, btn_balance, btn_preflight):
             button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
+        lyt.addStretch()
+        scroll.setWidget(w)
+        return scroll
+
+    def _build_grid_qpt_studio_subwidget(self) -> QWidget:
+        """Grid preset gallery, explicit interval controls and safe QPT tooling."""
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        w = QWidget()
+        lyt = QVBoxLayout(w)
+        lyt.setContentsMargins(12, 12, 12, 12)
+        lyt.setSpacing(10)
+
+        intro = QLabel(
+            "Build repeatable coordinate marginalia without hand-configuring QGIS grid stacks. "
+            "Presets are idempotent and can combine projected and geographic reference systems."
+        )
+        intro.setWordWrap(True)
+        lyt.addWidget(intro)
+
+        gb_grid = self._make_group("Coordinate Grid Preset Gallery")
+        form = QGridLayout(gb_grid)
+        form.addWidget(QLabel("Preset:"), 0, 0)
+        self.layout_grid_preset_combo = QComboBox()
+        from ..layout.grid_presets import list_grid_presets
+        for meta in list_grid_presets():
+            self.layout_grid_preset_combo.addItem(
+                f"{meta['name']} · {meta['category']}", meta["id"]
+            )
+        form.addWidget(self.layout_grid_preset_combo, 0, 1, 1, 3)
+        self.layout_grid_description = QLabel()
+        self.layout_grid_description.setWordWrap(True)
+        self.layout_grid_description.setStyleSheet("color:#64748b;")
+        form.addWidget(self.layout_grid_description, 1, 0, 1, 4)
+
+        self.layout_grid_auto = QCheckBox("Auto-fit clean intervals to the current map extent")
+        self.layout_grid_auto.setChecked(True)
+        form.addWidget(self.layout_grid_auto, 2, 0, 1, 4)
+        form.addWidget(QLabel("Easting / X interval:"), 3, 0)
+        self.layout_grid_x = QDoubleSpinBox()
+        self.layout_grid_x.setRange(0.000001, 1000000000.0)
+        self.layout_grid_x.setDecimals(6)
+        self.layout_grid_x.setValue(1000.0)
+        form.addWidget(self.layout_grid_x, 3, 1)
+        form.addWidget(QLabel("Northing / Y interval:"), 3, 2)
+        self.layout_grid_y = QDoubleSpinBox()
+        self.layout_grid_y.setRange(0.000001, 1000000000.0)
+        self.layout_grid_y.setDecimals(6)
+        self.layout_grid_y.setValue(1000.0)
+        form.addWidget(self.layout_grid_y, 3, 3)
+        self.layout_grid_annotations = QCheckBox("Show coordinate annotations")
+        self.layout_grid_annotations.setChecked(True)
+        self.layout_grid_replace = QCheckBox("Replace earlier 02CartoLab preset grids")
+        self.layout_grid_replace.setChecked(True)
+        form.addWidget(self.layout_grid_annotations, 4, 0, 1, 2)
+        form.addWidget(self.layout_grid_replace, 4, 2, 1, 2)
+        btn_apply_grid = QPushButton("Apply Grid Composition to Selected Layout")
+        btn_apply_grid.setIcon(_cartolab_icon("grid.png"))
+        btn_remove_grid = QPushButton("Remove 02CartoLab Preset Grids")
+        btn_remove_grid.setObjectName("ghost")
+        form.addWidget(btn_apply_grid, 5, 0, 1, 3)
+        form.addWidget(btn_remove_grid, 5, 3)
+        lyt.addWidget(gb_grid)
+
+        gb_qpt = self._make_group("QPT Inspector and Migration")
+        qpt_layout = QVBoxLayout(gb_qpt)
+        qpt_help = QLabel(
+            "Inspect an external QGIS layout template before import. The report identifies grid stacks, "
+            "off-page objects, missing stable IDs and expressions that require other plugins."
+        )
+        qpt_help.setWordWrap(True)
+        qpt_layout.addWidget(qpt_help)
+        path_row = QHBoxLayout()
+        self.qpt_path_input = QLineEdit()
+        self.qpt_path_input.setPlaceholderText("Select a .qpt layout template…")
+        btn_qpt_browse = QPushButton("Browse…")
+        path_row.addWidget(self.qpt_path_input, 1)
+        path_row.addWidget(btn_qpt_browse)
+        qpt_layout.addLayout(path_row)
+        qpt_actions = QHBoxLayout()
+        btn_qpt_inspect = QPushButton("Inspect Compatibility")
+        btn_qpt_import = QPushButton("Import Original QPT")
+        btn_qpt_import.setObjectName("ghost")
+        btn_safe_utm = QPushButton("Create Dependency-Free UTM Sheet")
+        btn_safe_utm.setIcon(_cartolab_icon("grid.png"))
+        qpt_actions.addWidget(btn_qpt_inspect)
+        qpt_actions.addWidget(btn_qpt_import)
+        qpt_actions.addWidget(btn_safe_utm)
+        qpt_layout.addLayout(qpt_actions)
+        self.qpt_report = QTextBrowser()
+        self.qpt_report.setMinimumHeight(190)
+        self.qpt_report.setPlainText("No QPT inspected yet.")
+        qpt_layout.addWidget(self.qpt_report)
+        lyt.addWidget(gb_qpt)
+
+        self.layout_grid_preset_combo.currentIndexChanged.connect(self._on_grid_preset_changed)
+        self.layout_grid_auto.toggled.connect(
+            lambda checked: (self.layout_grid_x.setEnabled(not checked),
+                             self.layout_grid_y.setEnabled(not checked))
+        )
+        btn_apply_grid.clicked.connect(self._on_apply_grid_preset)
+        btn_remove_grid.clicked.connect(self._on_remove_grid_presets)
+        btn_qpt_browse.clicked.connect(self._on_browse_qpt)
+        btn_qpt_inspect.clicked.connect(self._on_inspect_qpt)
+        btn_qpt_import.clicked.connect(self._on_import_qpt)
+        btn_safe_utm.clicked.connect(self._on_create_safe_utm_sheet)
+        self.layout_grid_x.setEnabled(False)
+        self.layout_grid_y.setEnabled(False)
+        self._on_grid_preset_changed()
         lyt.addStretch()
         scroll.setWidget(w)
         return scroll
@@ -2834,12 +2987,17 @@ class CartoLabDashboard(_QDialogBase):
             return
         try:
             from ..layout.map_sheet import create_map_sheet
+            orientation = self.mapsheet_orient_combo.currentText()
+            page_size = (
+                "SQUARE" if orientation == "Square"
+                else self.mapsheet_page_combo.currentText()
+            )
             layout = create_map_sheet(
                 iface=self.iface,
                 title=self.mapsheet_title.text().strip(),
                 credits=self.mapsheet_credits.text().strip(),
-                page_size=self.mapsheet_page_combo.currentText(),
-                landscape=(self.mapsheet_orient_combo.currentText() == "Landscape"),
+                page_size=page_size,
+                landscape=(orientation == "Landscape"),
                 add_title=self.cb_title.isChecked(),
                 add_legend=self.cb_legend.isChecked(),
                 add_scalebar=self.cb_scalebar.isChecked(),
@@ -3039,6 +3197,145 @@ class CartoLabDashboard(_QDialogBase):
                 )
         except Exception as exc:
             QMessageBox.critical(self, "Auto-Balance Error", str(exc))
+
+    def _on_preflight_layout(self) -> None:
+        layout = self._require_layout("Print Preflight")
+        if layout is None:
+            return
+        try:
+            from ..layout.preflight import format_preflight_report, preflight_layout
+            issues = preflight_layout(layout)
+            report = format_preflight_report(layout, issues)
+            if any(issue["severity"] == "error" for issue in issues):
+                QMessageBox.warning(self, "Print Preflight", report)
+            else:
+                QMessageBox.information(self, "Print Preflight", report)
+        except Exception as exc:
+            QMessageBox.critical(self, "Print Preflight Error", str(exc))
+
+    def _on_grid_preset_changed(self, _index: int = -1) -> None:
+        from ..layout.grid_presets import GRID_PRESETS
+        preset = GRID_PRESETS.get(self.layout_grid_preset_combo.currentData(), {})
+        self.layout_grid_description.setText(preset.get("description", ""))
+
+    def _on_apply_grid_preset(self) -> None:
+        layout = self._require_layout("Coordinate Grid")
+        if layout is None:
+            return
+        try:
+            from ..layout.grid_presets import apply_grid_preset
+            automatic = self.layout_grid_auto.isChecked()
+            grids = apply_grid_preset(
+                layout,
+                self.layout_grid_preset_combo.currentData(),
+                interval_x=None if automatic else self.layout_grid_x.value(),
+                interval_y=None if automatic else self.layout_grid_y.value(),
+                annotations=self.layout_grid_annotations.isChecked(),
+                replace=self.layout_grid_replace.isChecked(),
+            )
+            if not grids:
+                QMessageBox.warning(self, "Coordinate Grid", "The selected layout has no map frame.")
+                return
+            self.iface.messageBar().pushSuccess(
+                "CartoLab", f"Applied {len(grids)} grid layer(s): {self.layout_grid_preset_combo.currentText()}"
+            )
+        except Exception as exc:
+            QMessageBox.critical(self, "Coordinate Grid Error", str(exc))
+
+    def _on_remove_grid_presets(self) -> None:
+        layout = self._require_layout("Coordinate Grid")
+        if layout is None:
+            return
+        from ..layout.grid_presets import remove_cartolab_grids
+        removed = remove_cartolab_grids(layout)
+        self.iface.messageBar().pushInfo("CartoLab", f"Removed {removed} preset grid layer(s).")
+
+    def _on_browse_qpt(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Inspect QGIS Layout Template", self.qpt_path_input.text(),
+            "QGIS layout templates (*.qpt)"
+        )
+        if path:
+            self.qpt_path_input.setText(path)
+            self._on_inspect_qpt()
+
+    def _on_inspect_qpt(self) -> None:
+        path = self.qpt_path_input.text().strip()
+        if not path:
+            QMessageBox.information(self, "QPT Inspector", "Choose a .qpt file first.")
+            return
+        try:
+            from ..layout.qpt_inspector import format_qpt_report, inspect_qpt
+            report = inspect_qpt(path)
+            self.qpt_report.setPlainText(format_qpt_report(report))
+        except Exception as exc:
+            QMessageBox.critical(self, "QPT Inspector", str(exc))
+
+    def _on_import_qpt(self) -> None:
+        path = self.qpt_path_input.text().strip()
+        if not path:
+            QMessageBox.information(self, "Import QPT", "Choose a .qpt file first.")
+            return
+        try:
+            from qgis.PyQt.QtXml import QDomDocument
+            from qgis.core import QgsPrintLayout, QgsReadWriteContext
+            from ..layout.layout_utils import unique_layout_name
+            from ..layout.preflight import format_preflight_report, preflight_layout
+            from ..layout.qpt_inspector import format_qpt_report, inspect_qpt
+
+            report = inspect_qpt(path)
+            if not report["safe_to_import"]:
+                QMessageBox.warning(
+                    self,
+                    "QPT Requires External Functions",
+                    "This template uses expression functions that are not provided by core QGIS:\n\n"
+                    + ", ".join(report["external_functions"])
+                    + "\n\nDirect import was stopped to prevent an unstable Designer/render session. "
+                      "Use 'Create Dependency-Free UTM Sheet' instead."
+                )
+                self.qpt_report.setPlainText(format_qpt_report(report))
+                return
+            with open(path, "r", encoding="utf-8-sig") as handle:
+                xml_text = handle.read()
+            document = QDomDocument()
+            parsed = document.setContent(xml_text)
+            parsed_ok = parsed[0] if isinstance(parsed, tuple) else bool(parsed)
+            if not parsed_ok:
+                raise ValueError("QGIS could not parse the QPT XML document.")
+            project = QgsProject.instance()
+            layout = QgsPrintLayout(project)
+            layout.initializeDefaults()
+            layout.loadFromTemplate(document, QgsReadWriteContext(), True)
+            layout.setName(unique_layout_name(project, report["name"] or "Imported QPT"))
+            project.layoutManager().addLayout(layout)
+            self._refresh_layout_combo()
+            self.layout_combo.setCurrentText(layout.name())
+            issues = preflight_layout(layout)
+            self.qpt_report.setPlainText(
+                format_qpt_report(report) + "\n\nImported layout preflight:\n" +
+                format_preflight_report(layout, issues)
+            )
+            self._open_in_designer(layout)
+        except Exception as exc:
+            QMessageBox.critical(self, "Import QPT", str(exc))
+
+    def _on_create_safe_utm_sheet(self) -> None:
+        if not QgsProject.instance().mapLayers():
+            QMessageBox.warning(self, "UTM Field Sheet", "Load at least one map layer first.")
+            return
+        try:
+            from ..layout.template_gallery import create_template_layout
+            layout = create_template_layout(
+                "utm_field_sheet", iface=self.iface, project=QgsProject.instance(),
+                title="UTM Field Reference Sheet",
+                subtitle="Dependency-free projected coordinate and field-note layout",
+                credits="02CartoLab · Field Operations",
+            )
+            self._refresh_layout_combo()
+            self.layout_combo.setCurrentText(layout.name())
+            self._open_in_designer(layout)
+        except Exception as exc:
+            QMessageBox.critical(self, "UTM Field Sheet", str(exc))
 
     # ── System health / refresh ──────────────────────────────────────
 

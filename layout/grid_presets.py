@@ -1,0 +1,244 @@
+# -*- coding: utf-8 -*-
+"""Reusable publication grid presets for 02CartoLab Print Layout Studio."""
+from __future__ import annotations
+
+from contextlib import suppress
+from typing import Any, Dict, List, Optional
+
+try:
+    from qgis.core import (
+        QgsCoordinateReferenceSystem,
+        QgsCoordinateTransform,
+        QgsLayoutItemMap,
+        QgsLayoutItemMapGrid,
+        QgsLineSymbol,
+        QgsProject,
+    )
+    from qgis.PyQt.QtGui import QColor, QFont
+except ImportError:
+    QgsCoordinateReferenceSystem = QgsCoordinateTransform = None
+    QgsLayoutItemMap = QgsLayoutItemMapGrid = QgsLineSymbol = QgsProject = None
+    QColor = QFont = None
+
+from ..core.layout_math import nice_interval
+from .layout_utils import find_map_item
+
+
+GRID_PREFIX = "CartoLabPreset/"
+
+GRID_PRESETS: Dict[str, Dict[str, Any]] = {
+    "minimal": {
+        "name": "Minimal Coordinate Grid",
+        "category": "Editorial",
+        "description": "Quiet hairline grid with left/bottom coordinates.",
+        "components": [{"style": "Solid", "frame": "NoFrame", "divisions": 6,
+                        "color": "#cbd5e1", "width": 0.12, "sides": "left_bottom"}],
+    },
+    "utm_engineering": {
+        "name": "UTM Engineering Grid",
+        "category": "Survey & Planning",
+        "description": "Metric grid, full easting/northing labels and clean zebra neatline.",
+        "requires_projected": True,
+        "components": [{"style": "Solid", "frame": "Zebra", "divisions": 7,
+                        "color": "#64748b", "width": 0.16, "sides": "all",
+                        "expression": "format_number(@grid_number, 0)"}],
+    },
+    "utm_field": {
+        "name": "UTM Field Sheet",
+        "category": "Field Operations",
+        "description": "Strong 1 km-style reference grid plus fine 100 m cross ticks.",
+        "requires_projected": True,
+        "components": [
+            {"style": "Solid", "frame": "Zebra", "divisions": 6, "color": "#334155",
+             "width": 0.22, "sides": "all", "expression": "format_number(@grid_number, 0)"},
+            {"style": "Cross", "frame": "NoFrame", "divisions": 30, "color": "#94a3b8",
+             "width": 0.10, "sides": "none", "cross": 1.6},
+        ],
+    },
+    "survey_crosshair": {
+        "name": "Survey Crosshair Grid",
+        "category": "Survey & Planning",
+        "description": "Low-ink cross marks with coordinate ticks around the frame.",
+        "components": [{"style": "Cross", "frame": "LineBorder", "divisions": 10,
+                        "color": "#64748b", "width": 0.13, "sides": "all", "cross": 2.0}],
+    },
+    "border_ticks": {
+        "name": "Marginal Ticks Only",
+        "category": "Academic",
+        "description": "No interior lines; coordinates and divisions remain on the neatline.",
+        "components": [{"style": "FrameAndAnnotationsOnly", "frame": "LineBorder",
+                        "divisions": 7, "color": "#334155", "width": 0.15, "sides": "all"}],
+    },
+    "graticule": {
+        "name": "Latitude / Longitude Graticule",
+        "category": "Reference",
+        "description": "WGS 84 geographic graticule over any projected map.",
+        "components": [{"style": "Solid", "frame": "Zebra", "divisions": 6,
+                        "color": "#7c3aed", "width": 0.13, "sides": "all",
+                        "crs": "EPSG:4326", "geographic": True}],
+    },
+    "dual_reference": {
+        "name": "Dual UTM + Geographic Reference",
+        "category": "Technical",
+        "description": "Projected working grid with a secondary WGS 84 marginal graticule.",
+        "requires_projected": True,
+        "components": [
+            {"style": "Solid", "frame": "LineBorder", "divisions": 7,
+             "color": "#64748b", "width": 0.14, "sides": "left_bottom",
+             "expression": "format_number(@grid_number, 0)"},
+            {"style": "FrameAndAnnotationsOnly", "frame": "Zebra", "divisions": 5,
+             "color": "#7c3aed", "width": 0.12, "sides": "right_top",
+             "crs": "EPSG:4326", "geographic": True},
+        ],
+    },
+}
+
+
+def list_grid_presets() -> List[Dict[str, Any]]:
+    """Return serializable grid metadata in display order."""
+    return [dict(meta, id=key) for key, meta in GRID_PRESETS.items()]
+
+
+def _enum(owner, group: str, name: str, fallback: int):
+    scoped = getattr(owner, group, owner)
+    return getattr(scoped, name, getattr(owner, name, fallback))
+
+
+def _grid_extent(map_item, grid_crs, project):
+    extent = map_item.extent()
+    if grid_crs is None or QgsCoordinateTransform is None:
+        return extent
+    with suppress(Exception):
+        source = map_item.crs()
+        if source.isValid() and source != grid_crs:
+            return QgsCoordinateTransform(source, grid_crs, project).transformBoundingBox(extent)
+    return extent
+
+
+def remove_cartolab_grids(layout, map_item=None) -> int:
+    """Remove only grids generated by this preset system."""
+    target = map_item or find_map_item(layout)
+    if target is None:
+        return 0
+    stack = target.grids()
+    removed = 0
+    for grid in list(stack.asList()):
+        if grid.name().startswith(GRID_PREFIX):
+            stack.removeGrid(grid.id())
+            removed += 1
+    if removed:
+        target.updateBoundingRect()
+        layout.refresh()
+    return removed
+
+
+def apply_grid_preset(
+    layout,
+    preset_id: str,
+    map_item=None,
+    *,
+    interval_x: Optional[float] = None,
+    interval_y: Optional[float] = None,
+    annotations: bool = True,
+    replace: bool = True,
+) -> List[Any]:
+    """Apply a named, idempotent grid composition to the primary map item."""
+    if QgsLayoutItemMapGrid is None:
+        return []
+    preset = GRID_PRESETS.get(preset_id)
+    if preset is None:
+        raise ValueError(f"Unknown grid preset: {preset_id}")
+    target = map_item or find_map_item(layout)
+    if target is None:
+        return []
+    project = layout.project() if hasattr(layout, "project") else QgsProject.instance()
+    map_crs = target.crs()
+    if preset.get("requires_projected") and map_crs.isValid() and map_crs.isGeographic():
+        raise ValueError(f"{preset['name']} requires a projected CRS (for example a UTM zone).")
+    if replace:
+        remove_cartolab_grids(layout, target)
+
+    style_values = {
+        "Solid": _enum(QgsLayoutItemMapGrid, "GridStyle", "Solid", 0),
+        "Cross": _enum(QgsLayoutItemMapGrid, "GridStyle", "Cross", 1),
+        "Markers": _enum(QgsLayoutItemMapGrid, "GridStyle", "Markers", 2),
+        "FrameAndAnnotationsOnly": _enum(
+            QgsLayoutItemMapGrid, "GridStyle", "FrameAndAnnotationsOnly", 3
+        ),
+    }
+    frame_values = {
+        "NoFrame": _enum(QgsLayoutItemMapGrid, "FrameStyle", "NoFrame", 0),
+        "Zebra": _enum(QgsLayoutItemMapGrid, "FrameStyle", "Zebra", 1),
+        "LineBorder": _enum(QgsLayoutItemMapGrid, "FrameStyle", "LineBorder", 4),
+    }
+    side_values = {
+        "left": _enum(QgsLayoutItemMapGrid, "BorderSide", "Left", 0),
+        "right": _enum(QgsLayoutItemMapGrid, "BorderSide", "Right", 1),
+        "bottom": _enum(QgsLayoutItemMapGrid, "BorderSide", "Bottom", 2),
+        "top": _enum(QgsLayoutItemMapGrid, "BorderSide", "Top", 3),
+    }
+    show = _enum(QgsLayoutItemMapGrid, "DisplayMode", "ShowAll", 0)
+    hide = _enum(QgsLayoutItemMapGrid, "DisplayMode", "HideAll", 2)
+    map_units = _enum(QgsLayoutItemMapGrid, "GridUnit", "MapUnit", 0)
+
+    created = []
+    for index, component in enumerate(preset["components"], start=1):
+        name = f"{GRID_PREFIX}{preset_id}/{index}"
+        grid = QgsLayoutItemMapGrid(name, target)
+        grid.setEnabled(True)
+        grid.setUnits(map_units)
+
+        grid_crs = None
+        if component.get("crs") and QgsCoordinateReferenceSystem is not None:
+            grid_crs = QgsCoordinateReferenceSystem(component["crs"])
+            if grid_crs.isValid():
+                grid.setCrs(grid_crs)
+        measured = _grid_extent(target, grid_crs, project)
+        divisions = max(2, int(component.get("divisions", 6)))
+        ix = interval_x if interval_x and interval_x > 0 else nice_interval(measured.width(), divisions)
+        iy = interval_y if interval_y and interval_y > 0 else nice_interval(measured.height(), divisions)
+        grid.setIntervalX(ix if ix > 0 else 1.0)
+        grid.setIntervalY(iy if iy > 0 else 1.0)
+        grid.setStyle(style_values[component.get("style", "Solid")])
+        grid.setFrameStyle(frame_values[component.get("frame", "NoFrame")])
+        grid.setFrameWidth(float(component.get("frame_width", 1.4)))
+        grid.setFramePenColor(QColor("#0f172a"))
+        grid.setFrameFillColor1(QColor("#0f172a"))
+        grid.setFrameFillColor2(QColor("#ffffff"))
+        if QgsLineSymbol is not None:
+            grid.setLineSymbol(QgsLineSymbol.createSimple({
+                "color": component.get("color", "#cbd5e1"),
+                "width": str(component.get("width", 0.14)),
+            }))
+        with suppress(Exception):
+            grid.setCrossLength(float(component.get("cross", 2.0)))
+
+        enabled_annotations = annotations and component.get("sides", "all") != "none"
+        grid.setAnnotationEnabled(enabled_annotations)
+        if enabled_annotations:
+            side_mode = component.get("sides", "all")
+            visible = {
+                "all": {"left", "right", "bottom", "top"},
+                "left_bottom": {"left", "bottom"},
+                "right_top": {"right", "top"},
+            }.get(side_mode, {"left", "bottom"})
+            for side_name, side_value in side_values.items():
+                grid.setAnnotationDisplay(show if side_name in visible else hide, side_value)
+            geographic = bool(component.get("geographic"))
+            grid.setAnnotationPrecision(3 if geographic and ix < 0.05 else 2 if geographic else 0)
+            grid.setAnnotationFontColor(QColor(component.get("text_color", "#334155")))
+            grid.setAnnotationFrameDistance(float(component.get("annotation_distance", 1.5)))
+            if QFont is not None:
+                grid.setAnnotationFont(QFont("Segoe UI", 8))
+            expression = component.get("expression")
+            if expression:
+                with suppress(Exception):
+                    grid.setAnnotationExpression(expression)
+
+        target.grids().addGrid(grid)
+        created.append(grid)
+
+    target.updateBoundingRect()
+    layout.refresh()
+    return created
+

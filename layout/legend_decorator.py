@@ -36,7 +36,7 @@ except ImportError:
 
 
 from ..core.bivariate_engine import bivariate_colour_matrix
-from ..core.layout_math import nice_scalebar_segments
+from .map_sheet import _configure_scalebar
 
 
 
@@ -246,12 +246,14 @@ def add_scalebar_to_layout(
     segments: int = 3,
     units_per_segment: float = 1.0,
     unit_label: str = "km",
+    max_width_mm: float = 65.0,
 ) -> QgsLayoutItemScaleBar:
     """Add an executive publication-ready scalebar to the layout."""
     if layout is None or QgsLayoutItemScaleBar is None:
         return None
 
     scalebar = QgsLayoutItemScaleBar(layout)
+    scalebar.setId("cartolab_scalebar")
     if map_item is None:
         for item in layout.items():
             if isinstance(item, QgsLayoutItemMap):
@@ -260,6 +262,7 @@ def add_scalebar_to_layout(
 
     if map_item is not None:
         scalebar.setLinkedMap(map_item)
+    scalebar.applyDefaultSettings()
 
     # Style mapping: "Single Box", "Double Box", "Line Ticks", "Stepped Box", "Line Ticks Up", "Line Ticks Down"
     STYLE_MAP = {
@@ -291,23 +294,21 @@ def add_scalebar_to_layout(
     scalebar.setNumberOfSegmentsLeft(0)
 
     if map_item is not None and units_per_segment == 1.0:
-        ext = map_item.extent()
-        if ext and not ext.isEmpty():
-            map_w_km = ext.width() / 1000.0 if (hasattr(map_item, "crs") and map_item.crs().isValid() and not map_item.crs().isGeographic()) else 10.0
-            seg_km, n_right, n_left = nice_scalebar_segments(map_w_km, target_segments=n_segs)
-            scalebar.setNumberOfSegments(n_right)
-            scalebar.setNumberOfSegmentsLeft(n_left)
-            scalebar.setUnitsPerSegment(seg_km)
-        else:
+        project = None
+        with suppress(Exception):
+            project = map_item.layout().project()
+        if not _configure_scalebar(
+            scalebar,
+            map_item,
+            project,
+            max_width_mm=max_width_mm,
+            target_segments=n_segs,
+        ):
             scalebar.setUnitsPerSegment(units_per_segment)
+            scalebar.setUnitLabel(unit_label)
     else:
         scalebar.setUnitsPerSegment(units_per_segment)
-
-    scalebar.setUnitLabel(unit_label)
-
-    # Clean styling
-    if hasattr(scalebar, "setLineSymbol") and QgsFillSymbol is not None:
-        pass
+        scalebar.setUnitLabel(unit_label)
 
     scalebar.attemptMove(QgsLayoutPoint(position[0], position[1], _MM))
     layout.addLayoutItem(scalebar)
@@ -341,8 +342,6 @@ def add_scale_combo_to_layout(
     )
 
     scale_val = int(round(map_item.scale())) if map_item else 25000
-    map_name = map_item.id() if (map_item and map_item.id()) else "Map 1"
-
     lbl = QgsLayoutItemLabel(layout)
     lbl.setText(f"Scale 1:{scale_val:,}")
     if QFont is not None:

@@ -9,12 +9,12 @@ Produces:
 from __future__ import annotations
 
 import math
-from typing import List, Tuple, Optional
+from typing import List, Optional
 
 from qgis.core import (
-    QgsFeature, QgsField, QgsFields, QgsGeometry,
-    QgsLineString, QgsPoint, QgsPolygon, QgsVectorLayer,
-    QgsRasterLayer, QgsRasterBlock, QgsRectangle,
+    QgsFeature, QgsField, QgsGeometry,
+    QgsLineString, QgsPoint, QgsVectorLayer,
+    QgsRasterLayer, QgsRectangle,
 )
 from qgis.PyQt.QtCore import QVariant
 
@@ -161,9 +161,8 @@ def apply_value_by_alpha(
     """
     from qgis.core import (
         QgsClassificationCustom, QgsGraduatedSymbolRenderer,
-        QgsRendererRange, QgsSymbol, QgsClassificationJenks,
+        QgsRendererRange, QgsSymbol,
     )
-    from qgis.PyQt.QtGui import QColor
 
     # gather values
     values = []
@@ -187,7 +186,6 @@ def apply_value_by_alpha(
     alpha_step = (alpha_max - alpha_min) / max(len(alpha_breaks) - 2, 1)
 
     # build colour ramp
-    import random
     ramp_colours = _get_ramp_colours(colour_ramp_name, n_classes)
 
     ranges = []

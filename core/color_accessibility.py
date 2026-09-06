@@ -10,7 +10,6 @@ and CIE L*a*b* Delta E perceptual difference metrics.
 from __future__ import annotations
 
 import math
-from contextlib import suppress
 from typing import Dict, List, Tuple, Union
 
 
@@ -155,7 +154,6 @@ def suggest_accessible_color(
     # If background is bright, darken foreground; if background is dark, brighten foreground
     should_darken = bg_lum > 0.5
 
-    best_hex = foreground
     for step in range(1, 101):
         factor = 1.0 - (step / 100.0) if should_darken else 1.0 + (step / 100.0)
         nr = max(0, min(255, int(fg_r * factor) if should_darken else int(fg_r + (255 - fg_r) * (step / 100.0))))
@@ -164,8 +162,6 @@ def suggest_accessible_color(
         cand_hex = rgb_to_hex(nr, ng, nb)
         if contrast_ratio(cand_hex, background) >= target_ratio:
             return cand_hex
-        best_hex = cand_hex
-
     # Extreme fallback
     return "#000000" if should_darken else "#ffffff"
 

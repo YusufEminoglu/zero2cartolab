@@ -2,8 +2,6 @@
 """Bivariate Choropleth — Processing algorithm."""
 from __future__ import annotations
 
-import math
-
 from qgis.core import (
     QgsFeature, QgsFeatureSink, QgsField, QgsFields,
     QgsProcessing, QgsProcessingAlgorithm, QgsProcessingException,
@@ -16,9 +14,7 @@ from qgis.PyQt.QtCore import QVariant
 from qgis.PyQt.QtGui import QColor
 
 from ..core.utils import safe_float
-from ..core.bivariate_engine import (
-    geometric_interval_breaks, fisher_jenks_breaks, bivariate_colour_matrix,
-)
+from ..core.bivariate_engine import bivariate_colour_matrix
 from ._help_mixin import CartoLabHelpMixin
 
 

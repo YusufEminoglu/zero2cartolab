@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-End-to-end real-QGIS test for zero2cartolab — runs ALL 12 Processing
+End-to-end real-QGIS test for zero2cartolab — runs all Processing
 algorithms in a genuine QGIS Python environment (not stubs) and asserts
 numeric correctness on the six new cartography algorithms.
 
@@ -12,26 +12,41 @@ import os
 import sys
 import tempfile
 import traceback
+from contextlib import suppress
+from pathlib import Path
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 # line-buffer stdout so PASS/FAIL lines survive the os._exit() hard exit
-try:
+with suppress(Exception):
     sys.stdout.reconfigure(line_buffering=True)
-except Exception:
-    pass
 
 from qgis.core import QgsApplication
 
 qgs = QgsApplication([], False)
 qgs.initQgis()
 
+# Headless OSGeo4W does not always discover system fonts. Register a small
+# fallback set so visual-regression PNGs contain readable text, not tofu boxes.
+from qgis.PyQt.QtGui import QFontDatabase
+font_roots = [
+    Path(os.environ.get("WINDIR", "C:\\Windows")) / "Fonts",
+    Path("/usr/share/fonts/truetype/dejavu"),
+]
+for font_root in font_roots:
+    for font_name in ("segoeui.ttf", "arial.ttf", "DejaVuSans.ttf"):
+        font_path = font_root / font_name
+        if font_path.exists():
+            QFontDatabase.addApplicationFont(str(font_path))
+
 import qgis
 system_plugins_dir = os.path.abspath(os.path.join(os.path.dirname(qgis.__file__), "..", "plugins"))
 if system_plugins_dir in sys.path:
     sys.path.remove(system_plugins_dir)
 sys.path.insert(0, system_plugins_dir)
-sys.path.append(r"C:\Users\YE\PyCharmMiscProject\qgis_plugins")
+source_parent = str(Path(__file__).resolve().parents[2])
+if source_parent not in sys.path:
+    sys.path.append(source_parent)
 
 import processing
 from processing.core.Processing import Processing
@@ -42,11 +57,10 @@ Processing.initialize()
 
 
 from qgis.core import (
-    Qgis, QgsCoordinateReferenceSystem, QgsFeature, QgsFields, QgsField,
+    Qgis, QgsCoordinateReferenceSystem, QgsFeature,
     QgsGeometry, QgsPointXY, QgsProcessingContext, QgsProcessingFeedback,
-    QgsProcessingUtils, QgsProject, QgsVectorLayer, QgsRasterLayer,
+    QgsProcessingUtils, QgsProject, QgsRectangle, QgsVectorLayer, QgsRasterLayer,
 )
-from qgis.PyQt.QtCore import QVariant
 
 print(f"QGIS version: {Qgis.QGIS_VERSION}")
 
@@ -80,6 +94,7 @@ def ok(name, cond, detail=""):
 def run(algo_id, params, label):
     ctx = QgsProcessingContext()
     ctx.setProject(QgsProject.instance())
+    algorithm = QgsApplication.processingRegistry().algorithmById(algo_id)
     try:
         res = processing.run(algo_id, params, context=ctx, feedback=QgsProcessingFeedback())
     except Exception as exc:
@@ -88,7 +103,16 @@ def run(algo_id, params, label):
         return None, ctx
     out = {}
     for k, v in res.items():
-        if isinstance(v, str) and "\n" not in v and not v.lower().endswith((".html", ".pdf", ".md", ".qml")):
+        output_def = algorithm.outputDefinition(k) if algorithm is not None else None
+        layer_output = (
+            output_def is not None
+            and output_def.__class__.__name__ in {
+                "QgsProcessingOutputMapLayer",
+                "QgsProcessingOutputRasterLayer",
+                "QgsProcessingOutputVectorLayer",
+            }
+        )
+        if layer_output and isinstance(v, str):
             lyr = QgsProcessingUtils.mapLayerFromString(v, ctx)
             if not lyr:
                 matches = QgsProject.instance().mapLayersByName(v.replace("memory:", ""))
@@ -110,17 +134,17 @@ CELL = 1000.0
 N = 5  # 5x5 grid -> extent 0..5000
 
 
-def build_polygons():
+def build_polygons(crs=CRS, origin_x=0.0, origin_y=0.0, name="units"):
     lyr = QgsVectorLayer(
-        f"Polygon?crs={CRS}&field=uid:integer&field=count:double"
+        f"Polygon?crs={crs}&field=uid:integer&field=count:double"
         "&field=pop:double&field=score:double&field=floors:integer",
-        "units", "memory")
+        name, "memory")
     dp = lyr.dataProvider()
     feats = []
     for j in range(N):
         for i in range(N):
             uid = j * N + i
-            x0, y0 = i * CELL, j * CELL
+            x0, y0 = origin_x + i * CELL, origin_y + j * CELL
             ring = [QgsPointXY(x0, y0), QgsPointXY(x0 + CELL, y0),
                     QgsPointXY(x0 + CELL, y0 + CELL), QgsPointXY(x0, y0 + CELL),
                     QgsPointXY(x0, y0)]
@@ -384,14 +408,21 @@ print("\n--- Layout subsystem ---")
 from qgis.core import (
     QgsLayoutItemMap, QgsLayoutItemLegend, QgsLayoutItemScaleBar,
     QgsLayoutItemLabel, QgsLayoutItemPicture, QgsLayoutItemPolygon,
-    QgsPrintLayout,
+    QgsPrintLayout, QgsLayoutSize,
 )
-from zero2cartolab.layout.map_sheet import create_map_sheet
+from zero2cartolab.layout.map_sheet import create_map_sheet, _map_extent_width_km
 from zero2cartolab.layout.grid_styler import apply_minimalist_grid, GRID_ID
-from zero2cartolab.layout.legend_decorator import add_bivariate_legend_to_layout
+from zero2cartolab.layout.legend_decorator import (
+    add_bivariate_legend_to_layout,
+    add_scalebar_to_layout,
+)
 from zero2cartolab.layout.typography_engine import apply_typography_hierarchy
 from zero2cartolab.layout.isometric_stacker import create_isometric_stack_layout
 from zero2cartolab.layout.layout_utils import export_layout
+from zero2cartolab.layout.preflight import preflight_layout, summarize_preflight
+from zero2cartolab.layout.locator_map import add_locator_inset_map
+from zero2cartolab.layout.atlas_builder import setup_layout_atlas
+from zero2cartolab.layout.coordinate_grid import apply_coordinate_grid_decorator
 
 
 def _count(lay, cls):
@@ -416,6 +447,17 @@ _named = [g for g in _sm.grids().asList() if g.name() == GRID_ID]
 ok("grid idempotent (single 02CartoLab grid)", len(_named) == 1, str(len(_named)))
 ok("grid interval auto-derived > 0", _named[0].intervalX() > 0, str(_named[0].intervalX()))
 
+small_projected_layout = QgsPrintLayout(QgsProject.instance())
+small_projected_layout.initializeDefaults()
+small_projected_map = QgsLayoutItemMap(small_projected_layout)
+small_projected_map.attemptResize(QgsLayoutSize(100.0, 80.0))
+small_projected_map.setCrs(QgsCoordinateReferenceSystem("EPSG:3857"))
+small_projected_map.setExtent(QgsRectangle(0.0, 0.0, 5.0, 5.0))
+small_projected_layout.addLayoutItem(small_projected_map)
+apply_coordinate_grid_decorator(small_projected_layout, small_projected_map)
+small_grid = small_projected_map.grids().asList()[0]
+ok("small projected grid is not treated as degrees", small_grid.annotationPrecision() == 0)
+
 add_bivariate_legend_to_layout(sheet, legend_type="diamond", grid_size=4)
 ok("bivariate diamond legend native polygons", _count(sheet, QgsLayoutItemPolygon) >= 16,
    str(_count(sheet, QgsLayoutItemPolygon)))
@@ -439,17 +481,13 @@ ok("layout exports to SVG", export_layout(sheet, _svg, dpi=72) and os.path.exist
 print("\n--- Template Gallery Subsystem ---")
 from zero2cartolab.layout.template_gallery import (
     TEMPLATE_GALLERY,
+    _create_scalebar,
     create_template_layout,
-    create_report_figure,
-    create_academic_journal,
-    create_exhibition_poster,
-    create_fact_sheet,
-    create_diptych,
 )
 
-ok("template gallery has 5 archetypes", len(TEMPLATE_GALLERY) == 5)
+ok("template gallery has 10 archetypes", len(TEMPLATE_GALLERY) == 10)
 
-for tkey in ("report_figure", "academic_journal", "exhibition_poster", "fact_sheet", "diptych"):
+for tkey in TEMPLATE_GALLERY:
     t_lay = create_template_layout(
         tkey, iface=None, layers=[polys, points],
         title=f"E2E {tkey}", subtitle="Automated Test Subtitle", credits="02CartoLab Suite",
@@ -457,13 +495,167 @@ for tkey in ("report_figure", "academic_journal", "exhibition_poster", "fact_she
     ok(f"template {tkey} creates print layout", isinstance(t_lay, QgsPrintLayout))
     ok(f"template {tkey} has map frame(s)", _count(t_lay, QgsLayoutItemMap) >= 1)
     ok(f"template {tkey} has label(s)", _count(t_lay, QgsLayoutItemLabel) >= 1)
+    main_maps = [
+        item for item in t_lay.items()
+        if isinstance(item, QgsLayoutItemMap) and item.id() != "cartolab_locator_map"
+    ]
+    ok(
+        f"template {tkey} resolves layer CRS",
+        bool(main_maps) and all(item.crs().authid() == "EPSG:3857" for item in main_maps),
+        str([item.crs().authid() for item in main_maps]),
+    )
+    scale_bars = [item for item in t_lay.items() if isinstance(item, QgsLayoutItemScaleBar)]
+    ok(
+        f"template {tkey} uses readable scale units",
+        all(
+            0.0 < item.unitsPerSegment() < 100.0
+            and abs(item.mapUnitsPerScaleBarUnit() - 1.0) < 1e-9
+            for item in scale_bars
+        ),
+        str([
+            (item.unitsPerSegment(), item.mapUnitsPerScaleBarUnit())
+            for item in scale_bars
+        ]),
+    )
+    template_issues = preflight_layout(t_lay)
+    template_summary = summarize_preflight(template_issues)
+    ok(
+        f"template {tkey} passes print preflight",
+        template_summary["errors"] == 0,
+        str(template_issues),
+    )
     _tpng = os.path.join(tempfile.gettempdir(), f"cartolab_e2e_template_{tkey}.png")
     ok(f"template {tkey} exports to PNG", export_layout(t_lay, _tpng, dpi=72) and os.path.exists(_tpng))
+
+from zero2cartolab.layout.grid_presets import (
+    GRID_PRESETS,
+    apply_grid_preset,
+    remove_cartolab_grids,
+)
+
+utm_polys = build_polygons("EPSG:32635", 500000.0, 4200000.0, "UTM 35N units")
+utm_polys.setRenderer(polys.renderer().clone())
+QgsProject.instance().addMapLayer(utm_polys)
+for preset_id, preset_meta in GRID_PRESETS.items():
+    grid_sheet = create_map_sheet(
+        iface=None, layers=[utm_polys], title=f"Grid Preset · {preset_meta['name']}"
+    )
+    # Keep visual-regression plates focused on marginalia.  The generic map
+    # sheet legend sits beside the map and can crowd right-side annotations;
+    # complete gallery templates test their own deliberately placed legends.
+    for grid_legend in [
+        item for item in grid_sheet.items() if isinstance(item, QgsLayoutItemLegend)
+    ]:
+        grid_sheet.removeLayoutItem(grid_legend)
+    grid_map = next(item for item in grid_sheet.items() if isinstance(item, QgsLayoutItemMap))
+    created = apply_grid_preset(grid_sheet, preset_id, grid_map)
+    ok(
+        f"grid preset {preset_id} creates expected stack",
+        len(created) == len(preset_meta["components"]),
+        str(len(created)),
+    )
+    apply_grid_preset(grid_sheet, preset_id, grid_map)
+    generated = [
+        grid for grid in grid_map.grids().asList()
+        if grid.name().startswith("CartoLabPreset/")
+    ]
+    ok(
+        f"grid preset {preset_id} is idempotent",
+        len(generated) == len(preset_meta["components"]),
+        str([grid.name() for grid in generated]),
+    )
+    _grid_png = os.path.join(tempfile.gettempdir(), f"cartolab_e2e_grid_{preset_id}.png")
+    ok(
+        f"grid preset {preset_id} exports visual QA image",
+        export_layout(grid_sheet, _grid_png, dpi=72) and os.path.exists(_grid_png),
+    )
+    ok(
+        f"grid preset {preset_id} removal is scoped and complete",
+        remove_cartolab_grids(grid_sheet, grid_map) == len(preset_meta["components"]),
+    )
+
+# Real Qt construction and screenshot for the full Print Layout Studio GUI.
+from zero2cartolab.ui.cartolab_dashboard import CartoLabDashboard
+dashboard = CartoLabDashboard(iface=object())
+dashboard.nav_sidebar.setCurrentRow(1)
+dashboard.layout_sub_tabs.setCurrentIndex(2)
+dashboard.show()
+QgsApplication.processEvents()
+ok("print studio GUI has four workspaces", dashboard.layout_sub_tabs.count() == 4)
+ok("print studio GUI exposes all grid presets",
+   dashboard.layout_grid_preset_combo.count() == len(GRID_PRESETS))
+ok("print studio GUI exposes QPT compatibility report", dashboard.qpt_report is not None)
+_gui_png = os.path.join(tempfile.gettempdir(), "cartolab_e2e_print_studio_gui.png")
+ok("print studio GUI screenshot saved", dashboard.grab().save(_gui_png) and os.path.exists(_gui_png))
+dashboard.close()
+
+square_sheet = create_map_sheet(
+    iface=None, layers=[polys], title="Square E2E", page_size="SQUARE"
+)
+square_page = square_sheet.pageCollection().page(0).pageSize()
+ok(
+    "square map sheet has equal page dimensions",
+    abs(square_page.width() - square_page.height()) < 0.01,
+    f"{square_page.width()} x {square_page.height()}",
+)
+add_locator_inset_map(square_sheet)
+add_locator_inset_map(square_sheet)
+ok(
+    "locator decorator is idempotent",
+    sum(
+        1 for item in square_sheet.items()
+        if hasattr(item, "id") and item.id() == "cartolab_locator_inset"
+    ) == 1,
+)
+
+atlas_sheet = create_map_sheet(iface=None, layers=[polys], title="Atlas E2E")
+ok(
+    "atlas setup accepts valid filter and sort",
+    setup_layout_atlas(
+        atlas_sheet, polys, name_field="uid", filter_expression='"uid" >= 0', sort_field="uid"
+    ),
+)
+atlas = atlas_sheet.atlas()
+ok(
+    "atlas sorting is actually enabled",
+    atlas.sortFeatures() and atlas.sortExpression() == '"uid"',
+    atlas.sortExpression(),
+)
+ok(
+    "atlas rejects invalid filter before configuration",
+    not setup_layout_atlas(atlas_sheet, polys, filter_expression='"uid" >'),
+)
+
+geo_layout = QgsPrintLayout(QgsProject.instance())
+geo_layout.initializeDefaults()
+geo_map = QgsLayoutItemMap(geo_layout)
+geo_map.attemptResize(QgsLayoutSize(100.0, 80.0))
+geo_map.setCrs(QgsCoordinateReferenceSystem("EPSG:4326"))
+geo_map.setExtent(QgsRectangle(27.0, 38.0, 28.0, 39.0))
+geo_layout.addLayoutItem(geo_map)
+geo_width_km = _map_extent_width_km(geo_map, QgsProject.instance())
+ok(
+    "geographic map width is measured geodesically",
+    80.0 < geo_width_km < 100.0,
+    f"got {geo_width_km}",
+)
+gallery_bar = _create_scalebar(geo_layout, geo_map, 10.0, 10.0)
+ok(
+    "template scalebar uses geographic width",
+    gallery_bar is not None
+    and gallery_bar.unitsPerSegment() >= 5.0,
+)
+decorator_bar = add_scalebar_to_layout(geo_layout, map_item=geo_map)
+ok(
+    "designer scalebar uses geographic width",
+    decorator_bar is not None
+    and decorator_bar.unitsPerSegment() >= 5.0,
+)
 
 # ===========================================================================
 # REAL DATASET E2E (geostats_Sample_Dataset.gpkg)
 # ===========================================================================
-real_gpkg = r"C:\Users\YE\Downloads\geostats_Sample_Dataset.gpkg"
+real_gpkg = os.environ.get("ZERO2CARTOLAB_REAL_GPKG", "")
 if os.path.exists(real_gpkg):
     print("\n--- Real Dataset Testing (geostats_Sample_Dataset.gpkg) ---")
     real_layer = QgsVectorLayer(real_gpkg, "real_geostats", "ogr")

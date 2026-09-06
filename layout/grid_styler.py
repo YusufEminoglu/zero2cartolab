@@ -2,6 +2,7 @@
 """Minimalist coordinate-grid styler for print layouts."""
 from __future__ import annotations
 
+from contextlib import suppress
 from typing import Optional
 
 from qgis.core import QgsLayoutItemMapGrid, QgsLayout, QgsLineSymbol
@@ -72,7 +73,11 @@ def apply_minimalist_grid(
     grid.setLineSymbol(QgsLineSymbol.createSimple({"color": "#cbd5e1", "width": "0.15"}))
 
     grid.setAnnotationEnabled(True)
-    grid.setAnnotationPrecision(0)
+    is_geographic = False
+    with suppress(Exception):
+        crs = map_item.crs()
+        is_geographic = bool(crs is not None and crs.isValid() and crs.isGeographic())
+    grid.setAnnotationPrecision(2 if is_geographic and interval_x >= 0.05 else 3 if is_geographic else 0)
     grid.setAnnotationFontColor(QColor("#666666"))
     grid.setAnnotationFrameDistance(2.0)
 

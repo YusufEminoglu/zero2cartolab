@@ -34,17 +34,18 @@ try:
         QgsFillSymbol,
         QgsDistanceArea,
         QgsPointXY,
+        QgsCoordinateTransform,
     )
     _MM = QgsUnitTypes.LayoutUnit.LayoutMillimeters
 except ImportError:
     QColor = QFont = QPolygonF = QPointF = None
     QgsProject = QgsPrintLayout = QgsLayoutItemMap = QgsLayoutItemLabel = QgsLayoutItemLegend = None
     QgsLayoutItemScaleBar = QgsLayoutItemPicture = QgsLayoutItemPolygon = QgsLayoutPoint = QgsLayoutSize = None
-    QgsDistanceArea = QgsPointXY = None
+    QgsDistanceArea = QgsPointXY = QgsCoordinateTransform = None
     _MM = 0
 
-from ..core.layout_math import map_width_to_km, page_size_mm, nice_scalebar_segments
-from .layout_utils import unique_layout_name, north_arrow_svg_path
+from ..core.layout_math import fitted_scalebar_segments, map_width_to_km, page_size_mm
+from .layout_utils import unique_layout_name
 
 # A real font fallback chain with standard installed Windows/Unix fonts
 _FONT_FAMILIES = ["Segoe UI", "Arial", "Helvetica", "sans-serif"]
@@ -78,8 +79,32 @@ def _resolve_layers(iface, project: QgsProject) -> List:
     ] or list(project.mapLayers().values())
 
 
-def _resolve_extent(iface, layers) -> Optional[QgsRectangle]:
-    """Current canvas extent if possible, else the combined extent of layers."""
+def _resolve_crs(iface, project: QgsProject, layers):
+    """Resolve canvas/project CRS, preferring a valid input-layer CRS headlessly."""
+    if iface is not None:
+        with suppress(Exception):
+            crs = iface.mapCanvas().mapSettings().destinationCrs()
+            if crs is not None and crs.isValid():
+                return crs
+    for layer in layers or []:
+        with suppress(Exception):
+            crs = layer.crs()
+            if crs is not None and crs.isValid():
+                return crs
+    with suppress(Exception):
+        crs = project.crs()
+        if crs is not None and crs.isValid():
+            return crs
+    return None
+
+
+def _resolve_extent(
+    iface,
+    layers,
+    target_crs=None,
+    project: Optional[QgsProject] = None,
+) -> Optional[QgsRectangle]:
+    """Current canvas extent, else layer extents transformed to one CRS."""
     if iface is not None:
         with suppress(Exception):
             ext = iface.mapCanvas().extent()
@@ -91,6 +116,17 @@ def _resolve_extent(iface, layers) -> Optional[QgsRectangle]:
             le = layer.extent()
             if le is None or le.isEmpty():
                 continue
+            layer_crs = layer.crs()
+            if (
+                target_crs is not None
+                and target_crs.isValid()
+                and layer_crs is not None
+                and layer_crs.isValid()
+                and layer_crs != target_crs
+                and QgsCoordinateTransform is not None
+            ):
+                context = project.transformContext() if project is not None else QgsProject.instance().transformContext()
+                le = QgsCoordinateTransform(layer_crs, target_crs, context).transformBoundingBox(le)
             if extent is None:
                 extent = QgsRectangle(le)
             else:
@@ -103,6 +139,14 @@ def _distance_kilometres_unit():
         QgsUnitTypes,
         "DistanceKilometers",
         getattr(getattr(QgsUnitTypes, "DistanceUnit", None), "DistanceKilometers", 1),
+    )
+
+
+def _distance_metres_unit():
+    return getattr(
+        QgsUnitTypes,
+        "DistanceMeters",
+        getattr(getattr(QgsUnitTypes, "DistanceUnit", None), "DistanceMeters", 0),
     )
 
 
@@ -138,14 +182,21 @@ def _geodesic_extent_width_km(extent: QgsRectangle, crs, project: QgsProject) ->
             distance.setSourceCrs(crs, project.transformContext())
         if project is not None and hasattr(project, "ellipsoid"):
             ellipsoid = project.ellipsoid()
-            if ellipsoid:
-                distance.setEllipsoid(ellipsoid)
+        else:
+            ellipsoid = ""
+        if not ellipsoid or str(ellipsoid).upper() == "NONE":
+            with suppress(Exception):
+                ellipsoid = crs.ellipsoidAcronym()
+        distance.setEllipsoid(ellipsoid or "WGS84")
         mid_y = (float(extent.yMinimum()) + float(extent.yMaximum())) * 0.5
-        width_m = distance.measureLine(
+        width = distance.measureLine(
             QgsPointXY(float(extent.xMinimum()), mid_y),
             QgsPointXY(float(extent.xMaximum()), mid_y),
         )
-        width_km = map_width_to_km(float(width_m), 0.001)
+        unit_to_km = QgsUnitTypes.fromUnitToUnitFactor(
+            distance.lengthUnits(), _distance_kilometres_unit()
+        )
+        width_km = map_width_to_km(float(width), float(unit_to_km))
     return width_km
 
 
@@ -166,6 +217,51 @@ def _map_extent_width_km(map_item: QgsLayoutItemMap, project: QgsProject) -> flo
         return _fallback_geographic_width_km(extent)
 
     return map_width_to_km(float(extent.width()), _crs_unit_to_km(crs))
+
+
+def _configure_scalebar(
+    bar: QgsLayoutItemScaleBar,
+    map_item: QgsLayoutItemMap,
+    project: QgsProject,
+    *,
+    max_width_mm: float,
+    target_segments: int = 3,
+) -> bool:
+    """Configure a metric scale bar that stays inside its layout budget."""
+    if bar is None or map_item is None:
+        return False
+    map_w_km = _map_extent_width_km(map_item, project)
+    if map_w_km <= 0:
+        return False
+
+    map_frame_w_mm = 0.0
+    with suppress(Exception):
+        map_frame_w_mm = float(map_item.rect().width())
+    if map_frame_w_mm <= 0:
+        map_frame_w_mm = max_width_mm * 3.0
+
+    seg_km, n_right, n_left = fitted_scalebar_segments(
+        map_w_km,
+        map_frame_w_mm,
+        max_width_mm,
+        target_segments=target_segments,
+    )
+    use_metres = map_w_km < 5.0
+    bar.setUnits(_distance_metres_unit() if use_metres else _distance_kilometres_unit())
+    bar.setUnitLabel("m" if use_metres else "km")
+    # QgsLayoutItemScaleBar converts its selected distance unit against the
+    # linked map CRS. A non-1 manual factor is an additional divisor and would
+    # corrupt labels (for example 0.5 km becoming 0.0005 km).
+    bar.setMapUnitsPerScaleBarUnit(1.0)
+    bar.setNumberOfSegments(n_right)
+    bar.setNumberOfSegmentsLeft(n_left)
+    segment_display_units = seg_km * 1000.0 if use_metres else seg_km
+    bar.setUnitsPerSegment(segment_display_units)
+    with suppress(Exception):
+        bar.setMaximumBarWidth(float(max_width_mm))
+    with suppress(Exception):
+        bar.resizeToMinimumWidth()
+    return True
 
 
 def create_map_sheet(
@@ -219,15 +315,11 @@ def create_map_sheet(
 
     project = project or QgsProject.instance()
     layers = layers if layers is not None else _resolve_layers(iface, project)
-    extent = extent if extent is not None else _resolve_extent(iface, layers)
     if crs is None:
-        if iface is not None:
-            try:
-                crs = iface.mapCanvas().mapSettings().destinationCrs()
-            except Exception:
-                crs = project.crs()
-        else:
-            crs = project.crs()
+        crs = _resolve_crs(iface, project, layers)
+    extent = extent if extent is not None else _resolve_extent(
+        iface, layers, target_crs=crs, project=project
+    )
 
     layout = QgsPrintLayout(project)
     layout.initializeDefaults()
@@ -286,6 +378,7 @@ def create_map_sheet(
     if add_title:
         text = title or project.title() or "Map"
         label = QgsLayoutItemLabel(layout)
+        label.setId("cartolab_title")
         label.setText(text)
         label.setBackgroundEnabled(False)
         label.setFrameEnabled(False)
@@ -297,6 +390,7 @@ def create_map_sheet(
 
         if subtitle:
             sub = QgsLayoutItemLabel(layout)
+            sub.setId("cartolab_subtitle")
             sub.setText(subtitle)
             sub.setBackgroundEnabled(False)
             sub.setFrameEnabled(False)
@@ -309,6 +403,7 @@ def create_map_sheet(
     # --- legend ----------------------------------------------------------
     if add_legend:
         legend = QgsLayoutItemLegend(layout)
+        legend.setId("cartolab_legend")
         legend.setLinkedMap(map_item)
         legend.setLegendFilterByMapEnabled(True)
         legend.setResizeToContents(True)
@@ -334,27 +429,23 @@ def create_map_sheet(
     # --- scale bar -------------------------------------------------------
     if add_scalebar:
         bar = QgsLayoutItemScaleBar(layout)
+        bar.setId("cartolab_scalebar")
         bar.setLinkedMap(map_item)
         bar.applyDefaultSettings()
         bar.setStyle("Line Ticks Up" if preset == "swiss_modern" else "Single Box")
         bar.applyDefaultSize()
 
-        unit_km = _distance_kilometres_unit()
-        bar.setUnits(unit_km)
-        bar.setUnitLabel("km")
         bar.setNumberOfSegments(3)
         bar.setNumberOfSegmentsLeft(0)
         bar.setBackgroundEnabled(False)
         bar.setFrameEnabled(False)
-        ext = map_item.extent()
-        if ext and not ext.isEmpty():
-            map_w_km = _map_extent_width_km(map_item, project)
-            if map_w_km <= 0:
-                map_w_km = 10.0
-            seg_km, n_right, n_left = nice_scalebar_segments(map_w_km, target_segments=3)
-            bar.setNumberOfSegments(n_right)
-            bar.setNumberOfSegmentsLeft(n_left)
-            bar.setUnitsPerSegment(seg_km)
+        _configure_scalebar(
+            bar,
+            map_item,
+            project,
+            max_width_mm=max(32.0, map_w * 0.32),
+            target_segments=3,
+        )
         with suppress(Exception):
             tf_sb = bar.textFormat()
             tf_sb.setFont(_font(8.0))
@@ -372,6 +463,7 @@ def create_map_sheet(
     # --- credits ---------------------------------------------------------
     if credits:
         cred = QgsLayoutItemLabel(layout)
+        cred.setId("cartolab_credits")
         cred.setText(credits)
         cred.setBackgroundEnabled(False)
         cred.setFrameEnabled(False)

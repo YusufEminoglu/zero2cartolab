@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from contextlib import suppress
 
-import math
-
 from qgis.PyQt.QtCore import QVariant
 from qgis.PyQt.QtGui import QColor
 from qgis.core import (

@@ -11,10 +11,10 @@ from __future__ import annotations
 
 import math
 import re
-from typing import List, Tuple, Optional
+from typing import List, Tuple
 
 from qgis.core import (
-    QgsFeature, QgsGeometry, QgsVectorLayer,
+    QgsGeometry, QgsVectorLayer,
 )
 
 from .utils import safe_float

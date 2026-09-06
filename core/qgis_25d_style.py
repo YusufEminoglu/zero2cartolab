@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Native QGIS 2.5D styling helpers for 0202CartoLab."""
+"""Native QGIS 2.5D styling helpers for 02CartoLab."""
 from __future__ import annotations
 
 from contextlib import suppress
@@ -402,7 +402,7 @@ def build_style_summary(layer_name: str, config: Style25DConfig, resolved_max_fl
     render_label = "per-floor colour bands" if config.render_mode == RENDER_MODE_FLOOR_BANDS else "native 2.5D"
     palette_label = FLOOR_BAND_PALETTES.get(config.floor_palette, FLOOR_BAND_PALETTES["civic_spectrum"])["label"]
     lines = [
-        "0202CartoLab 2.5D style applied",
+        "02CartoLab 2.5D style applied",
         f"Layer: {layer_name}",
         f"Height field: {config.height_field}",
         f"Height source: {mode_label}",

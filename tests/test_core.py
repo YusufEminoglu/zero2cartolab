@@ -9,8 +9,8 @@ from __future__ import annotations
 import math
 import os
 import sys
+import tempfile
 import types
-import traceback
 
 # ---------------------------------------------------------------------------
 # Mock qgis.* so we can import core modules outside QGIS
@@ -130,7 +130,7 @@ failed = 0
 errors = []
 
 def check(name, cond, detail=""):
-    global passed, failed, errors
+    global passed, failed
     if cond:
         passed += 1
     else:
@@ -292,6 +292,12 @@ check("VbA small set range ok", all(10 <= a <= 200 for a in alphas2))
 # Identical reliability — all max alpha
 alphas3 = be.compute_alpha_values([10, 20, 30], [50, 50, 50], 0, 255)
 check("VbA identical reliability", len(set(alphas3)) == 1, str(alphas3))
+
+# Sparse valid values must follow the same null policy as the Jenks path.
+alphas4 = be.compute_alpha_values([10, 20, 30], [1, None, 3], 30, 255)
+check("VbA sparse null keeps output aligned", len(alphas4) == 3, str(alphas4))
+check("VbA sparse null uses minimum opacity", alphas4[1] == 30, str(alphas4))
+check("VbA sparse values stay bounded", all(30 <= a <= 255 for a in alphas4))
 
 # ===================================================================
 # 3. AFFINE MATRIX
@@ -698,10 +704,16 @@ check("page A4 landscape swaps axes", lm.page_size_mm("A4", landscape=True) == (
 check("page unknown falls back to A4",
       lm.page_size_mm("ZZ", landscape=False) == (210.0, 297.0))
 check("page A3 landscape", lm.page_size_mm("A3", landscape=True) == (420.0, 297.0))
+check("page square is genuinely square", lm.page_size_mm("SQUARE") == (250.0, 250.0))
 check("map_width_to_km metres", lm.map_width_to_km(12500.0, 0.001) == 12.5)
 check("map_width_to_km kilometres factor", lm.map_width_to_km(12.5, 1.0) == 12.5)
 check("map_width_to_km rejects invalid",
       lm.map_width_to_km(-1.0, 0.001) == 0.0 and lm.map_width_to_km(10.0, 0.0) == 0.0)
+fit_seg, fit_right, fit_left = lm.fitted_scalebar_segments(450.0, 220.0, 55.0, 3)
+fit_physical_mm = (fit_seg * fit_right / 450.0) * 220.0
+check("fitted scalebar respects narrow sidebar", fit_physical_mm <= 55.0,
+      (fit_seg, fit_right, fit_physical_mm))
+check("fitted scalebar uses clean segment", fit_seg in (1, 2, 5, 10, 20, 50, 100))
 
 # ===================================================================
 # 14. PALETTES — ColorBrewer + scientific colour ramps
@@ -1037,12 +1049,15 @@ check("FloatingAnnotationTool class exists", hasattr(fa, "FloatingAnnotationTool
 # ===================================================================
 section("Template Gallery & Publication Archetypes")
 from zero2cartolab.layout import template_gallery as tg
-check("TEMPLATE_GALLERY exists and has 5 archetypes", len(tg.TEMPLATE_GALLERY) == 5)
+check("TEMPLATE_GALLERY exists and has 10 archetypes", len(tg.TEMPLATE_GALLERY) == 10)
 check("report_figure template registered", "report_figure" in tg.TEMPLATE_GALLERY)
 check("academic_journal template registered", "academic_journal" in tg.TEMPLATE_GALLERY)
 check("exhibition_poster template registered", "exhibition_poster" in tg.TEMPLATE_GALLERY and tg.get_template_info("poster_exhibition") is not None)
 check("fact_sheet template registered", "fact_sheet" in tg.TEMPLATE_GALLERY)
 check("diptych template registered", "diptych" in tg.TEMPLATE_GALLERY and tg.get_template_info("side_by_side_diptych") is not None)
+for _advanced_template in ("utm_field_sheet", "planning_board", "data_story",
+                           "atlas_production", "emergency_brief"):
+    check(f"advanced template {_advanced_template} registered", _advanced_template in tg.TEMPLATE_GALLERY)
 
 check("create_report_figure is callable", callable(tg.create_report_figure))
 check("create_academic_journal is callable", callable(tg.create_academic_journal))
@@ -1067,6 +1082,35 @@ try:
 except ValueError:
     check("create_template_layout raises on invalid id", True)
 
+from zero2cartolab.layout.grid_presets import GRID_PRESETS, list_grid_presets
+check("grid gallery has 7 compositions", len(GRID_PRESETS) == 7)
+check("grid gallery includes layered UTM field preset",
+      len(GRID_PRESETS["utm_field"]["components"]) == 2)
+check("grid gallery includes dual CRS reference preset",
+      len(GRID_PRESETS["dual_reference"]["components"]) == 2)
+check("grid preset metadata is serializable", all(meta.get("id") for meta in list_grid_presets()))
+
+from zero2cartolab.layout.qpt_inspector import format_qpt_report, inspect_qpt
+_qpt_xml = """<Layout units="mm" printResolution="300" name="UTM Test">
+<PageCollection><LayoutItem type="65638" id="" size="297,210,mm" position="0,0,mm"/></PageCollection>
+<LayoutItem type="65639" id="Map 1" size="250,170,mm" position="20,20,mm">
+<ComposerMapGrid name="UTM" show="1" annotationExpression="mgrs_gzd(0,0,'EPSG:32635')"/>
+</LayoutItem><LayoutItem type="65641" id="Info" size="80,20,mm" position="-90,10,mm"/>
+</Layout>"""
+_qpt_fd, _qpt_path = tempfile.mkstemp(suffix=".qpt")
+os.close(_qpt_fd)
+with open(_qpt_path, "w", encoding="utf-8") as _qpt_handle:
+    _qpt_handle.write(_qpt_xml)
+_qpt_report = inspect_qpt(_qpt_path)
+os.remove(_qpt_path)
+check("QPT inspector identifies grid stack", _qpt_report["grid_count"] == 1)
+check("QPT inspector detects external MGRS dependency",
+      _qpt_report["external_functions"] == ["mgrs_gzd"])
+check("QPT inspector blocks unsafe external-function import", not _qpt_report["safe_to_import"])
+check("QPT inspector detects off-page item", any("outside" in w for w in _qpt_report["warnings"]))
+check("QPT report formatter includes compatibility notes",
+      "Compatibility notes" in format_qpt_report(_qpt_report))
+
 # ===================================================================
 # SUMMARY
 # ===================================================================
@@ -1082,4 +1126,3 @@ if __name__ == "__main__":
         sys.exit(1)
     else:
         sys.exit(0)
-

@@ -1,14 +1,14 @@
 <div align="center">
 
-![0202CartoLab](media/banner.png)
+![02CartoLab](media/banner.png)
 
-# 0202CartoLab
+# 02CartoLab
 
 **Publication-grade cartography — without leaving QGIS.**
 
 [![Release](https://img.shields.io/github/v/release/YusufEminoglu/zero2cartolab?color=3b4994&label=release)](https://github.com/YusufEminoglu/zero2cartolab/releases)
 [![License: GPL v3](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
-[![Documentation](https://img.shields.io/badge/📖_Reference_Manual-13a0a0)](https://yusufeminoglu.github.io/YusufEminoglu/zero2cartolab/)
+[![Documentation](https://img.shields.io/badge/📖_Reference_Manual-13a0a0)](https://yusufeminoglu.github.io/zero2cartolab/)
 [![QGIS](https://img.shields.io/badge/QGIS-3.28%20LTR%20%E2%86%92%204.x-589632?logo=qgis&logoColor=white)](https://qgis.org)
 [![Showcase](https://img.shields.io/badge/showcase-GitHub%20Pages-be64ac)](docs/index.html)
 [![Part of PlanX](https://img.shields.io/badge/suite-PlanX-ff8a3d)](https://github.com/YusufEminoglu/PlanX)
@@ -38,7 +38,7 @@ The map types journals and design studios actually ask for —
 | 🗺 **Shape as data** | Continuous-area **cartograms** distort polygons by value; **ridge-line maps** turn any raster (DEM, heat, density, accessibility) into joy-division-style relief. |
 | 📊 **Point & density cartography** | **Dot-density**, Flannery **proportional symbols** and **hexbin** aggregation turn raw points and counts into honest density maps — plus visual-center **label anchors** (polylabel) and coordinate **graticules**. |
 | 🧮 **Choropleth done right** | One-step **normalization** — rates per capita, z-score, robust MAD-z, percentile rank and log — so you map *rates*, not population. |
-| 🖨 **Auto layouts** | One-click **Auto Map Sheet** builds a finished print layout from the current view — titled map frame, filtered legend, scale bar, north arrow, coordinate grid and credits — then opens it in the Designer. Plus a **Layout Manager** (open, duplicate, delete, export PNG/PDF) and decorators: native bivariate legends, isometric layer stacks, minimalist grids and typography hierarchy. |
+| 🖨 **Auto layouts** | One-click **Auto Map Sheet** builds a finished print layout from the current view — titled map frame, filtered legend, fitted scale bar, north arrow, coordinate grid and credits — then opens it in the Designer. Ten publication templates, seven grid compositions, safe QPT inspection, atomic PNG/PDF/SVG export, and **Print Preflight** cover the full production workflow. |
 
 Built for planners, urban researchers, studios and academic cartography workflows.
 
@@ -46,7 +46,7 @@ Built for planners, urban researchers, studios and academic cartography workflow
 
 ## 🛠 Module Catalog
 
-Everything is reachable from the **02CartoLab Dashboard** (`Plugins → 0202CartoLab`) and the **Processing Toolbox → 0202CartoLab** provider:
+Everything is reachable from the **02CartoLab Dashboard** (`Plugins → 02CartoLab`) and the **Processing Toolbox → 02CartoLab** provider:
 
 | Module | What it does | Surface |
 |---|---|---|
@@ -64,10 +64,13 @@ Everything is reachable from the **02CartoLab Dashboard** (`Plugins → 0202Cart
 | **Visual-Center Label Points** | Pole-of-inaccessibility (polylabel) anchors that always sit inside the shape | Processing |
 | **Graticule / Reference Grid** | Meridians & parallels on nice intervals, each carrying a coordinate label | Processing |
 | **Choropleth Normalization & Rates** | Rate, z-score, robust z, min-max, percentile rank, log — prep before classifying | Processing |
-| **Layout Template Gallery** | 5 publication archetypes: Report Figure (16:9), Academic Journal (2-col), Exhibition Poster (A1/A2), Fact Sheet, Comparative Diptych | Dashboard → Layout Studio |
+| **Layout Template Gallery** | 10 publication archetypes: Report Figure, Academic Journal, Exhibition Poster, Fact Sheet, Diptych, UTM Field Sheet, Planning Review Board, Spatial Data Story, Atlas Production Sheet, Emergency Operations Brief | Dashboard → Layout Studio |
+| **Grid Preset Gallery** | 7 idempotent compositions: minimal, UTM engineering, layered UTM field, survey crosshair, marginal ticks, WGS 84 graticule, and dual UTM + geographic reference | Dashboard + Print Layout Designer dock |
+| **QPT Inspector** | Audits page/items/grid stacks, off-page content, stable IDs, and external expression dependencies before importing a QGIS template | Dashboard → Grid + QPT Studio |
 | **Auto Map Sheet** | Complete print layout from the current view — map, legend, scale bar, north arrow, grid, credits — in one click | Dashboard → Layout Studio |
 | **Layout Manager** | List, open, duplicate, delete and export (PNG / PDF / SVG, 96–600 dpi) project layouts | Dashboard → Layout Studio |
 | **Layout Decorators** | Native bivariate legends, 3D isometric layer stacks, idempotent minimalist grids, typography hierarchy, paper themes | Dashboard → Layout Studio |
+| **Print Preflight** | Non-mutating publication check for page overflow, duplicate IDs, empty/tiny map frames, unlinked legends/scale bars and empty labels | Dashboard or Print Layout Designer dock |
 
 ---
 
@@ -90,7 +93,7 @@ The flagship module — a better, reusable version of the QML extrusion styles p
 An interactive, GitHub Pages-ready showcase lives in [`docs/index.html`](docs/index.html) — 2.5D canvas scene, feature map, workflow narrative and publication-oriented positioning.
 
 ```text
-GitHub Pages source →  Branch: master   Folder: /docs
+GitHub Pages source →  Branch: main   Folder: /docs
 ```
 
 More: [Documentation index](docs/README.md) · [Feature showcase](docs/SHOWCASE.md) · [Architecture](docs/ARCHITECTURE.md) · [Publishing notes](docs/PUBLISHING.md)
@@ -100,7 +103,7 @@ More: [Documentation index](docs/README.md) · [Feature showcase](docs/SHOWCASE.
 ## 📦 Installation
 
 **From QGIS Plugin Hub** *(recommended)*
-> `Plugins → Manage and Install Plugins…` → search **0202CartoLab** → Install.
+> `Plugins → Manage and Install Plugins…` → search **02CartoLab** → Install.
 
 **From ZIP**
 > Download the latest zip from [Releases](https://github.com/YusufEminoglu/zero2cartolab/releases) → `Plugins → Install from ZIP`.
@@ -125,7 +128,7 @@ zero2cartolab/
 
 ## 🇹🇷 Türkçe Özet
 
-**0202CartoLab**, sıradan CBS katmanlarını **yayın kalitesinde analitik haritalara** dönüştüren bir QGIS eklentisidir:
+**02CartoLab**, sıradan CBS katmanlarını **yayın kalitesinde analitik haritalara** dönüştüren bir QGIS eklentisidir:
 
 - **2.5D bina stillemesi:** `Kat_Sayisi` gibi kat alanlarından yerli QGIS renderer ile ekstrüzyon; **kat başına renk bandı ve lejant satırı**, otomatik en yüksek kat tespiti, gölge/duvar gölgelemesi ve tek tıkla QML dışa aktarımı. Elden ele dolaşan kırılgan QML bloklarının kalıcı, yeniden kullanılabilir hâli.
 - **İki değişkenli haritalar:** Bivariate koroplet (3×3 palet, özel köşe renkleri, eşkenar/dörtgen lejantlar) ve güvenilirliği saydamlıkla gösteren **Value-by-Alpha**.
@@ -135,13 +138,13 @@ zero2cartolab/
 - **Doğru koroplet:** Tek adımda normalleştirme (kişi başına oran, z-skoru, dayanıklı MAD-z, yüzdelik, log) — nüfusu değil *oranı* haritalayın.
 - **Otomatik sayfa düzeni:** Tek tıkla **Otomatik Harita Sayfası** — geçerli görünümden başlıklı harita çerçevesi, lejant, ölçek çubuğu, kuzey oku, koordinat ızgarası ve künye içeren tam bir baskı düzeni oluşturur ve Tasarımcı'da açar. Ayrıca **Düzen Yöneticisi** (aç, çoğalt, sil, PNG/PDF dışa aktar) ve dekoratörler: yerli bivariate lejantlar, izometrik katman istifi, tipografi hiyerarşisi.
 
-Kurulum: QGIS → *Eklentiler → Eklentileri Yönet ve Kur* → **0202CartoLab** aratın. Pano: *Eklentiler → 0202CartoLab → 02CartoLab Dashboard*.
+Kurulum: QGIS → *Eklentiler → Eklentileri Yönet ve Kur* → **02CartoLab** aratın. Pano: *Eklentiler → 02CartoLab → 02CartoLab Dashboard*.
 
 ---
 
 ## 🧩 Part of the PlanX ecosystem
 
-This plugin is one of 15 open-source QGIS plugins for urban planning by the same author:
+This plugin is part of an open-source QGIS plugin ecosystem for urban planning by the same author:
 
 | Planning & analysis | CAD & production | 3D & visualization |
 |---|---|---|

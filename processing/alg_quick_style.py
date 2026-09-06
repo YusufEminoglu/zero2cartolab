@@ -25,7 +25,6 @@ from qgis.core import (
 from ..core import palettes as pal
 from ..core import quick_style as qs
 from ..core.utils import safe_float
-from ..core.bivariate_engine import geometric_interval_breaks
 from ._help_mixin import CartoLabHelpMixin
 
 _MODE_AUTO, _MODE_GRAD, _MODE_CAT = 0, 1, 2

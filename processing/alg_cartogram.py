@@ -15,9 +15,6 @@ from qgis.core import (
     QgsProcessingParameterField,
     QgsProcessingParameterNumber,
     QgsProcessingOutputNumber,
-    QgsVectorLayer,
-    QgsWkbTypes,
-    QgsFeature,
 )
 from qgis import processing
 
@@ -165,4 +162,3 @@ class CartogramAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
             self.ITERATIONS: iterations,
             self.RESIDUAL_ERROR: error_pct,
         }
-

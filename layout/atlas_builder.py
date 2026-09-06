@@ -16,6 +16,7 @@ from typing import Optional, Tuple
 try:
     from qgis.core import (
         QgsFillSymbol,
+        QgsExpression,
         QgsLayout,
         QgsLayoutItemLabel,
         QgsLayoutItemLegend,
@@ -39,7 +40,7 @@ try:
 except ImportError:
     QgsLayout = QgsLayoutItemLabel = QgsLayoutItemLegend = QgsLayoutItemMap = QgsLayoutItemShape = QgsLayoutItemScaleBar = None
     QgsLayoutMeasurement = QgsLayoutPoint = QgsLayoutSize = QgsPrintLayout = QgsProject = QgsUnitTypes = QgsVectorLayer = None
-    QgsFillSymbol = QFont = QColor = None
+    QgsFillSymbol = QgsExpression = QFont = QColor = None
     _MM = 0
 
 from .locator_map import add_locator_inset_map
@@ -91,6 +92,17 @@ def setup_layout_atlas(
     if atlas is None:
         return False
 
+    if filter_expression and QgsExpression is not None:
+        expression = QgsExpression(filter_expression)
+        if expression.hasParserError():
+            return False
+
+    # Generated atlas furniture is replaced on repeated runs instead of stacked.
+    for item in list(layout.items()):
+        with suppress(Exception):
+            if (item.id() or "").startswith("cartolab_atlas_"):
+                layout.removeLayoutItem(item)
+
     # 1. Configure Atlas Engine
     atlas.setEnabled(True)
     atlas.setCoverageLayer(coverage_layer)
@@ -103,14 +115,17 @@ def setup_layout_atlas(
         atlas_title_expr = "[% @atlas_pagename %]"
 
     if filter_expression:
-        with suppress(Exception):
-            atlas.setFilterExpression(filter_expression)
-            atlas.setFilterFeatures(True)
+        atlas.setFilterExpression(filter_expression)
+        atlas.setFilterFeatures(True)
+    else:
+        atlas.setFilterFeatures(False)
 
     if sort_field and sort_field in [f.name() for f in coverage_layer.fields()]:
-        with suppress(Exception):
-            atlas.setSortKeyAttributeName(sort_field)
-            atlas.setSortAscending(sort_ascending)
+        atlas.setSortExpression(f'"{sort_field}"')
+        atlas.setSortAscending(sort_ascending)
+        atlas.setSortFeatures(True)
+    else:
+        atlas.setSortFeatures(False)
 
     # 2. Page Dimensions & Geometry Budget
     page = layout.pageCollection().page(0) if layout.pageCollection() else None
@@ -167,6 +182,7 @@ def setup_layout_atlas(
         banner_w = page_w - (2 * page_margin_mm)
         if QgsLayoutItemShape is not None:
             banner_card = QgsLayoutItemShape(layout)
+            banner_card.setId("cartolab_atlas_banner")
             if hasattr(QgsLayoutItemShape, "Shape") and hasattr(QgsLayoutItemShape.Shape, "Rectangle"):
                 banner_card.setShapeType(QgsLayoutItemShape.Shape.Rectangle)
             elif hasattr(QgsLayoutItemShape, "Rectangle"):
@@ -186,6 +202,7 @@ def setup_layout_atlas(
         # Header Title (Dynamic)
         title_text = banner_title if banner_title else f"Map Series: {atlas_title_expr}"
         lbl_b_title = QgsLayoutItemLabel(layout)
+        lbl_b_title.setId("cartolab_atlas_title")
         lbl_b_title.setText(title_text)
         lbl_b_title.setBackgroundEnabled(False)
         lbl_b_title.setFrameEnabled(False)
@@ -202,6 +219,7 @@ def setup_layout_atlas(
         # Header Subtitle
         sub_text = banner_subtitle if banner_subtitle else "Automated Atlas Map Book · PlanX CartoLab"
         lbl_b_sub = QgsLayoutItemLabel(layout)
+        lbl_b_sub.setId("cartolab_atlas_subtitle")
         lbl_b_sub.setText(sub_text)
         lbl_b_sub.setBackgroundEnabled(False)
         lbl_b_sub.setFrameEnabled(False)
@@ -216,6 +234,7 @@ def setup_layout_atlas(
 
         # Dynamic Page Counter on Right of Banner
         lbl_b_counter = QgsLayoutItemLabel(layout)
+        lbl_b_counter.setId("cartolab_atlas_counter")
         lbl_b_counter.setText(page_counter_format)
         lbl_b_counter.setBackgroundEnabled(False)
         lbl_b_counter.setFrameEnabled(False)
@@ -234,6 +253,7 @@ def setup_layout_atlas(
         has_atlas_title = any(isinstance(it, QgsLayoutItemLabel) and "atlas" in it.text().lower() for it in layout.items())
         if not has_atlas_title:
             lbl_title = QgsLayoutItemLabel(layout)
+            lbl_title.setId("cartolab_atlas_title")
             lbl_title.setText(f"Map Series: {atlas_title_expr}")
             if QFont is not None:
                 lbl_title.setFont(QFont("Inter, Segoe UI", 16, QFont.Weight.Bold))
@@ -246,6 +266,7 @@ def setup_layout_atlas(
         has_counter = any(isinstance(it, QgsLayoutItemLabel) and "@atlas_featurenumber" in it.text() for it in layout.items())
         if not has_counter:
             lbl_counter = QgsLayoutItemLabel(layout)
+            lbl_counter.setId("cartolab_atlas_counter")
             lbl_counter.setText(page_counter_format)
             if QFont is not None:
                 lbl_counter.setFont(QFont("Inter, Segoe UI", 10, QFont.Weight.DemiBold))

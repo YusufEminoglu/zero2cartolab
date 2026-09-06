@@ -7,7 +7,7 @@ typography hierarchies for all label items in QGIS Print Layouts.
 """
 from __future__ import annotations
 
-from typing import Dict, Tuple
+from typing import Dict
 
 try:
     from qgis.core import QgsLayout, QgsLayoutItemLabel
