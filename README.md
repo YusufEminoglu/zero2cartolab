@@ -6,12 +6,12 @@
 
 **Publication-grade cartography — without leaving QGIS.**
 
-[![Release](https://img.shields.io/github/v/release/YusufEminoglu/zero2cartolab?color=3b4994&label=release)](https://gitlab.com/geospacephilo/EasyFillet/releases)
+[![Release](https://img.shields.io/github/v/release/YusufEminoglu/zero2cartolab?color=3b4994&label=release)](https://github.com/YusufEminoglu/zero2cartolab/releases)
 [![License: GPL v3](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
 [![Documentation](https://img.shields.io/badge/📖_Reference_Manual-13a0a0)](https://geophilo.com/zero2cartolab/)
 [![QGIS](https://img.shields.io/badge/QGIS-3.28%20LTR%20%E2%86%92%204.x-589632?logo=qgis&logoColor=white)](https://qgis.org)
 [![Showcase](https://img.shields.io/badge/showcase-GitHub%20Pages-be64ac)](docs/index.html)
-[![Part of PlanX](https://img.shields.io/badge/suite-PlanX-ff8a3d)](https://gitlab.com/geospacephilo/EasyFillet)
+[![Part of PlanX](https://img.shields.io/badge/suite-PlanX-ff8a3d)](https://github.com/YusufEminoglu/zero2cartolab)
 
 The map types journals and design studios actually ask for —
 **2.5D buildings, bivariate choropleths, Value-by-Alpha, cartograms, ridge maps, dot-density & proportional symbols, hexbins, visual-center labels and automated layouts** — as native QGIS styling, not fragile pasted QML.
@@ -106,7 +106,7 @@ More: [Documentation index](docs/README.md) · [Feature showcase](docs/SHOWCASE.
 > `Plugins → Manage and Install Plugins…` → search **02CartoLab** → Install.
 
 **From ZIP**
-> Download the latest zip from [Releases](https://gitlab.com/geospacephilo/EasyFillet/releases) → `Plugins → Install from ZIP`.
+> Download the latest zip from [Releases](https://github.com/YusufEminoglu/zero2cartolab/releases) → `Plugins → Install from ZIP`.
 
 | Requirement | Value |
 |---|---|
@@ -148,17 +148,17 @@ This plugin is part of an open-source QGIS plugin ecosystem for urban planning b
 
 | Planning & analysis | CAD & production | 3D & visualization |
 |---|---|---|
-| [PlanX](https://gitlab.com/geospacephilo/EasyFillet) — spatial-planning suite | [PlanX CAD Toolset](https://gitlab.com/geospacephilo/EasyFillet) — drafting-grade CAD | [PlanX 3D City](https://gitlab.com/geospacephilo/EasyFillet) — Three.js city viewer |
-| [GeoStats Lab](https://gitlab.com/geospacephilo/EasyFillet) — spatial statistics | [EasyFillet](https://gitlab.com/geospacephilo/EasyFillet) — tangent-arc fillet | [3D OSM Model](https://gitlab.com/geospacephilo/EasyFillet) — OSM → 3D city in browser |
-| [Suitability Lab](https://gitlab.com/geospacephilo/EasyFillet) — raster MCDA | [Settlement Toolset](https://gitlab.com/geospacephilo/EasyFillet) — 9-stage settlement plans | [OSM Quick 3D](https://gitlab.com/geospacephilo/EasyFillet) — OSM → native QGIS 3D |
-| [DataCube Lab](https://gitlab.com/geospacephilo/EasyFillet) — spatiotemporal cubes | [UIP Toolset](https://gitlab.com/geospacephilo/EasyFillet) — Turkish master-plan automation | [Urban Procedural 3D](https://gitlab.com/geospacephilo/EasyFillet) — parametric zoning lab |
-| [Urban Resilience](https://gitlab.com/geospacephilo/EasyFillet) — 28 resilience tools | [ParcelFlux](https://gitlab.com/geospacephilo/EasyFillet) — parcel subdivision | [02CartoLab](https://gitlab.com/geospacephilo/EasyFillet) — publication cartography |
+| [PlanX](https://github.com/YusufEminoglu/zero2cartolab) — spatial-planning suite | [PlanX CAD Toolset](https://github.com/YusufEminoglu/zero2cartolab) — drafting-grade CAD | [PlanX 3D City](https://github.com/YusufEminoglu/zero2cartolab) — Three.js city viewer |
+| [GeoStats Lab](https://github.com/YusufEminoglu/zero2cartolab) — spatial statistics | [EasyFillet](https://github.com/YusufEminoglu/zero2cartolab) — tangent-arc fillet | [3D OSM Model](https://github.com/YusufEminoglu/zero2cartolab) — OSM → 3D city in browser |
+| [Suitability Lab](https://github.com/YusufEminoglu/zero2cartolab) — raster MCDA | [Settlement Toolset](https://github.com/YusufEminoglu/zero2cartolab) — 9-stage settlement plans | [OSM Quick 3D](https://github.com/YusufEminoglu/zero2cartolab) — OSM → native QGIS 3D |
+| [DataCube Lab](https://github.com/YusufEminoglu/zero2cartolab) — spatiotemporal cubes | [UIP Toolset](https://github.com/YusufEminoglu/zero2cartolab) — Turkish master-plan automation | [Urban Procedural 3D](https://github.com/YusufEminoglu/zero2cartolab) — parametric zoning lab |
+| [Urban Resilience](https://github.com/YusufEminoglu/zero2cartolab) — 28 resilience tools | [ParcelFlux](https://github.com/YusufEminoglu/zero2cartolab) — parcel subdivision | [02CartoLab](https://github.com/YusufEminoglu/zero2cartolab) — publication cartography |
 
 ---
 
 ## 🤝 Contributing & Support
 
-- 🐛 **Bugs / requests** → [Issues](https://gitlab.com/geospacephilo/EasyFillet/-/issues)
+- 🐛 **Bugs / requests** → [Issues](https://github.com/YusufEminoglu/zero2cartolab/issues)
 - 📜 **Changelog** → [CHANGELOG.md](CHANGELOG.md) follows *Keep a Changelog*
 - ✅ Before a PR: `py -3 tests/test_core.py` (headless, no QGIS required)
 
