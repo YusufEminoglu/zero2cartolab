@@ -221,7 +221,7 @@
   <div class="nav-inner">
     <div class="nav-logo">
       <span>02CartoLab</span>
-      <span class="logo-badge">v1.0.0</span>
+      <span class="logo-badge">v1.1.0</span>
     </div>
     <ul class="nav-links">
       <li><a href="#about">About</a></li>
@@ -604,6 +604,31 @@
       <h2 class="section-title">Release history</h2>
     </div>
     <div class="changelog-wrapper">
+      <div class="changelog-version">
+        <span class="version-badge">v1.1.0</span>
+        <span class="version-date">2026-09-06</span>
+        <span class="badge" style="font-size:0.72rem;padding:0.2rem 0.6rem;">Fixes &amp; Hardening</span>
+      </div>
+      <div class="changelog-entries">
+        <div class="changelog-entry">Automatic scale bars are now geodesic on geographic CRS maps and unit-aware and space-fitted on projected maps</div>
+        <div class="changelog-entry">Template CRS and combined extents now resolve from actual layers, with coordinate transformation for mixed-CRS inputs</div>
+        <div class="changelog-entry">The Square map-sheet option now creates a genuinely square page</div>
+        <div class="changelog-entry">Corrected atlas filtering/sorting (previously used a nonexistent QGIS sort method)</div>
+        <div class="changelog-entry">Repeated locator and atlas decoration is now idempotent, preventing duplicate furniture</div>
+        <div class="changelog-entry">PNG, PDF, and SVG export are now atomic so a failed render cannot destroy an existing file</div>
+        <div class="changelog-entry">Added a full Grid and QPT Studio with automatic/manual intervals and one-click dependency-free UTM migration</div>
+        <div class="changelog-entry">Expanded the layout gallery from 5 to 10 complete archetypes</div>
+        <div class="changelog-entry">Added QGIS 3/4 live regression and screenshot coverage across all publication archetypes</div>
+      </div>
+      <div class="changelog-version">
+        <span class="version-badge">v1.0.1</span>
+        <span class="version-date">2026-08-21</span>
+        <span class="badge" style="font-size:0.72rem;padding:0.2rem 0.6rem;">Fix</span>
+      </div>
+      <div class="changelog-entries">
+        <div class="changelog-entry">Fixed Isometric Layer Stacker resolving selected layers by non-unique display names &mdash; selections now carry stable QGIS layer IDs</div>
+        <div class="changelog-entry">Corrected the stale CITATION.cff release version and date</div>
+      </div>
       <div class="changelog-version">
         <span class="version-badge">v1.0.0</span>
         <span class="version-date">2026-08-20</span>

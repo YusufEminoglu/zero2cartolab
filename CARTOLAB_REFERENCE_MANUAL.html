@@ -384,11 +384,12 @@
     <li><a href="#algo16">16. Color Accessibility &amp; CVD Engine</a></li>
     <li><a href="#algo17">17. Solar Position &amp; Sun Lighting</a></li>
     <li><a href="#algo18">18. Scientific Color Ramps Library</a></li>
+    <li><a href="#algo19">19. Export Bivariate 2D Legend Matrix</a></li>
   </ul>
 
   <div class="sidebar-footer">
     <p>02CartoLab by Yusuf Emino&#x11F;lu<br>
-    v1.0.0 &middot; QGIS 3.x / 4.x<br>
+    v1.1.0 &middot; QGIS 3.x / 4.x<br>
     Cartography &amp; Thematic Mapping</p>
   </div>
 </aside>
@@ -397,7 +398,7 @@
 <main class="main" id="main-content">
 
   <h1>CartoLab <em>Academic Reference Manual</em></h1>
-  <p class="subtitle">Mathematical formulations, theoretical foundations, and verified literature for all 13 Processing algorithms and 5 advanced Layout Studio systems. Version 1.0.0.</p>
+  <p class="subtitle">Mathematical formulations, theoretical foundations, and verified literature for all 19 Processing algorithms and 5 advanced Layout Studio systems. Version 1.1.0.</p>
 
   <p style="color:var(--muted); max-width:760px;">
     This manual provides the complete theoretical apparatus behind every algorithm and layout engine in
@@ -2180,6 +2181,57 @@
         <tr><td><strong>IceFire</strong></td><td>Cyclic / Diverging</td><td>Yes</td><td>Temperature anomalies, thermal stress &amp; solar radiation</td></tr>
       </tbody>
     </table>
+  </section>
+
+  <!-- ═══════════════ ALGORITHM 19 ═══════════════ -->
+  <section class="algo-section" id="algo19">
+    <span class="algo-id">bivariate_matrix_export</span>
+    <span class="algo-group">Thematic Mapping</span>
+    <h2>19. Export Bivariate 2D Legend Matrix</h2>
+
+    <h3>Purpose</h3>
+    <p>
+      Generates a standalone $N \times N$ (2&times;2, 3&times;3, or 4&times;4) vector polygon layer
+      of the bivariate colour legend itself &mdash; the swatch grid explained in
+      <a href="#algo2">Algorithm 2, Bivariate Choropleth Map</a> &mdash; plus an HTML preview,
+      so the legend can be placed, styled and printed as its own map element rather than only
+      appearing inside a print layout item. Each output cell carries the same bilinear
+      corner-colour interpolation (Eq. 1 in Algorithm 2) used to style the choropleth itself,
+      so the two always match.
+    </p>
+
+    <h3>Parameters</h3>
+    <table>
+      <thead>
+        <tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Number of classes per axis</td><td>Integer</td><td>3</td><td>$N$ (2&ndash;4); produces $N^2$ legend cells</td></tr>
+        <tr><td>Colour Palette Preset</td><td>Enum</td><td>Teal &ndash; Brown</td><td>Stevens Pink-Cyan, Teal-Brown, Blue-Orange, Purple-Green, Night Neon, or Custom Corner Colours</td></tr>
+        <tr><td>4 corner colours</td><td>Colour (RGBA)</td><td>&mdash;</td><td>Bottom-Left / Top-Left / Bottom-Right / Top-Right anchors, used only when the preset is Custom</td></tr>
+        <tr><td>Rotate 45 degrees</td><td>Boolean</td><td>False</td><td>Draws the grid as a diamond legend instead of a square one</td></tr>
+        <tr><td>Cell size</td><td>Double</td><td>100.0</td><td>Map units per cell edge</td></tr>
+        <tr><td>Origin X / Origin Y</td><td>Double</td><td>0.0 / 0.0</td><td>Placement of the grid's corner or centre</td></tr>
+        <tr><td>Horizontal / Vertical axis variable name</td><td>String (optional)</td><td>"Variable X" / "Variable Y"</td><td>Axis labels carried onto the output attributes</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Output Description</h3>
+    <p>
+      The output polygon layer carries <code>col</code>, <code>row</code>, <code>bivar_class</code>,
+      <code>label</code> and <code>hex_color</code> fields for each of the $N^2$ cells, and is
+      auto-styled with a categorized renderer matching the interpolated colour matrix. A second,
+      HTML output renders the same matrix as a standalone legend preview.
+    </p>
+
+    <h3>Interpretation Guide</h3>
+    <div class="interpret-box">
+      <strong>Interpretation</strong>
+      Use this algorithm when the legend needs to live as its own map feature &mdash; for example
+      placed directly on the map canvas near the bivariate choropleth, exported to a separate
+      print-layout element, or shared as a lightweight HTML reference &mdash; instead of relying on
+      a Bivariate Choropleth run's auto-generated categorized-renderer legend alone.
+    </div>
   </section>
 
 </main>
