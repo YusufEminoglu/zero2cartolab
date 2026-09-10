@@ -143,20 +143,20 @@ class BivariateChoroplethAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
             QgsProcessingParameterField(
                 self.FIELD_X, "Horizontal axis field (X)",
                 parentLayerParameterName=self.INPUT,
-                type=QgsProcessingParameterField.Numeric,
+                type=QgsProcessingParameterField.DataType.Numeric,
             )
         )
         self.addParameter(
             QgsProcessingParameterField(
                 self.FIELD_Y, "Vertical axis field (Y)",
                 parentLayerParameterName=self.INPUT,
-                type=QgsProcessingParameterField.Numeric,
+                type=QgsProcessingParameterField.DataType.Numeric,
             )
         )
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.CLASSES, "Number of classes per axis (N x N)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=QgsProcessingParameterNumber.Type.Integer,
                 defaultValue=3, minValue=2, maxValue=4,
             )
         )

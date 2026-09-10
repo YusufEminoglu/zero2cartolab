@@ -183,10 +183,11 @@ def setup_layout_atlas(
         if QgsLayoutItemShape is not None:
             banner_card = QgsLayoutItemShape(layout)
             banner_card.setId("cartolab_atlas_banner")
-            if hasattr(QgsLayoutItemShape, "Shape") and hasattr(QgsLayoutItemShape.Shape, "Rectangle"):
-                banner_card.setShapeType(QgsLayoutItemShape.Shape.Rectangle)
-            elif hasattr(QgsLayoutItemShape, "Rectangle"):
-                banner_card.setShapeType(QgsLayoutItemShape.Rectangle)
+            rectangle = getattr(
+                getattr(QgsLayoutItemShape, "Shape", QgsLayoutItemShape),
+                "Rectangle", getattr(QgsLayoutItemShape, "Rectangle", 0),
+            )
+            banner_card.setShapeType(rectangle)
             banner_card.attemptMove(QgsLayoutPoint(page_margin_mm, page_margin_mm, _MM))
             banner_card.attemptResize(QgsLayoutSize(banner_w, banner_h, _MM))
             if QgsFillSymbol is not None:

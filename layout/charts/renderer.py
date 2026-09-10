@@ -117,7 +117,8 @@ def _cartesian(layout, root, spec, categories, values, x, y, w, h, x_values=None
     minimum = min(0.0, min(values))
     maximum = max(0.0, max(values))
     span = maximum - minimum or 1.0
-    value_y = lambda value: py + ph - ((float(value) - minimum) / span) * ph
+    def value_y(value):
+        return py + ph - ((float(value) - minimum) / span) * ph
     zero_y = value_y(0.0)
 
     _add_polyline(layout, f"{root}_axis_y", [(px, py), (px, py + ph)], spec.text_color, 0.22)
@@ -250,7 +251,8 @@ def _multi_cartesian(layout, root, spec, categories, series, x, y, w, h):
     else:
         minimum, maximum = min([0.0] + all_values), max([0.0] + all_values)
     span = maximum - minimum or 1.0
-    value_y = lambda value: py + ph - ((float(value) - minimum) / span) * ph
+    def value_y(value):
+        return py + ph - ((float(value) - minimum) / span) * ph
     zero_y = value_y(0.0)
     _add_polyline(layout, f"{root}_axis_y", [(px, py), (px, py + ph)], spec.text_color, 0.22)
     _add_polyline(layout, f"{root}_axis_x", [(px, zero_y), (px + pw, zero_y)], spec.text_color, 0.22)

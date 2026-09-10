@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-09-10
+
+### Fixed
+
+- Resolve the two Flake8 E731 findings in the native chart renderer.
+- Use Qt6-scoped Processing enums and compatibility-safe layout shape lookup so
+  the Plugin Hub compatibility report is clean without dropping QGIS 3 support.
+
 ## [1.2.0] - 2026-09-10
 
 ### Added

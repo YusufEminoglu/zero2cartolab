@@ -76,10 +76,10 @@ class QuickStyleAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
 
     def flags(self):
         f = super().flags()
-        if hasattr(QgsProcessingAlgorithm, "FlagNoExecutionResults"):
-            f |= QgsProcessingAlgorithm.FlagNoExecutionResults
-        if hasattr(QgsProcessingAlgorithm, "FlagSupportsInPlaceEdits"):
-            f |= QgsProcessingAlgorithm.FlagSupportsInPlaceEdits
+        if hasattr(QgsProcessingAlgorithm.Flag, "FlagNoExecutionResults"):
+            f |= QgsProcessingAlgorithm.Flag.FlagNoExecutionResults
+        if hasattr(QgsProcessingAlgorithm.Flag, "FlagSupportsInPlaceEdits"):
+            f |= QgsProcessingAlgorithm.Flag.FlagSupportsInPlaceEdits
         return f
 
     def shortHelpString(self) -> str:

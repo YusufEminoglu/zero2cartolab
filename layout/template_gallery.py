@@ -159,10 +159,11 @@ def _create_card_shape(
         return None
 
     shape = QgsLayoutItemShape(layout)
-    if hasattr(QgsLayoutItemShape, "Shape") and hasattr(QgsLayoutItemShape.Shape, "Rectangle"):
-        shape.setShapeType(QgsLayoutItemShape.Shape.Rectangle)
-    elif hasattr(QgsLayoutItemShape, "Rectangle"):
-        shape.setShapeType(QgsLayoutItemShape.Rectangle)
+    rectangle = getattr(
+        getattr(QgsLayoutItemShape, "Shape", QgsLayoutItemShape),
+        "Rectangle", getattr(QgsLayoutItemShape, "Rectangle", 0),
+    )
+    shape.setShapeType(rectangle)
 
     shape.attemptMove(QgsLayoutPoint(x, y, _MM))
     shape.attemptResize(QgsLayoutSize(w, h, _MM))
