@@ -8,6 +8,7 @@ dist/
 .DS_Store
 *.qgs~
 *.qgz~
+/symbology-style.db
 
 NEXT_AGENT_BRIEF.md
 ENHANCEMENT_PLAN_*.md
