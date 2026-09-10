@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.3] - 2026-09-11
+
+### Fixed
+
+- Remove the QGIS-generated style database from version control and explicitly
+  exclude it from Hub ZIP assembly.
+
 ## [1.3.2] - 2026-09-11
 
 ### Fixed

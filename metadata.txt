@@ -1,6 +1,6 @@
 [general]
 name=02CartoLab
-version=1.3.2
+version=1.3.3
 hasProcessingProvider=yes
 
 category=Vector
