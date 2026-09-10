@@ -653,6 +653,96 @@ ok(
 )
 
 # ===========================================================================
+# NATIVE PRINT-LAYOUT CHARTS + PHYSICAL OUTPUT QA
+# ===========================================================================
+print("\n--- Native Print Layout Charts ---")
+from qgis.PyQt.QtGui import QColor, QImage, QPainter
+from zero2cartolab.layout.charts import PALETTES, ChartSpec, add_chart_to_layout, list_charts, remove_chart
+from zero2cartolab.layout.pixel_qa import analyze_export, validate_pixels
+
+for chart_type in (
+    "bar", "grouped_bar", "stacked_bar", "line", "multi_line", "area",
+    "scatter", "pie", "donut", "histogram",
+):
+    chart_layout = create_map_sheet(
+        iface=None, layers=[polys], title=f"{chart_type.title()} chart QA",
+        add_legend=False, add_north_arrow=True,
+    )
+    chart_spec = ChartSpec(
+        chart_type=chart_type,
+        category_field="uid" if chart_type != "histogram" else "",
+        value_field="score",
+        series_field="floors" if chart_type in ("grouped_bar", "stacked_bar", "multi_line") else "",
+        aggregation="sum",
+        title=f"Score by unit · {chart_type.title()}",
+        x=115.0, y=118.0, width=160.0, height=70.0,
+        top_n=5, bins=5,
+        palette=PALETTES["Colorblind Safe"] if chart_type == "donut" else PALETTES["Editorial"],
+        background_color="#0f172a" if chart_type == "donut" else "#ffffff",
+        text_color="#f8fafc" if chart_type == "donut" else "#0f172a",
+        grid_color="#334155" if chart_type == "donut" else "#e2e8f0",
+    )
+    chart_root = add_chart_to_layout(chart_layout, polys, chart_spec)
+    persisted = list_charts(chart_layout)
+    ok(
+        f"{chart_type} chart persists editable spec metadata",
+        len(persisted) == 1 and persisted[0]["spec"]["chart_type"] == chart_type,
+    )
+    chart_items = [
+        item for item in chart_layout.items()
+        if hasattr(item, "id") and item.id().startswith(chart_root)
+    ]
+    ok(f"{chart_type} chart creates native layout items", len(chart_items) >= 4, str(len(chart_items)))
+    frame = next(item for item in chart_items if item.id() == f"{chart_root}_frame")
+    page_rect = chart_layout.pageCollection().page(0).sceneBoundingRect()
+    ok(f"{chart_type} chart respects page boundary", page_rect.contains(frame.sceneBoundingRect()))
+    chart_issues = preflight_layout(chart_layout)
+    ok(
+        f"{chart_type} chart passes frame/grid/scale preflight",
+        not any(issue["severity"] == "error" for issue in chart_issues),
+        str(chart_issues),
+    )
+    chart_png = os.path.join(tempfile.gettempdir(), f"cartolab_e2e_chart_{chart_type}.png")
+    exported = export_layout(chart_layout, chart_png, dpi=150)
+    image = QImage(chart_png) if exported else QImage()
+    ok(
+        f"{chart_type} chart exports non-empty 150 DPI raster",
+        exported and not image.isNull() and image.width() > 1000 and image.height() > 700
+        and os.path.getsize(chart_png) > 10_000,
+        f"{image.width()}x{image.height()} · {os.path.getsize(chart_png) if os.path.exists(chart_png) else 0} bytes",
+    )
+    pixel_metrics = analyze_export(chart_png, dpi=150, safe_margin_mm=3.0, sample_step=5)
+    pixel_issues = validate_pixels(pixel_metrics, safe_margin_mm=3.0)
+    ok(
+        f"{chart_type} pixel QA finds ink, colour and safe edges",
+        pixel_metrics.ink_ratio > 0.02
+        and pixel_metrics.unique_color_buckets >= 8
+        and not any(issue["severity"] == "error" for issue in pixel_issues)
+        and pixel_metrics.edge_ink_ratio < 0.002,
+        str(pixel_metrics.as_dict()) + " " + str(pixel_issues),
+    )
+    removed = remove_chart(chart_layout, chart_root)
+    ok(f"{chart_type} chart removal is complete", removed == len(chart_items))
+
+blank_image = QImage(400, 300, QImage.Format.Format_RGB32 if hasattr(QImage.Format, "Format_RGB32") else QImage.Format_RGB32)
+blank_image.fill(QColor("#ffffff"))
+blank_metrics = analyze_export(blank_image, dpi=150, sample_step=2)
+ok(
+    "pixel QA rejects blank exports",
+    any(issue["code"] == "pixel_blank" and issue["severity"] == "error"
+        for issue in validate_pixels(blank_metrics)),
+)
+edge_image = QImage(blank_image)
+painter = QPainter(edge_image)
+painter.fillRect(0, 0, 35, edge_image.height(), QColor("#0f172a"))
+painter.end()
+edge_metrics = analyze_export(edge_image, dpi=150, safe_margin_mm=3.0, sample_step=2)
+ok(
+    "pixel QA detects ink entering print-safe edge",
+    any(issue["code"] == "pixel_safe_margin" for issue in validate_pixels(edge_metrics)),
+)
+
+# ===========================================================================
 # REAL DATASET E2E (geostats_Sample_Dataset.gpkg)
 # ===========================================================================
 real_gpkg = os.environ.get("ZERO2CARTOLAB_REAL_GPKG", "")

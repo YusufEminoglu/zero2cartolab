@@ -4,6 +4,44 @@ All notable changes to the **02CartoLab** plugin will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Added an independent native Print Layout chart engine, architecturally adapted
+  from 02viz's data-source, transform, specification, and renderer separation.
+  Bar, grouped/stacked bar, line, multi-series line, area, numeric scatter,
+  pie, donut, and histogram charts can be
+  built from vector-layer fields without a web view or optional dependency.
+- Added an **Add Graph** workspace directly inside the Print Layout Designer,
+  including aggregation, Top-N, title, frame size, automatic corner placement,
+  custom millimetre coordinates, and complete chart removal.
+- Added weighted least-overlap placement and persistent chart specifications;
+  reopened layouts restore their chart list and settings for replacement edits.
+- Added export-driven Pixel QA in the Designer: real 150 DPI raster inspection
+  detects blank output, unsafe edge ink, low colour diversity, rendered content
+  bounds, and minimum physical margins.
+- Added chart palette and surface presets, live WCAG contrast feedback, value and
+  legend switches, histogram bin control, and configurable print-safe margins.
+- Added physical 150 DPI output coverage for every chart type on both QGIS 3.44
+  and QGIS 4.2, plus page-boundary, native-item, preflight, and cleanup checks.
+
+### Changed
+
+- Expanded Print Preflight with coordinate-grid density/interval, scale-bar
+  segment/width, legend size, north-arrow, and chart safe-margin checks.
+- Made every Designer workspace vertically scrollable, removed horizontal form
+  overflow, and compacted the tab/form hierarchy for narrow layout docks.
+- Native charts are grouped so they can be selected and moved as one editable
+  Designer object while remaining vector output in PDF and SVG.
+- Constrained auto-sized map-sheet legends to their allocated sidebar.
+
+### Fixed
+
+- Made Layout Designer integration retry until newly opened QGIS windows are
+  ready, support both QGIS window APIs, avoid duplicate docks after reload, and
+  disconnect/remove its UI cleanly when the plugin unloads.
+
 ## [1.1.0] - 2026-09-06
 
 ### Fixed

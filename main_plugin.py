@@ -116,6 +116,10 @@ class O2CartoLabPlugin:
             )
 
     def unload(self) -> None:
+        with suppress(Exception):
+            from .layout.designer_integration import teardown_designer_integration
+            teardown_designer_integration(self.iface)
+
         # unset map tool if active
         if self.annotation_tool:
             with suppress(Exception):
@@ -133,4 +137,3 @@ class O2CartoLabPlugin:
         if self.provider:
             QgsApplication.processingRegistry().removeProvider(self.provider)
             self.provider = None
-

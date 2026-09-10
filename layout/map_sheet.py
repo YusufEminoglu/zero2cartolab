@@ -425,6 +425,15 @@ def create_map_sheet(
         legend.attemptMove(QgsLayoutPoint(map_x + map_w + gap, map_y, _MM))
         legend.attemptResize(QgsLayoutSize(legend_w, map_h, _MM))
         layout.addLayoutItem(legend)
+        # Measure the natural legend, but never let a large layer tree push
+        # furniture beyond its dedicated sidebar or page margin.
+        with suppress(Exception):
+            legend.adjustBoxSize()
+            natural_w = float(legend.rect().width())
+            natural_h = float(legend.rect().height())
+            if natural_w > legend_w or natural_h > map_h:
+                legend.setResizeToContents(False)
+                legend.attemptResize(QgsLayoutSize(legend_w, map_h, _MM))
 
     # --- scale bar -------------------------------------------------------
     if add_scalebar:

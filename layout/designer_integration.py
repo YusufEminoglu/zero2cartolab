@@ -10,11 +10,12 @@ from __future__ import annotations
 
 import math
 import os
+import tempfile
 from contextlib import suppress
 
 try:
     from qgis.core import QgsProject, QgsLayoutItemMap
-    from qgis.PyQt.QtCore import Qt, QUrl, QSize
+    from qgis.PyQt.QtCore import Qt, QUrl, QSize, QTimer
     from qgis.PyQt.QtGui import QDesktopServices, QIcon
     from qgis.PyQt.QtWidgets import (
         QAction,
@@ -32,6 +33,7 @@ try:
         QMessageBox,
         QPushButton,
         QScrollArea,
+        QSpinBox,
         QTabWidget,
         QToolBar,
         QVBoxLayout,
@@ -39,12 +41,47 @@ try:
     )
 except ImportError:
     QgsProject = QgsLayoutItemMap = None
-    Qt = QUrl = QSize = QDesktopServices = QIcon = QAction = QCheckBox = QComboBox = QDockWidget = QDoubleSpinBox = QFileDialog = QFormLayout = QGroupBox = QHBoxLayout = QLabel = QLineEdit = QMenu = QMessageBox = QPushButton = QScrollArea = QTabWidget = QToolBar = QVBoxLayout = QWidget = None
+    Qt = QUrl = QSize = QTimer = QDesktopServices = QIcon = QAction = QCheckBox = QComboBox = QDockWidget = QDoubleSpinBox = QFileDialog = QFormLayout = QGroupBox = QHBoxLayout = QLabel = QLineEdit = QMenu = QMessageBox = QPushButton = QScrollArea = QSpinBox = QTabWidget = QToolBar = QVBoxLayout = QWidget = None
 
 
 
 
-_INTEGRATED_DESIGNERS = set()
+_INTEGRATED_DESIGNERS = {}
+_SIGNAL_HANDLERS = {}
+
+
+def _designer_window(designer):
+    """Return the QMainWindow owned by a layout designer across QGIS versions."""
+    for attr in ("window", "mainWindow"):
+        candidate = getattr(designer, attr, None)
+        if callable(candidate):
+            with suppress(Exception):
+                window = candidate()
+                if window is not None and hasattr(window, "addDockWidget"):
+                    return window
+
+    view = getattr(designer, "view", None)
+    if callable(view):
+        with suppress(Exception):
+            view = view()
+    if view is not None:
+        window_getter = getattr(view, "window", None)
+        if callable(window_getter):
+            with suppress(Exception):
+                window = window_getter()
+                if window is not None and hasattr(window, "addDockWidget"):
+                    return window
+    return None
+
+
+def _attach_when_ready(iface, designer, attempts: int = 5) -> None:
+    """Retry attachment because QGIS can emit opened before the window is ready."""
+    if attach_cartolab_to_designer(iface, designer) or attempts <= 1 or QTimer is None:
+        return
+    QTimer.singleShot(
+        100,
+        lambda: _attach_when_ready(iface, designer, attempts - 1),
+    )
 
 
 def setup_designer_integration(iface) -> None:
@@ -52,35 +89,55 @@ def setup_designer_integration(iface) -> None:
     if not iface:
         return
 
-    def _on_opened(designer):
-        attach_cartolab_to_designer(iface, designer)
+    # Plugin reloads must not accumulate callbacks on the application iface.
+    teardown_designer_integration(iface, remove_docks=False)
 
-    with suppress(Exception):
-        if hasattr(iface, "layoutDesignerOpened"):
-            iface.layoutDesignerOpened.connect(_on_opened)
+    def _on_opened(designer):
+        _attach_when_ready(iface, designer)
+
+    signal = getattr(iface, "layoutDesignerOpened", None)
+    if signal is not None:
+        signal.connect(_on_opened)
+        _SIGNAL_HANDLERS[id(iface)] = (iface, _on_opened)
 
     # Attach to existing open layout designers
     with suppress(Exception):
         if hasattr(iface, "layoutDesigners"):
             for designer in iface.layoutDesigners():
-                attach_cartolab_to_designer(iface, designer)
+                _attach_when_ready(iface, designer)
 
 
-def attach_cartolab_to_designer(iface, designer) -> None:
-    """Attach PlanX CartoLab embedded studio dock panel inside a QgsLayoutDesignerInterface window."""
-    if designer is None or id(designer) in _INTEGRATED_DESIGNERS:
+def teardown_designer_integration(iface, remove_docks: bool = True) -> None:
+    """Disconnect the application hook and remove CartoLab-owned Designer UI."""
+    registered = _SIGNAL_HANDLERS.pop(id(iface), None) if iface is not None else None
+    if registered:
+        registered_iface, callback = registered
+        signal = getattr(registered_iface, "layoutDesignerOpened", None)
+        if signal is not None:
+            with suppress(Exception):
+                signal.disconnect(callback)
+
+    if not remove_docks:
         return
-    _INTEGRATED_DESIGNERS.add(id(designer))
+    for designer_id, dock in list(_INTEGRATED_DESIGNERS.items()):
+        with suppress(Exception):
+            dock.close()
+            dock.deleteLater()
+        _INTEGRATED_DESIGNERS.pop(designer_id, None)
 
-    main_win = None
-    with suppress(Exception):
-        if hasattr(designer, "view") and hasattr(designer.view(), "window"):
-            main_win = designer.view().window()
-        elif hasattr(designer, "mainWindow"):
-            main_win = designer.mainWindow()
+
+def attach_cartolab_to_designer(iface, designer) -> bool:
+    """Attach PlanX CartoLab embedded studio dock panel inside a QgsLayoutDesignerInterface window."""
+    if designer is None:
+        return False
+    designer_id = id(designer)
+    if designer_id in _INTEGRATED_DESIGNERS:
+        return True
+
+    main_win = _designer_window(designer)
 
     if main_win is None:
-        return
+        return False
 
     # Clean up any existing CartoLab dock widgets in this designer window
     with suppress(Exception):
@@ -97,11 +154,13 @@ def attach_cartolab_to_designer(iface, designer) -> None:
     dock = create_cartolab_layout_dock(iface, designer, main_win)
     dock.setWindowIcon(icon)
     _RightDock = getattr(getattr(Qt, "DockWidgetArea", Qt), "RightDockWidgetArea", getattr(Qt, "RightDockWidgetArea", 2))
+    main_win.addDockWidget(_RightDock, dock)
+    dock.show()
+    _INTEGRATED_DESIGNERS[designer_id] = dock
     with suppress(Exception):
-        if hasattr(designer, "addDockWidget"):
-            designer.addDockWidget(_RightDock, dock)
-        elif hasattr(main_win, "addDockWidget"):
-            main_win.addDockWidget(_RightDock, dock)
+        dock.destroyed.connect(
+            lambda _obj=None, key=designer_id: _INTEGRATED_DESIGNERS.pop(key, None)
+        )
 
     # 2. Add single 02CartoLab Menu item and QToolBar Action Button
     with suppress(Exception):
@@ -128,6 +187,7 @@ def attach_cartolab_to_designer(iface, designer) -> None:
             target_tb = toolbars[0]
         if target_tb:
             target_tb.addAction(act_toggle)
+    return True
 
 
 def _get_cartolab_icon(name: str = "icon.png") -> QIcon:
@@ -164,9 +224,9 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
         QTabBar::tab {
             background: #f1f5f9;
             color: #475569;
-            padding: 8px 18px 8px 22px;
+            padding: 7px 9px;
             font-weight: 600;
-            font-size: 11px;
+            font-size: 10px;
             border-top-left-radius: 6px;
             border-top-right-radius: 6px;
             margin-right: 2px;
@@ -224,6 +284,18 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
             font-size: 11px;
         }
     """)
+
+    def _add_scroll_tab(widget, label):
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QScrollArea.Shape.NoFrame if hasattr(QScrollArea, "Shape") else 0)
+        no_horizontal = getattr(
+            getattr(Qt, "ScrollBarPolicy", Qt), "ScrollBarAlwaysOff",
+            getattr(Qt, "ScrollBarAlwaysOff", 1),
+        )
+        scroll.setHorizontalScrollBarPolicy(no_horizontal)
+        scroll.setWidget(widget)
+        return tabs.addTab(scroll, label)
 
     # -----------------------------------------------------------------
     # TAB 0: Template Gallery (Publication Archetypes)
@@ -326,7 +398,7 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
     lyt_tpl.addWidget(gb_quick_tpl)
     lyt_tpl.addStretch()
 
-    tabs.addTab(tab_tpl, "  Templates  ")
+    _add_scroll_tab(tab_tpl, "Templates")
 
     # -----------------------------------------------------------------
     # TAB 1: Canvas & Grid
@@ -455,10 +527,70 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
     btn_dock_preflight.clicked.connect(_dock_preflight)
     fl_typo.addRow(btn_dock_preflight)
 
+    pixel_status = QLabel("Pixel QA · export not checked yet")
+    pixel_status.setWordWrap(True)
+    pixel_status.setStyleSheet(
+        "background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;"
+        "border-radius:6px;padding:7px;font-weight:600;"
+    )
+    fl_typo.addRow(pixel_status)
+
+    layout_safe_margin = QDoubleSpinBox()
+    layout_safe_margin.setRange(0.0, 25.0)
+    layout_safe_margin.setValue(3.0)
+    layout_safe_margin.setSuffix(" mm")
+    fl_typo.addRow("Pixel safe edge:", layout_safe_margin)
+
+    btn_pixel_qa = QPushButton("Render & Validate Pixels · 150 DPI")
+    btn_pixel_qa.setIcon(_get_cartolab_icon("layout.png"))
+
+    def _run_pixel_qa():
+        layout = _get_designer_layout(designer)
+        if not layout:
+            return
+        descriptor, path = tempfile.mkstemp(prefix="cartolab_pixel_qa_", suffix=".png")
+        os.close(descriptor)
+        with suppress(OSError):
+            os.remove(path)
+        try:
+            from .layout_utils import export_layout
+            from .pixel_qa import analyze_export, format_pixel_report, validate_pixels
+            if not export_layout(layout, path, dpi=150):
+                raise RuntimeError("QGIS could not render the layout for pixel inspection.")
+            safe_margin = layout_safe_margin.value()
+            metrics = analyze_export(path, dpi=150, safe_margin_mm=safe_margin)
+            issues = validate_pixels(metrics, safe_margin_mm=safe_margin)
+            report = format_pixel_report(metrics, issues)
+            has_error = any(issue["severity"] == "error" for issue in issues)
+            pixel_status.setText(
+                f"Pixel QA · {'BLOCKED' if has_error else 'READY' if not issues else 'CHECK'} · "
+                f"edge ink {metrics.edge_ink_ratio * 100:.2f}% · "
+                f"{metrics.unique_color_buckets} colour buckets"
+            )
+            pixel_status.setStyleSheet(
+                ("background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;" if has_error
+                 else "background:#fef3c7;color:#92400e;border:1px solid #fcd34d;" if issues
+                 else "background:#dcfce7;color:#166534;border:1px solid #86efac;")
+                + "border-radius:6px;padding:7px;font-weight:700;"
+            )
+            if issues:
+                QMessageBox.warning(parent_win, "Pixel QA", report)
+            else:
+                QMessageBox.information(parent_win, "Pixel QA", report)
+        except Exception as exc:
+            pixel_status.setText("Pixel QA · render failed")
+            QMessageBox.critical(parent_win, "Pixel QA Error", str(exc))
+        finally:
+            with suppress(OSError):
+                os.remove(path)
+
+    btn_pixel_qa.clicked.connect(_run_pixel_qa)
+    fl_typo.addRow(btn_pixel_qa)
+
     lyt_canvas.addWidget(gb_typo)
     lyt_canvas.addStretch()
 
-    tabs.addTab(tab_canvas, "  Canvas & Grid  ")
+    _add_scroll_tab(tab_canvas, "Grid")
 
 
     # -----------------------------------------------------------------
@@ -822,7 +954,7 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
 
     lyt_dec.addStretch()
 
-    tabs.addTab(tab_dec, "  Decorators  ")
+    _add_scroll_tab(tab_dec, "Decorate")
 
     # -----------------------------------------------------------------
     # TAB 3: 3D Perspective & Quick Export
@@ -989,7 +1121,336 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
     lyt_exp.addWidget(gb_exp)
     lyt_exp.addStretch()
 
-    tabs.addTab(tab_exp, "  3D & Export  ")
+    _add_scroll_tab(tab_exp, "Export")
+
+    # -----------------------------------------------------------------
+    # TAB 4: Native Print Layout Charts
+    # -----------------------------------------------------------------
+    tab_graph = QWidget()
+    lyt_graph = QVBoxLayout(tab_graph)
+    lyt_graph.setContentsMargins(8, 8, 8, 8)
+    lyt_graph.setSpacing(10)
+
+    gb_graph_data = QGroupBox("Add Graph · Layer Data")
+    fl_graph_data = QFormLayout(gb_graph_data)
+    graph_layer_combo = QComboBox()
+    if QgsProject and QgsProject.instance():
+        for layer in QgsProject.instance().mapLayers().values():
+            if hasattr(layer, "fields") and hasattr(layer, "getFeatures"):
+                graph_layer_combo.addItem(layer.name(), layer)
+    fl_graph_data.addRow("Layer:", graph_layer_combo)
+
+    graph_type_combo = QComboBox()
+    for key, label in (
+        ("bar", "Bar"), ("grouped_bar", "Grouped Bar"),
+        ("stacked_bar", "Stacked Bar"), ("line", "Line"),
+        ("multi_line", "Multi-series Line"), ("area", "Area"),
+        ("scatter", "Scatter"), ("pie", "Pie"), ("donut", "Donut"),
+        ("histogram", "Histogram"),
+    ):
+        graph_type_combo.addItem(label, key)
+    fl_graph_data.addRow("Chart:", graph_type_combo)
+
+    graph_category_combo = QComboBox()
+    graph_series_combo = QComboBox()
+    graph_value_combo = QComboBox()
+    graph_aggregation_combo = QComboBox()
+    for key, label in (
+        ("count", "Count"), ("sum", "Sum"), ("mean", "Mean"),
+        ("median", "Median"), ("min", "Minimum"), ("max", "Maximum"),
+    ):
+        graph_aggregation_combo.addItem(label, key)
+    fl_graph_data.addRow("Category / X:", graph_category_combo)
+    fl_graph_data.addRow("Series:", graph_series_combo)
+    fl_graph_data.addRow("Value / Y:", graph_value_combo)
+    fl_graph_data.addRow("Summary:", graph_aggregation_combo)
+
+    def _refresh_graph_fields():
+        layer = graph_layer_combo.currentData()
+        graph_category_combo.clear()
+        graph_series_combo.clear()
+        graph_series_combo.addItem("(single series)", "")
+        graph_value_combo.clear()
+        graph_value_combo.addItem("(not required for count)", "")
+        if layer is None:
+            return
+        for field in layer.fields():
+            graph_category_combo.addItem(field.name(), field.name())
+            graph_series_combo.addItem(field.name(), field.name())
+            with suppress(Exception):
+                if field.isNumeric():
+                    graph_value_combo.addItem(field.name(), field.name())
+
+    graph_layer_combo.currentIndexChanged.connect(_refresh_graph_fields)
+    _refresh_graph_fields()
+    lyt_graph.addWidget(gb_graph_data)
+
+    gb_graph_layout = QGroupBox("Frame and Publication Settings")
+    fl_graph_layout = QFormLayout(gb_graph_layout)
+    graph_title = QLineEdit("Layer summary")
+    fl_graph_layout.addRow("Title:", graph_title)
+
+    graph_top_n = QSpinBox()
+    graph_top_n.setRange(1, 50)
+    graph_top_n.setValue(10)
+    fl_graph_layout.addRow("Top N:", graph_top_n)
+
+    graph_bins = QSpinBox()
+    graph_bins.setRange(3, 40)
+    graph_bins.setValue(8)
+    fl_graph_layout.addRow("Histogram bins:", graph_bins)
+
+    graph_palette = QComboBox()
+    from .charts import PALETTES
+    for palette_name, colors in PALETTES.items():
+        graph_palette.addItem(palette_name, colors)
+    fl_graph_layout.addRow("Palette:", graph_palette)
+
+    graph_surface = QComboBox()
+    graph_surface.addItem("Paper White", ("#ffffff", "#0f172a", "#e2e8f0"))
+    graph_surface.addItem("Warm Editorial", ("#fffbeb", "#292524", "#e7e5e4"))
+    graph_surface.addItem("Soft Gray", ("#f8fafc", "#0f172a", "#cbd5e1"))
+    graph_surface.addItem("Dark Ink", ("#0f172a", "#f8fafc", "#334155"))
+    fl_graph_layout.addRow("Surface:", graph_surface)
+
+    graph_color_status = QLabel()
+    graph_color_status.setStyleSheet(
+        "background:#dcfce7;color:#166534;border:1px solid #86efac;"
+        "border-radius:5px;padding:5px;font-weight:700;"
+    )
+    fl_graph_layout.addRow("Color QA:", graph_color_status)
+
+    def _refresh_graph_color_status():
+        from .pixel_qa import contrast_ratio
+        background, text_color, _grid_color = graph_surface.currentData()
+        ratio = contrast_ratio(text_color, background)
+        palette_min = min(contrast_ratio(color, background) for color in graph_palette.currentData())
+        graph_color_status.setText(f"AA {ratio:.1f}:1 · palette min {palette_min:.1f}:1")
+
+    graph_palette.currentIndexChanged.connect(_refresh_graph_color_status)
+    graph_surface.currentIndexChanged.connect(_refresh_graph_color_status)
+    _refresh_graph_color_status()
+
+    graph_show_values = QCheckBox("Show value labels")
+    graph_show_values.setChecked(True)
+    graph_show_legend = QCheckBox("Show chart legend")
+    graph_show_legend.setChecked(True)
+    fl_graph_layout.addRow(graph_show_values)
+    fl_graph_layout.addRow(graph_show_legend)
+
+    graph_safe_margin = QDoubleSpinBox()
+    graph_safe_margin.setRange(0.0, 25.0)
+    graph_safe_margin.setValue(3.0)
+    graph_safe_margin.setSuffix(" mm")
+    fl_graph_layout.addRow("Safe margin:", graph_safe_margin)
+
+    graph_position = QComboBox()
+    graph_position.addItem("Best available (least overlap)", "best")
+    graph_position.addItem("Bottom-right", "bottom_right")
+    graph_position.addItem("Bottom-left", "bottom_left")
+    graph_position.addItem("Top-right", "top_right")
+    graph_position.addItem("Top-left", "top_left")
+    graph_position.addItem("Custom", "custom")
+    fl_graph_layout.addRow("Position:", graph_position)
+
+    graph_x = QDoubleSpinBox(); graph_x.setRange(0, 2000); graph_x.setValue(15); graph_x.setSuffix(" mm")
+    graph_y = QDoubleSpinBox(); graph_y.setRange(0, 2000); graph_y.setValue(15); graph_y.setSuffix(" mm")
+    graph_w = QDoubleSpinBox(); graph_w.setRange(35, 500); graph_w.setValue(90); graph_w.setSuffix(" mm")
+    graph_h = QDoubleSpinBox(); graph_h.setRange(30, 500); graph_h.setValue(60); graph_h.setSuffix(" mm")
+    fl_graph_layout.addRow("X:", graph_x)
+    fl_graph_layout.addRow("Y:", graph_y)
+    fl_graph_layout.addRow("Width:", graph_w)
+    fl_graph_layout.addRow("Height:", graph_h)
+    lyt_graph.addWidget(gb_graph_layout)
+
+    graph_ids = QComboBox()
+    with suppress(Exception):
+        from .charts import list_charts
+        active_layout = _get_designer_layout(designer)
+        for chart_meta in list_charts(active_layout):
+            title = chart_meta["spec"].get("title", "Chart")
+            graph_ids.addItem(f"{title} · {chart_meta['id'][-10:]}", chart_meta["id"])
+
+    def _graph_geometry(layout):
+        page = layout.pageCollection().page(0)
+        size = page.pageSize()
+        page_w, page_h = float(size.width()), float(size.height())
+        width, height = graph_w.value(), graph_h.value()
+        margin = max(3.0, graph_safe_margin.value())
+        preset = graph_position.currentData()
+        x = graph_x.value()
+        y = graph_y.value()
+        if preset == "best":
+            from .charts import best_position
+            occupied = []
+            for item in layout.items():
+                item_id = item.id() if hasattr(item, "id") else ""
+                if item_id.startswith("cartolab_chart_"):
+                    continue
+                with suppress(Exception):
+                    class_name = type(item).__name__.lower()
+                    if "page" in class_name:
+                        continue
+                    rect = item.sceneBoundingRect()
+                    if rect.width() <= 0 or rect.height() <= 0:
+                        continue
+                    weight = 1.0 if "map" in class_name else 4.0
+                    occupied.append(((rect.x(), rect.y(), rect.width(), rect.height()), weight))
+            x, y = best_position(page_w, page_h, width, height, occupied, margin)
+        elif preset == "bottom_right":
+            x, y = page_w - margin - width, page_h - margin - height
+        elif preset == "bottom_left":
+            x, y = margin, page_h - margin - height
+        elif preset == "top_right":
+            x, y = page_w - margin - width, margin
+        elif preset == "top_left":
+            x, y = margin, margin
+        return x, y, width, height
+
+    btn_add_graph = QPushButton("Add Graph")
+    btn_add_graph.setIcon(_get_cartolab_icon("chart.png"))
+
+    def _add_graph():
+        layout = _get_designer_layout(designer)
+        layer = graph_layer_combo.currentData()
+        if layout is None or layer is None:
+            QMessageBox.warning(parent_win, "Add Graph", "Open a layout and select a vector layer first.")
+            return
+        try:
+            from .charts import ChartSpec, add_chart_to_layout
+            x, y, width, height = _graph_geometry(layout)
+            spec = ChartSpec(
+                chart_type=graph_type_combo.currentData() or "bar",
+                category_field=graph_category_combo.currentData() or "",
+                value_field=graph_value_combo.currentData() or "",
+                series_field=graph_series_combo.currentData() or "",
+                aggregation=graph_aggregation_combo.currentData() or "count",
+                title=graph_title.text().strip() or "Layer summary",
+                x=x, y=y, width=width, height=height,
+                top_n=graph_top_n.value(), bins=graph_bins.value(),
+                show_values=graph_show_values.isChecked(),
+                show_legend=graph_show_legend.isChecked(),
+                palette=tuple(graph_palette.currentData()),
+                background_color=graph_surface.currentData()[0],
+                text_color=graph_surface.currentData()[1],
+                grid_color=graph_surface.currentData()[2],
+                safe_margin_mm=graph_safe_margin.value(),
+            )
+            chart_id = add_chart_to_layout(layout, layer, spec)
+            graph_ids.addItem(f"{graph_title.text().strip() or 'Chart'} · {chart_id[-10:]}", chart_id)
+            if hasattr(iface, "messageBar"):
+                iface.messageBar().pushSuccess("CartoLab", "Native chart added to Print Layout.")
+        except Exception as exc:
+            QMessageBox.critical(parent_win, "Add Graph Error", str(exc))
+
+    btn_add_graph.clicked.connect(_add_graph)
+    fl_graph_layout.addRow(btn_add_graph)
+
+    btn_update_graph = QPushButton("Update Selected Graph")
+    btn_update_graph.setObjectName("ghost")
+
+    def _update_graph():
+        layout = _get_designer_layout(designer)
+        layer = graph_layer_combo.currentData()
+        old_id = graph_ids.currentData()
+        if layout is None or layer is None or not old_id:
+            QMessageBox.warning(parent_win, "Update Graph", "Select an existing graph first.")
+            return
+        try:
+            from .charts import ChartSpec, add_chart_to_layout, remove_chart
+            x, y, width, height = _graph_geometry(layout)
+            spec = ChartSpec(
+                chart_type=graph_type_combo.currentData() or "bar",
+                category_field=graph_category_combo.currentData() or "",
+                value_field=graph_value_combo.currentData() or "",
+                series_field=graph_series_combo.currentData() or "",
+                aggregation=graph_aggregation_combo.currentData() or "count",
+                title=graph_title.text().strip() or "Layer summary",
+                x=x, y=y, width=width, height=height,
+                top_n=graph_top_n.value(), bins=graph_bins.value(),
+                show_values=graph_show_values.isChecked(),
+                show_legend=graph_show_legend.isChecked(),
+                palette=tuple(graph_palette.currentData()),
+                background_color=graph_surface.currentData()[0],
+                text_color=graph_surface.currentData()[1],
+                grid_color=graph_surface.currentData()[2],
+                safe_margin_mm=graph_safe_margin.value(),
+            )
+            new_id = add_chart_to_layout(layout, layer, spec)
+            remove_chart(layout, old_id)
+            index = graph_ids.currentIndex()
+            graph_ids.setItemText(index, f"{spec.title} · {new_id[-10:]}")
+            graph_ids.setItemData(index, new_id)
+            layout.refresh()
+        except Exception as exc:
+            QMessageBox.critical(parent_win, "Update Graph Error", str(exc))
+
+    btn_update_graph.clicked.connect(_update_graph)
+    fl_graph_layout.addRow(btn_update_graph)
+
+    btn_remove_graph = QPushButton("Remove Graph")
+    btn_remove_graph.setObjectName("ghost")
+
+    def _remove_graph():
+        layout = _get_designer_layout(designer)
+        chart_id = graph_ids.currentData()
+        if layout is None or not chart_id:
+            return
+        from .charts import remove_chart
+        if remove_chart(layout, chart_id):
+            graph_ids.removeItem(graph_ids.currentIndex())
+            layout.refresh()
+
+    btn_remove_graph.clicked.connect(_remove_graph)
+    fl_graph_layout.addRow("Added charts:", graph_ids)
+    fl_graph_layout.addRow(btn_remove_graph)
+
+    def _select_combo_data(combo, value):
+        index = combo.findData(value)
+        if index >= 0:
+            combo.setCurrentIndex(index)
+
+    def _load_graph_settings(_index=0):
+        chart_id = graph_ids.currentData()
+        layout = _get_designer_layout(designer)
+        if not chart_id or layout is None:
+            return
+        from .charts import list_charts
+        meta = next((entry for entry in list_charts(layout) if entry["id"] == chart_id), None)
+        if not meta:
+            return
+        for index in range(graph_layer_combo.count()):
+            layer = graph_layer_combo.itemData(index)
+            if layer is not None and hasattr(layer, "id") and layer.id() == meta["layer_id"]:
+                graph_layer_combo.setCurrentIndex(index)
+                break
+        spec = meta["spec"]
+        _select_combo_data(graph_type_combo, spec.get("chart_type", "bar"))
+        _select_combo_data(graph_category_combo, spec.get("category_field", ""))
+        _select_combo_data(graph_series_combo, spec.get("series_field", ""))
+        _select_combo_data(graph_value_combo, spec.get("value_field", ""))
+        _select_combo_data(graph_aggregation_combo, spec.get("aggregation", "count"))
+        graph_title.setText(spec.get("title", "Chart"))
+        graph_top_n.setValue(int(spec.get("top_n", 10)))
+        graph_bins.setValue(int(spec.get("bins", 8)))
+        graph_show_values.setChecked(bool(spec.get("show_values", True)))
+        graph_show_legend.setChecked(bool(spec.get("show_legend", True)))
+        graph_safe_margin.setValue(float(spec.get("safe_margin_mm", 3.0)))
+        palette = tuple(spec.get("palette", ()))
+        _select_combo_data(graph_palette, palette)
+        surface = (spec.get("background_color", "#ffffff"), spec.get("text_color", "#0f172a"), spec.get("grid_color", "#e2e8f0"))
+        _select_combo_data(graph_surface, surface)
+        graph_x.setValue(float(spec.get("x", 15.0)))
+        graph_y.setValue(float(spec.get("y", 15.0)))
+        graph_w.setValue(float(spec.get("width", 90.0)))
+        graph_h.setValue(float(spec.get("height", 60.0)))
+        _select_combo_data(graph_position, "custom")
+
+    graph_ids.currentIndexChanged.connect(_load_graph_settings)
+    if graph_ids.count():
+        _load_graph_settings()
+    lyt_graph.addStretch()
+    _add_scroll_tab(tab_graph, "Add Graph")
 
     main_lyt.addWidget(tabs)
     dock.setWidget(container)

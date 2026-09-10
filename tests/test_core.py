@@ -872,6 +872,8 @@ from zero2cartolab.layout import designer_integration as di
 check("designer_integration setup function exists", callable(di.setup_designer_integration))
 check("designer_integration attach function exists", callable(di.attach_cartolab_to_designer))
 check("designer_integration dock creator exists", callable(di.create_cartolab_layout_dock))
+check("designer_integration teardown function exists", callable(di.teardown_designer_integration))
+check("designer integration tracks docks by designer", isinstance(di._INTEGRATED_DESIGNERS, dict))
 
 # ===================================================================
 # 17. PAPER CANVAS THEMES
@@ -1110,6 +1112,59 @@ check("QPT inspector blocks unsafe external-function import", not _qpt_report["s
 check("QPT inspector detects off-page item", any("outside" in w for w in _qpt_report["warnings"]))
 check("QPT report formatter includes compatibility notes",
       "Compatibility notes" in format_qpt_report(_qpt_report))
+
+# ===================================================================
+# 26. NATIVE PRINT LAYOUT CHARTS
+# ===================================================================
+section("Native Print Layout Charts")
+from zero2cartolab.layout.charts.spec import ChartSpec, CHART_TYPES
+from zero2cartolab.layout.charts.transform import build_chart_data
+from zero2cartolab.layout.charts.placement import best_position, intersection_area
+
+_chart_cols = {"district": ["A", "B", "A", "C"], "value": [4, 7, 6, 3]}
+_bar_data = build_chart_data(
+    ChartSpec(category_field="district", value_field="value", aggregation="sum"),
+    _chart_cols,
+)
+check("chart engine exposes ten publication chart types", len(CHART_TYPES) == 10)
+check("chart aggregation groups categories", _bar_data == {
+    "categories": ["A", "B", "C"], "values": [10.0, 7.0, 3.0]
+})
+_hist_data = build_chart_data(
+    ChartSpec(chart_type="histogram", value_field="value", bins=3), _chart_cols
+)
+check("histogram conserves observations", sum(_hist_data["values"]) == 4)
+_scatter_data = build_chart_data(
+    ChartSpec(chart_type="scatter", category_field="value", value_field="value"),
+    _chart_cols,
+)
+check("scatter preserves numeric X/Y pairs", _scatter_data["x_values"] == [4.0, 7.0, 6.0, 3.0])
+_multi_data = build_chart_data(
+    ChartSpec(chart_type="grouped_bar", category_field="district", value_field="value",
+              series_field="series", aggregation="sum"),
+    {**_chart_cols, "series": ["X", "X", "Y", "Y"]},
+)
+check("multi-series transform builds pivoted series", len(_multi_data["series"]) == 2)
+check("chart overlap area is exact", intersection_area((0, 0, 10, 10), (5, 5, 10, 10)) == 25)
+check(
+    "best chart position avoids occupied lower-right",
+    best_position(297, 210, 90, 60, [((197, 140, 90, 60), 5)]) != (197, 140),
+)
+try:
+    ChartSpec(chart_type="bar", aggregation="sum", category_field="district").validated()
+    _invalid_chart_rejected = False
+except ValueError:
+    _invalid_chart_rejected = True
+check("chart spec rejects missing numeric value", _invalid_chart_rejected)
+from zero2cartolab.layout.pixel_qa import contrast_ratio
+check("dark ink on white exceeds WCAG AAA", contrast_ratio("#0f172a", "#ffffff") >= 7.0)
+check("identical colours have unit contrast", abs(contrast_ratio("#ffffff", "#ffffff") - 1.0) < 1e-9)
+try:
+    ChartSpec(category_field="district", background_color="#ffffff", text_color="#dddddd").validated()
+    _low_contrast_rejected = False
+except ValueError:
+    _low_contrast_rejected = True
+check("chart spec rejects low-contrast typography", _low_contrast_rejected)
 
 # ===================================================================
 # SUMMARY

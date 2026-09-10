@@ -71,6 +71,8 @@ Everything is reachable from the **02CartoLab Dashboard** (`Plugins → 02CartoL
 | **Layout Manager** | List, open, duplicate, delete and export (PNG / PDF / SVG, 96–600 dpi) project layouts | Dashboard → Layout Studio |
 | **Layout Decorators** | Native bivariate legends, 3D isometric layer stacks, idempotent minimalist grids, typography hierarchy, paper themes | Dashboard → Layout Studio |
 | **Print Preflight** | Non-mutating publication check for page overflow, duplicate IDs, empty/tiny map frames, unlinked legends/scale bars and empty labels | Dashboard or Print Layout Designer dock |
+| **Add Graph** | Native editable bar, grouped/stacked bar, line, multi-series line, area, numeric scatter, pie, donut and histogram charts from vector-layer fields; aggregation, Top-N, persisted edit settings and least-overlap print-safe placement; no web view or external dependency | Print Layout Designer dock |
+| **Pixel QA** | Renders the active layout at 150 DPI and measures blankness, colour diversity, content bounds, minimum margin and ink entering the configurable print-safe edge; chart colours receive live WCAG contrast validation | Print Layout Designer dock |
 
 ---
 
@@ -119,7 +121,8 @@ More: [Documentation index](docs/README.md) · [Feature showcase](docs/SHOWCASE.
 zero2cartolab/
   core/        # Symbology engines, 2.5D renderer helpers, math logic
   processing/  # QGIS Processing algorithms
-  layout/      # Print Layout automation
+  layout/      # Print Layout automation, native charts, preflight and pixel QA
+    charts/    # Independent data -> transform -> spec -> native renderer pipeline
   ui/          # Dashboard, 2.5D panel, feature inspector
   docs/        # Web Documentation showcase (excluded from the Hub zip)
 ```

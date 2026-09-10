@@ -59,6 +59,10 @@ def preflight_layout(layout: QgsLayout, tolerance: float = 0.75) -> List[Dict[st
             ))
 
     page_rects = [page.sceneBoundingRect() for page in pages]
+    item_by_id = {
+        item.id(): item for item in items
+        if hasattr(item, "id") and item.id()
+    }
     for item in items:
         item_id = item.id() if hasattr(item, "id") else ""
         with suppress(RuntimeError):
@@ -98,26 +102,126 @@ def preflight_layout(layout: QgsLayout, tolerance: float = 0.75) -> List[Dict[st
                     "warning", "small_map_frame",
                     "Map frame is very small and may not be legible in print.", item_id,
                 ))
+            for grid in list(item.grids().asList()) if hasattr(item, "grids") else []:
+                if not grid.enabled():
+                    continue
+                interval_x = float(grid.intervalX())
+                interval_y = float(grid.intervalY())
+                if interval_x <= 0 or interval_y <= 0:
+                    issues.append(_issue(
+                        "error", "invalid_grid_interval",
+                        "Enabled coordinate grid has a zero or negative interval.", item_id,
+                    ))
+                    continue
+                width = float(extent.width()) if extent is not None else 0.0
+                height = float(extent.height()) if extent is not None else 0.0
+                divisions_x = width / interval_x if interval_x else 0.0
+                divisions_y = height / interval_y if interval_y else 0.0
+                if divisions_x > 14 or divisions_y > 14:
+                    issues.append(_issue(
+                        "warning", "dense_grid",
+                        "Coordinate grid is too dense for a publication layout; increase its interval.", item_id,
+                    ))
+                elif (divisions_x and divisions_x < 2) or (divisions_y and divisions_y < 2):
+                    issues.append(_issue(
+                        "warning", "sparse_grid",
+                        "Coordinate grid has fewer than two divisions on an axis.", item_id,
+                    ))
         elif isinstance(item, QgsLayoutItemScaleBar):
             linked_map = item.linkedMap() if hasattr(item, "linkedMap") else None
             if linked_map is None:
                 issues.append(_issue(
                     "error", "unlinked_scalebar", "Scale bar is not linked to a map.", item_id
                 ))
+            else:
+                with suppress(Exception):
+                    if float(item.unitsPerSegment()) <= 0:
+                        issues.append(_issue(
+                            "error", "invalid_scalebar_segment",
+                            "Scale bar segment distance must be positive.", item_id,
+                        ))
+                with suppress(Exception):
+                    segments = int(item.numberOfSegments()) + int(item.numberOfSegmentsLeft())
+                    if segments < 2 or segments > 6:
+                        issues.append(_issue(
+                            "warning", "scalebar_segment_count",
+                            "Scale bar should normally contain 2–6 readable segments.", item_id,
+                        ))
+                with suppress(Exception):
+                    if float(item.rect().width()) > float(linked_map.rect().width()) * 0.55:
+                        issues.append(_issue(
+                            "warning", "oversize_scalebar",
+                            "Scale bar occupies more than half of its linked map width.", item_id,
+                        ))
         elif isinstance(item, QgsLayoutItemLegend):
             linked_map = item.linkedMap() if hasattr(item, "linkedMap") else None
             if linked_map is None:
                 issues.append(_issue(
                     "warning", "unlinked_legend", "Legend is not linked to a map frame.", item_id
                 ))
+            with suppress(Exception):
+                if float(item.rect().width()) < 18 or float(item.rect().height()) < 12:
+                    issues.append(_issue(
+                        "warning", "small_legend",
+                        "Legend frame is too small for reliably readable symbols and labels.", item_id,
+                    ))
         elif isinstance(item, QgsLayoutItemLabel):
             if not (item.text() or "").strip():
                 issues.append(_issue(
                     "warning", "empty_label", "Text label is empty.", item_id
                 ))
 
+        if item_id.endswith("_frame") and item_id.startswith("cartolab_chart_"):
+            with suppress(Exception):
+                rect = item.sceneBoundingRect()
+                containing = next((page for page in page_rects if page.contains(rect.center())), None)
+                if containing is not None:
+                    inset = 3.0
+                    if (rect.left() < containing.left() + inset or
+                            rect.top() < containing.top() + inset or
+                            rect.right() > containing.right() - inset or
+                            rect.bottom() > containing.bottom() - inset):
+                        issues.append(_issue(
+                            "warning", "chart_safe_margin",
+                            "Chart is inside the page but violates the 3 mm print-safe margin.", item_id,
+                        ))
+
     if not any(isinstance(item, QgsLayoutItemMap) for item in items):
         issues.append(_issue("error", "map_missing", "The layout contains no map frame."))
+    if "cartolab_map" in item_by_id:
+        has_north = any(
+            item_id == "cartolab_north_arrow" or item_id.startswith("cartolab_north_arrow_")
+            for item_id in item_by_id
+        )
+        if not has_north:
+            issues.append(_issue(
+                "warning", "north_arrow_missing",
+                "CartoLab map sheet has no north arrow; add one unless orientation is self-evident.",
+                "cartolab_map",
+            ))
+    chart_frames = [
+        item for item in items
+        if hasattr(item, "id")
+        and item.id().startswith("cartolab_chart_")
+        and item.id().endswith("_frame")
+    ]
+    for frame in chart_frames:
+        with suppress(Exception):
+            frame_rect = frame.sceneBoundingRect()
+            for other in items:
+                if other is frame or isinstance(other, QgsLayoutItemMap):
+                    continue
+                other_id = other.id() if hasattr(other, "id") else ""
+                if other_id.startswith("cartolab_chart_"):
+                    continue
+                overlap = frame_rect.intersected(other.sceneBoundingRect())
+                if overlap.width() * overlap.height() > 4.0:
+                    issues.append(_issue(
+                        "warning", "chart_furniture_overlap",
+                        f"Chart overlaps layout furniture '{other_id or type(other).__name__}'.",
+                        frame.id(),
+                    ))
+                    break
     return issues
 
 
