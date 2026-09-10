@@ -55,13 +55,13 @@ def _line(color="#64748b", width="0.25"):
 
 
 def _add_label(layout, item_id, text, x, y, w, h, size=7.0, bold=False,
-               color="#334155", align=None):
+               color="#334155", align=None, font_family="Segoe UI"):
     label = QgsLayoutItemLabel(layout)
     label.setId(item_id)
     label.setText(str(text))
     label.setBackgroundEnabled(False)
     label.setFrameEnabled(False)
-    font = QFont("Segoe UI")
+    font = QFont(font_family)
     font.setPointSizeF(float(size))
     font.setBold(bool(bold))
     label.setFont(font)
@@ -121,13 +121,16 @@ def _cartesian(layout, root, spec, categories, values, x, y, w, h, x_values=None
         return py + ph - ((float(value) - minimum) / span) * ph
     zero_y = value_y(0.0)
 
-    _add_polyline(layout, f"{root}_axis_y", [(px, py), (px, py + ph)], spec.text_color, 0.22)
-    _add_polyline(layout, f"{root}_axis_x", [(px, zero_y), (px + pw, zero_y)], spec.text_color, 0.22)
+    axis_width = max(0.18, spec.line_width_mm * 0.34)
+    _add_polyline(layout, f"{root}_axis_y", [(px, py), (px, py + ph)], spec.text_color, axis_width)
+    _add_polyline(layout, f"{root}_axis_x", [(px, zero_y), (px + pw, zero_y)], spec.text_color, axis_width)
     for index in range(5):
         value = minimum + span * index / 4.0
         gy = value_y(value)
         _add_polyline(layout, f"{root}_grid_{index}", [(px, gy), (px + pw, gy)], spec.grid_color, 0.12)
-        _add_label(layout, f"{root}_tick_{index}", _fmt(value), x + 0.5, gy - 2.0, left - 1.5, 4.0, 5.6, color=spec.text_color)
+        _add_label(layout, f"{root}_tick_{index}", _fmt(value), x + 0.5, gy - 2.0,
+                   left - 1.5, 4.0, spec.label_size_pt, color=spec.text_color,
+                   font_family=spec.font_family)
 
     count = len(categories)
     slot = pw / max(1, count)
@@ -142,7 +145,9 @@ def _cartesian(layout, root, spec, categories, values, x, y, w, h, x_values=None
                       bar_w, bar_h, palette[index % len(palette)])
             if spec.show_values and slot >= 8:
                 _add_label(layout, f"{root}_value_{index}", _fmt(value),
-                           cx - slot / 2, top_y - 4.0, slot, 3.5, 5.6, bold=True)
+                           cx - slot / 2, top_y - 4.0, slot, 3.5,
+                           spec.label_size_pt, bold=True, color=spec.text_color,
+                           font_family=spec.font_family)
     else:
         if spec.chart_type == "scatter" and x_values:
             x_min, x_max = min(x_values), max(x_values)
@@ -158,10 +163,10 @@ def _cartesian(layout, root, spec, categories, values, x, y, w, h, x_values=None
                                 [QPointF(points[-1][0], zero_y)])
             area = QgsLayoutItemPolygon(polygon, layout)
             area.setId(f"{root}_area")
-            area.setSymbol(_fill("#bfdbfe", "transparent"))
+            area.setSymbol(_fill(palette[0], "transparent"))
             layout.addLayoutItem(area)
         if spec.chart_type in ("line", "area") and len(points) > 1:
-            _add_polyline(layout, f"{root}_line", points, palette[0], 0.7)
+            _add_polyline(layout, f"{root}_line", points, palette[0], spec.line_width_mm)
         for index, (cx, cy) in enumerate(points):
             marker = QgsLayoutItemShape(layout)
             marker.setId(f"{root}_mark_{index}")
@@ -170,7 +175,7 @@ def _cartesian(layout, root, spec, categories, values, x, y, w, h, x_values=None
                 "Ellipse", getattr(QgsLayoutItemShape, "Ellipse", 1),
             )
             marker.setShapeType(ellipse)
-            marker.setSymbol(_fill(palette[index % len(palette)], "#ffffff", 0.2))
+            marker.setSymbol(_fill(palette[index % len(palette)], spec.background_color, 0.2))
             marker.attemptMove(QgsLayoutPoint(cx - 1.2, cy - 1.2, _MM))
             marker.attemptResize(QgsLayoutSize(2.4, 2.4, _MM))
             layout.addLayoutItem(marker)
@@ -190,7 +195,8 @@ def _cartesian(layout, root, spec, categories, values, x, y, w, h, x_values=None
             label = label[:12] + "…"
         _add_label(layout, f"{root}_cat_{index}", label,
                    cx - slot * stride / 2, py + ph + 1.2,
-                   slot * stride, bottom - 1.5, 5.5, color=spec.text_color)
+                   slot * stride, bottom - 1.5, spec.label_size_pt,
+                   color=spec.text_color, font_family=spec.font_family)
 
 
 def _pie(layout, root, spec, categories, values, x, y, w, h):
@@ -219,7 +225,7 @@ def _pie(layout, root, spec, categories, values, x, y, w, h):
             points = [QPointF(cx, cy)] + outer
         wedge = QgsLayoutItemPolygon(QPolygonF(points), layout)
         wedge.setId(f"{root}_mark_{index}")
-        wedge.setSymbol(_fill(palette[index % len(palette)], "#ffffff", 0.18))
+        wedge.setSymbol(_fill(palette[index % len(palette)], spec.background_color, 0.18))
         layout.addLayoutItem(wedge)
         angle = end
 
@@ -234,7 +240,8 @@ def _pie(layout, root, spec, categories, values, x, y, w, h):
                       palette[index % len(palette)])
             text = f"{str(category)[:15]}  {_fmt(value)}"
             _add_label(layout, f"{root}_legend_{index}", text, lx + 4.3, yy,
-                       legend_w - 4.3, row_h, 5.6, color=spec.text_color)
+                       legend_w - 4.3, row_h, spec.label_size_pt,
+                       color=spec.text_color, font_family=spec.font_family)
 
 
 def _multi_cartesian(layout, root, spec, categories, series, x, y, w, h):
@@ -254,14 +261,16 @@ def _multi_cartesian(layout, root, spec, categories, series, x, y, w, h):
     def value_y(value):
         return py + ph - ((float(value) - minimum) / span) * ph
     zero_y = value_y(0.0)
-    _add_polyline(layout, f"{root}_axis_y", [(px, py), (px, py + ph)], spec.text_color, 0.22)
-    _add_polyline(layout, f"{root}_axis_x", [(px, zero_y), (px + pw, zero_y)], spec.text_color, 0.22)
+    axis_width = max(0.18, spec.line_width_mm * 0.34)
+    _add_polyline(layout, f"{root}_axis_y", [(px, py), (px, py + ph)], spec.text_color, axis_width)
+    _add_polyline(layout, f"{root}_axis_x", [(px, zero_y), (px + pw, zero_y)], spec.text_color, axis_width)
     for index in range(5):
         value = minimum + span * index / 4.0
         gy = value_y(value)
         _add_polyline(layout, f"{root}_grid_{index}", [(px, gy), (px + pw, gy)], spec.grid_color, 0.12)
         _add_label(layout, f"{root}_tick_{index}", _fmt(value), x + 0.5, gy - 2,
-                   left - 1.5, 4, 5.6, color=spec.text_color)
+                   left - 1.5, 4, spec.label_size_pt, color=spec.text_color,
+                   font_family=spec.font_family)
 
     slot = pw / max(1, len(categories))
     if spec.chart_type == "grouped_bar":
@@ -297,13 +306,14 @@ def _multi_cartesian(layout, root, spec, categories, series, x, y, w, h):
                       for index, value in enumerate(row["values"])]
             if len(points) > 1:
                 _add_polyline(layout, f"{root}_line_{s_index}", points,
-                              spec.palette[s_index % len(spec.palette)], 0.65)
+                              spec.palette[s_index % len(spec.palette)], spec.line_width_mm)
 
     for index, category in enumerate(categories):
         label = str(category)[:12] + ("…" if len(str(category)) > 12 else "")
         _add_label(layout, f"{root}_cat_{index}", label,
                    px + slot * index, py + ph + 1.2, slot, bottom - 1.5,
-                   5.5, color=spec.text_color)
+                   spec.label_size_pt, color=spec.text_color,
+                   font_family=spec.font_family)
     if spec.show_legend:
         legend_x = x + 4.0
         for index, row in enumerate(series[:6]):
@@ -311,7 +321,8 @@ def _multi_cartesian(layout, root, spec, categories, series, x, y, w, h):
             _add_rect(layout, f"{root}_key_{index}", lx, y + 8.2, 3.0, 2.5,
                       spec.palette[index % len(spec.palette)])
             _add_label(layout, f"{root}_legend_{index}", str(row["name"])[:12],
-                       lx + 3.8, y + 7.5, 21.0, 4.0, 5.4, color=spec.text_color)
+                       lx + 3.8, y + 7.5, 21.0, 4.0, spec.label_size_pt,
+                       color=spec.text_color, font_family=spec.font_family)
 
 
 def add_chart_to_layout(layout, layer, spec: ChartSpec):
@@ -341,7 +352,9 @@ def add_chart_to_layout(layout, layer, spec: ChartSpec):
     _add_rect(layout, f"{root}_frame", spec.x, spec.y, spec.width, spec.height,
               spec.background_color, spec.grid_color, 0.25)
     _add_label(layout, f"{root}_title", spec.title or "Chart",
-               spec.x + 4, spec.y + 2, spec.width - 8, 6, 9.0, True, spec.text_color)
+               spec.x + 4, spec.y + 2, spec.width - 8, 6,
+               spec.title_size_pt, True, spec.text_color,
+               font_family=spec.font_family)
     if spec.chart_type in ("pie", "donut"):
         _pie(layout, root, spec, categories, values,
              spec.x, spec.y, spec.width, spec.height)

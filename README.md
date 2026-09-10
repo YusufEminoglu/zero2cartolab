@@ -72,6 +72,7 @@ Everything is reachable from the **02CartoLab Dashboard** (`Plugins → 02CartoL
 | **Layout Decorators** | Native bivariate legends, 3D isometric layer stacks, idempotent minimalist grids, typography hierarchy, paper themes | Dashboard → Layout Studio |
 | **Print Preflight** | Non-mutating publication check for page overflow, duplicate IDs, empty/tiny map frames, unlinked legends/scale bars and empty labels | Dashboard or Print Layout Designer dock |
 | **Add Graph** | Native editable bar, grouped/stacked bar, line, multi-series line, area, numeric scatter, pie, donut and histogram charts from vector-layer fields; aggregation, Top-N, persisted edit settings and least-overlap print-safe placement; no web view or external dependency | Print Layout Designer dock |
+| **02viz Theme Bridge** | Optionally discovers the active 02viz plugin's versioned theme catalog and applies its palettes, surfaces, typography and stroke presets to native Print Layout charts; automatically retains CartoLab built-ins when 02viz is unavailable | Print Layout Designer dock |
 | **Pixel QA** | Renders the active layout at 150 DPI and measures blankness, colour diversity, content bounds, minimum margin and ink entering the configurable print-safe edge; chart colours receive live WCAG contrast validation | Print Layout Designer dock |
 
 ---

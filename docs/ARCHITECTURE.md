@@ -41,6 +41,12 @@ zero2viz installation, web view, JavaScript runtime, or external Python package
 is required. Chart specifications and source-layer IDs are stored on the layout
 group so graphs can be listed, edited, regenerated, and removed.
 
+The optional `theme_adapter` discovers an active zero2viz instance through the
+QGIS plugin registry and consumes its versioned, plain-data theme catalog. It
+does not import zero2viz package internals. Theme snapshots are persisted in the
+CartoLab chart specification, so disabling zero2viz never makes an existing
+layout unreadable and built-in themes always remain available.
+
 `layout/pixel_qa.py` validates the rendered result rather than only item
 geometry. It measures ink coverage, colour diversity, content bounds, minimum
 page-edge clearance, and ink entering a configurable safe margin. Structural

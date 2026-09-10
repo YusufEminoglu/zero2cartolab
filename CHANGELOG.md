@@ -6,6 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-09-10
+
+### Added
+
+- Add optional 02viz theme discovery to the Print Layout Designer. When 02viz
+  is active, Add Graph gains its Studio Light, Ink Dark, Soft Pastel, and Bold
+  Print palettes, surfaces, typography, and stroke presets; built-in themes
+  remain available when 02viz is absent or disabled.
+- Persist the theme provider, theme ID, font family, title/label sizes, and line
+  width in every native chart specification so layouts remain reproducible
+  without a runtime dependency on 02viz.
+
 ## [1.2.1] - 2026-09-10
 
 ### Fixed

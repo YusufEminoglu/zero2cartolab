@@ -12,7 +12,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from qgis.core import QgsApplication
 from qgis.PyQt.QtCore import QObject, pyqtSignal
 from qgis.PyQt.QtGui import QFontDatabase
-from qgis.PyQt.QtWidgets import QDockWidget, QMainWindow, QTabWidget
+from qgis.PyQt.QtWidgets import QComboBox, QDockWidget, QMainWindow, QTabWidget
 
 
 class _Signals(QObject):
@@ -54,6 +54,10 @@ def main() -> int:
     first_designer = _Designer(first_window)
     iface = _Iface([first_designer])
 
+    import zero2viz
+    from qgis.utils import plugins
+    plugins["zero2viz"] = zero2viz.classFactory(iface)
+
     integration.setup_designer_integration(iface)
     app.processEvents()
     first_docks = first_window.findChildren(QDockWidget, "CartoLabLayoutStudioDock")
@@ -62,6 +66,10 @@ def main() -> int:
     tabs = first_docks[0].findChild(QTabWidget)
     assert tabs is not None and tabs.count() == 5, "Add Graph workspace is missing"
     assert "Add Graph" in tabs.tabText(4)
+    combos = first_docks[0].findChildren(QComboBox)
+    combo_labels = [combo.itemText(i) for combo in combos for i in range(combo.count())]
+    assert any(label.startswith("02viz · Studio Light") for label in combo_labels), \
+        "active 02viz theme provider was not discovered by Add Graph"
     first_window.resize(1400, 900)
     first_docks[0].resize(620, 840)
     tabs.setCurrentIndex(4)
@@ -80,6 +88,7 @@ def main() -> int:
     assert len(second_window.findChildren(QDockWidget, "CartoLabLayoutStudioDock")) == 1
 
     integration.teardown_designer_integration(iface)
+    plugins.pop("zero2viz", None)
     app.processEvents()
     assert not integration._INTEGRATED_DESIGNERS
     print("PASS: Print Layout Designer dock lifecycle")

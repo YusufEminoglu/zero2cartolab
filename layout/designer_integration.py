@@ -1200,8 +1200,36 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
     graph_bins.setValue(8)
     fl_graph_layout.addRow("Histogram bins:", graph_bins)
 
+    from .charts import PALETTES, discover_zero2viz_themes
+    graph_theme = QComboBox()
+    built_in_themes = [
+        {"id": "editorial", "label": "Editorial", "provider": "02CartoLab",
+         "palette": PALETTES["Editorial"], "surface": ("#ffffff", "#0f172a", "#e2e8f0"),
+         "font_family": "Segoe UI", "title_size_pt": 9.0, "label_size_pt": 5.6,
+         "line_width_mm": 0.65},
+        {"id": "dark_ink", "label": "Dark Ink", "provider": "02CartoLab",
+         "palette": PALETTES["Colorblind Safe"], "surface": ("#0f172a", "#f8fafc", "#334155"),
+         "font_family": "Segoe UI", "title_size_pt": 9.5, "label_size_pt": 5.7,
+         "line_width_mm": 0.72},
+    ]
+    for theme in built_in_themes:
+        graph_theme.addItem(f"CartoLab · {theme['label']}", theme)
+    external_themes, theme_status_text = discover_zero2viz_themes()
+    for theme in external_themes:
+        graph_theme.addItem(f"02viz · {theme['label']}", theme)
+    fl_graph_layout.addRow("Theme:", graph_theme)
+
+    graph_theme_status = QLabel(theme_status_text)
+    graph_theme_status.setWordWrap(True)
+    graph_theme_status.setStyleSheet(
+        ("background:#dcfce7;color:#166534;border:1px solid #86efac;"
+         if external_themes else
+         "background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;")
+        + "border-radius:5px;padding:5px;"
+    )
+    fl_graph_layout.addRow("Theme source:", graph_theme_status)
+
     graph_palette = QComboBox()
-    from .charts import PALETTES
     for palette_name, colors in PALETTES.items():
         graph_palette.addItem(palette_name, colors)
     fl_graph_layout.addRow("Palette:", graph_palette)
@@ -1227,9 +1255,28 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
         palette_min = min(contrast_ratio(color, background) for color in graph_palette.currentData())
         graph_color_status.setText(f"AA {ratio:.1f}:1 · palette min {palette_min:.1f}:1")
 
+    def _ensure_combo_value(combo, label, value):
+        index = combo.findData(value)
+        if index < 0:
+            combo.addItem(label, value)
+            index = combo.count() - 1
+        combo.setCurrentIndex(index)
+
+    def _apply_graph_theme(_index=0):
+        theme = graph_theme.currentData() or built_in_themes[0]
+        prefix = theme.get("provider", "02CartoLab")
+        _ensure_combo_value(
+            graph_palette, f"{prefix} · {theme['label']}", tuple(theme["palette"]),
+        )
+        _ensure_combo_value(
+            graph_surface, f"{prefix} · {theme['label']}", tuple(theme["surface"]),
+        )
+        _refresh_graph_color_status()
+
     graph_palette.currentIndexChanged.connect(_refresh_graph_color_status)
     graph_surface.currentIndexChanged.connect(_refresh_graph_color_status)
-    _refresh_graph_color_status()
+    graph_theme.currentIndexChanged.connect(_apply_graph_theme)
+    _apply_graph_theme()
 
     graph_show_values = QCheckBox("Show value labels")
     graph_show_values.setChecked(True)
@@ -1319,6 +1366,7 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
         try:
             from .charts import ChartSpec, add_chart_to_layout
             x, y, width, height = _graph_geometry(layout)
+            theme = graph_theme.currentData() or built_in_themes[0]
             spec = ChartSpec(
                 chart_type=graph_type_combo.currentData() or "bar",
                 category_field=graph_category_combo.currentData() or "",
@@ -1334,6 +1382,12 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
                 background_color=graph_surface.currentData()[0],
                 text_color=graph_surface.currentData()[1],
                 grid_color=graph_surface.currentData()[2],
+                theme_provider=theme.get("provider", "02CartoLab"),
+                theme_id=theme.get("id", "editorial"),
+                font_family=theme.get("font_family", "Segoe UI"),
+                title_size_pt=theme.get("title_size_pt", 9.0),
+                label_size_pt=theme.get("label_size_pt", 5.6),
+                line_width_mm=theme.get("line_width_mm", 0.65),
                 safe_margin_mm=graph_safe_margin.value(),
             )
             chart_id = add_chart_to_layout(layout, layer, spec)
@@ -1359,6 +1413,7 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
         try:
             from .charts import ChartSpec, add_chart_to_layout, remove_chart
             x, y, width, height = _graph_geometry(layout)
+            theme = graph_theme.currentData() or built_in_themes[0]
             spec = ChartSpec(
                 chart_type=graph_type_combo.currentData() or "bar",
                 category_field=graph_category_combo.currentData() or "",
@@ -1374,6 +1429,12 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
                 background_color=graph_surface.currentData()[0],
                 text_color=graph_surface.currentData()[1],
                 grid_color=graph_surface.currentData()[2],
+                theme_provider=theme.get("provider", "02CartoLab"),
+                theme_id=theme.get("id", "editorial"),
+                font_family=theme.get("font_family", "Segoe UI"),
+                title_size_pt=theme.get("title_size_pt", 9.0),
+                label_size_pt=theme.get("label_size_pt", 5.6),
+                line_width_mm=theme.get("line_width_mm", 0.65),
                 safe_margin_mm=graph_safe_margin.value(),
             )
             new_id = add_chart_to_layout(layout, layer, spec)
@@ -1436,6 +1497,12 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
         graph_show_values.setChecked(bool(spec.get("show_values", True)))
         graph_show_legend.setChecked(bool(spec.get("show_legend", True)))
         graph_safe_margin.setValue(float(spec.get("safe_margin_mm", 3.0)))
+        for theme_index in range(graph_theme.count()):
+            theme = graph_theme.itemData(theme_index) or {}
+            if (theme.get("provider") == spec.get("theme_provider", "02CartoLab")
+                    and theme.get("id") == spec.get("theme_id", "editorial")):
+                graph_theme.setCurrentIndex(theme_index)
+                break
         palette = tuple(spec.get("palette", ()))
         _select_combo_data(graph_palette, palette)
         surface = (spec.get("background_color", "#ffffff"), spec.get("text_color", "#0f172a"), spec.get("grid_color", "#e2e8f0"))

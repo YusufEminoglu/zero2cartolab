@@ -42,6 +42,12 @@ class ChartSpec:
     background_color: str = "#ffffff"
     text_color: str = "#0f172a"
     grid_color: str = "#e2e8f0"
+    theme_provider: str = "02CartoLab"
+    theme_id: str = "editorial"
+    font_family: str = "Segoe UI"
+    title_size_pt: float = 9.0
+    label_size_pt: float = 5.6
+    line_width_mm: float = 0.65
     safe_margin_mm: float = 3.0
 
     def validated(self) -> "ChartSpec":
@@ -57,6 +63,12 @@ class ChartSpec:
             raise ValueError("Histogram bins must be between 3 and 40.")
         if self.safe_margin_mm < 0 or self.safe_margin_mm > 25:
             raise ValueError("Safe margin must be between 0 and 25 mm.")
+        if not 6.0 <= self.title_size_pt <= 24.0:
+            raise ValueError("Chart title size must be between 6 and 24 pt.")
+        if not 4.0 <= self.label_size_pt <= 16.0:
+            raise ValueError("Chart label size must be between 4 and 16 pt.")
+        if not 0.1 <= self.line_width_mm <= 3.0:
+            raise ValueError("Chart line width must be between 0.1 and 3 mm.")
         if not self.palette:
             raise ValueError("Chart palette cannot be empty.")
         from ..pixel_qa import contrast_ratio

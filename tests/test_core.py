@@ -1120,6 +1120,7 @@ section("Native Print Layout Charts")
 from zero2cartolab.layout.charts.spec import ChartSpec, CHART_TYPES
 from zero2cartolab.layout.charts.transform import build_chart_data
 from zero2cartolab.layout.charts.placement import best_position, intersection_area
+from zero2cartolab.layout.charts.theme_adapter import discover_zero2viz_themes
 
 _chart_cols = {"district": ["A", "B", "A", "C"], "value": [4, 7, 6, 3]}
 _bar_data = build_chart_data(
@@ -1165,6 +1166,28 @@ try:
 except ValueError:
     _low_contrast_rejected = True
 check("chart spec rejects low-contrast typography", _low_contrast_rejected)
+
+class _FakeVizPlugin:
+    def print_layout_theme_catalog(self):
+        return {
+            "api": "zero2viz.print_layout_themes", "api_version": 1,
+            "themes": [{
+                "id": "studio_light", "label": "Studio Light",
+                "palette": ["#2a8f85", "#fa8e7a"],
+                "background": "#fbfbfd", "text": "#16323f", "grid": "#e3e7ec",
+                "font_family": "Segoe UI", "title_size_pt": 9,
+                "label_size_pt": 5.6, "line_width_mm": 0.65,
+            }],
+        }
+
+_viz_themes, _viz_status = discover_zero2viz_themes({"zero2viz": _FakeVizPlugin()})
+check("02viz adapter accepts versioned theme catalog", len(_viz_themes) == 1)
+check("02viz adapter transfers palette and typography",
+      _viz_themes[0]["palette"][0] == "#2a8f85"
+      and _viz_themes[0]["font_family"] == "Segoe UI")
+check("02viz adapter reports connected status", _viz_status.startswith("02viz connected"))
+_fallback_themes, _fallback_status = discover_zero2viz_themes({})
+check("02viz adapter remains optional", not _fallback_themes and "built-in" in _fallback_status)
 
 # ===================================================================
 # SUMMARY
