@@ -439,6 +439,15 @@ ok("map sheet has north arrow",
    _count(sheet, QgsLayoutItemPicture) >= 1
    or any(hasattr(it, "id") and it.id() == "cartolab_north_arrow" for it in sheet.items())
    or _count(sheet, QgsLayoutItemPolygon) >= 1)
+_north_arrow = next(it for it in sheet.items() if hasattr(it, "id") and it.id() == "cartolab_north_arrow")
+_north_label = next(it for it in sheet.items() if hasattr(it, "id") and it.id() == "cartolab_north_arrow_label")
+ok(
+    "north notation N shares the arrow centre axis",
+    abs(_north_arrow.sceneBoundingRect().center().x()
+        - _north_label.sceneBoundingRect().center().x()) < 0.05,
+    f"arrow={_north_arrow.sceneBoundingRect().center().x():.3f} "
+    f"label={_north_label.sceneBoundingRect().center().x():.3f}",
+)
 
 _sm = next(it for it in sheet.items() if isinstance(it, QgsLayoutItemMap))
 apply_minimalist_grid(sheet)
@@ -474,6 +483,47 @@ _pdf = os.path.join(tempfile.gettempdir(), "cartolab_e2e_sheet.pdf")
 ok("layout exports to PDF", export_layout(sheet, _pdf, dpi=72) and os.path.exists(_pdf))
 _svg = os.path.join(tempfile.gettempdir(), "cartolab_e2e_sheet.svg")
 ok("layout exports to SVG", export_layout(sheet, _svg, dpi=72) and os.path.exists(_svg))
+
+# A live legend stress layout: long layer/category labels must trigger actual
+# type reduction and remain inside the fixed 58 mm publication sidebar.
+legend_stress_layer = polys.clone()
+legend_stress_layer.setName("Neighbourhood Development Performance Assessment")
+legend_stress_renderer = legend_stress_layer.renderer()
+with suppress(Exception):
+    for category_index, _category in enumerate(legend_stress_renderer.categories()):
+        legend_stress_renderer.updateCategoryLabel(
+            category_index,
+            f"Scenario {category_index + 1} · Long planning classification label",
+        )
+QgsProject.instance().addMapLayer(legend_stress_layer)
+legend_stress = create_map_sheet(
+    iface=None, layers=[legend_stress_layer], title="Legend Auto-fit Live QA",
+    credits="long-label stress fixture", add_grid=True,
+)
+legend_stress_item = next(
+    item for item in legend_stress.items() if isinstance(item, QgsLayoutItemLegend)
+)
+legend_fit_font = float(legend_stress_item.customProperty("cartolab/legend_fit_font_pt", 99.0))
+legend_fit_width = float(legend_stress_item.customProperty("cartolab/legend_natural_width_mm", 999.0))
+legend_fit_height = float(legend_stress_item.customProperty("cartolab/legend_natural_height_mm", 999.0))
+legend_fit_ok = bool(legend_stress_item.customProperty("cartolab/legend_fits", False))
+legend_model_rows = legend_stress_item.model().rowCount()
+ok("legend stress fixture is visible in the real legend model", legend_model_rows > 0,
+   str(legend_model_rows))
+ok("long legend labels trigger automatic font reduction", legend_fit_font < 9.0, str(legend_fit_font))
+ok(
+    "long legend natural content fits its allocated sidebar",
+    legend_fit_ok and legend_fit_width <= 58.0 and legend_fit_height <= 149.0,
+    f"{legend_fit_width:.2f} x {legend_fit_height:.2f} mm @ {legend_fit_font:.1f} pt",
+)
+_legend_stress_png = os.path.join(tempfile.gettempdir(), "cartolab_e2e_legend_stress.png")
+ok(
+    "legend stress layout exports visible QA PNG",
+    export_layout(legend_stress, _legend_stress_png, dpi=150)
+    and os.path.exists(_legend_stress_png)
+    and os.path.getsize(_legend_stress_png) > 10_000,
+)
+QgsProject.instance().removeMapLayer(legend_stress_layer.id())
 
 # ===========================================================================
 # TEMPLATE GALLERY E2E (all 5 publication archetypes)

@@ -15,8 +15,8 @@ from contextlib import suppress
 from typing import List, Optional
 
 try:
-    from qgis.PyQt.QtGui import QColor, QFont, QPolygonF
-    from qgis.PyQt.QtCore import QPointF
+    from qgis.PyQt.QtGui import QColor, QFont, QFontMetricsF, QPolygonF
+    from qgis.PyQt.QtCore import QModelIndex, QPointF, Qt
     from qgis.core import (
         QgsProject,
         QgsPrintLayout,
@@ -38,7 +38,7 @@ try:
     )
     _MM = QgsUnitTypes.LayoutUnit.LayoutMillimeters
 except ImportError:
-    QColor = QFont = QPolygonF = QPointF = None
+    QColor = QFont = QFontMetricsF = QPolygonF = QModelIndex = QPointF = Qt = None
     QgsProject = QgsPrintLayout = QgsLayoutItemMap = QgsLayoutItemLabel = QgsLayoutItemLegend = None
     QgsLayoutItemScaleBar = QgsLayoutItemPicture = QgsLayoutItemPolygon = QgsLayoutPoint = QgsLayoutSize = None
     QgsDistanceArea = QgsPointXY = QgsCoordinateTransform = None
@@ -63,6 +63,108 @@ def _font(size: float, bold: bool = False, family: str = "Segoe UI") -> QFont:
         f.setPointSizeF(float(size))
     f.setBold(bold)
     return f
+
+
+def _legend_style(legend, name: str):
+    from qgis.core import QgsLegendStyle
+    scoped = getattr(QgsLegendStyle, "Style", QgsLegendStyle)
+    return getattr(scoped, name, getattr(QgsLegendStyle, name, None))
+
+
+def _set_legend_typography(legend, label_size: float) -> None:
+    """Apply a compact hierarchy while retaining a readable lower bound."""
+    sizes = {
+        "Title": min(10.0, label_size + 1.2),
+        "Group": min(9.5, label_size + 0.8),
+        "Subgroup": min(9.0, label_size + 0.4),
+        "SymbolLabel": label_size,
+    }
+    for style_name, size in sizes.items():
+        style_enum = _legend_style(legend, style_name)
+        if style_enum is None:
+            continue
+        style = legend.rstyle(style_enum)
+        text_format = style.textFormat()
+        text_format.setFont(_font(size, bold=style_name in ("Title", "Group")))
+        text_format.setSize(size)
+        text_format.setColor(QColor("#0f172a"))
+        style.setTextFormat(text_format)
+
+
+def _legend_model_texts(legend) -> list[str]:
+    """Collect every visible layer/group/symbol label from the legend model."""
+    model = legend.model()
+    texts = []
+    display_role = Qt.ItemDataRole.DisplayRole
+    display_role = int(getattr(display_role, "value", display_role))
+
+    def visit(parent):
+        for row in range(model.rowCount(parent)):
+            index = model.index(row, 0, parent)
+            value = model.data(index, display_role)
+            if value is not None and str(value).strip():
+                texts.append(str(value).strip())
+            visit(index)
+
+    visit(QModelIndex())
+    return texts
+
+
+def _legend_text_budget(legend, label_size: float, symbol_width: float,
+                        symbol_height: float, box_space: float) -> tuple[float, float]:
+    """Estimate rendered content in mm using actual Qt glyph metrics."""
+    texts = _legend_model_texts(legend)
+    if not texts:
+        return 0.0, 0.0
+    metrics = QFontMetricsF(_font(label_size))
+    advance = getattr(metrics, "horizontalAdvance", None)
+    if advance is None:
+        advance = getattr(metrics, "width")
+    widest_px = max(float(advance(text)) for text in texts)
+    # QFontMetricsF uses device pixels; QGIS layout's standard logical text DPI
+    # is 96. Add symbol and both-side spacing to obtain the real row budget.
+    width_mm = widest_px * 25.4 / 96.0 + symbol_width + box_space * 2.0 + 2.0
+    line_height_mm = max(symbol_height, float(metrics.height()) * 25.4 / 96.0)
+    height_mm = len(texts) * line_height_mm + box_space * 2.0
+    return width_mm, height_mm
+
+
+def _fit_legend_to_box(legend, width_mm: float, height_mm: float) -> dict:
+    """Shrink typography/symbols until the natural legend fits its budget."""
+    result = {"font_pt": 9.0, "natural_width_mm": 0.0,
+              "natural_height_mm": 0.0, "fits": False}
+    for step in range(9):
+        size = 9.0 - step * 0.5
+        scale = size / 9.0
+        symbol_width = max(3.2, 6.0 * scale)
+        symbol_height = max(2.6, 4.0 * scale)
+        box_space = max(1.0, 2.0 * scale)
+        _set_legend_typography(legend, size)
+        legend.setSymbolWidth(symbol_width)
+        legend.setSymbolHeight(symbol_height)
+        legend.setBoxSpace(box_space)
+        with suppress(Exception):
+            legend.setColumnSpace(max(1.0, 2.0 * scale))
+        legend.setResizeToContents(True)
+        legend.adjustBoxSize()
+        metric_w, metric_h = _legend_text_budget(
+            legend, size, symbol_width, symbol_height, box_space
+        )
+        natural_w = max(float(legend.rect().width()), metric_w)
+        natural_h = max(float(legend.rect().height()), metric_h)
+        result = {"font_pt": size, "natural_width_mm": natural_w,
+                  "natural_height_mm": natural_h,
+                  "fits": natural_w <= width_mm and natural_h <= height_mm}
+        if result["fits"]:
+            break
+    # Lock the final box: no later refresh may expand it into page margins.
+    legend.setResizeToContents(False)
+    legend.attemptResize(QgsLayoutSize(width_mm, height_mm, _MM))
+    legend.setCustomProperty("cartolab/legend_fit_font_pt", result["font_pt"])
+    legend.setCustomProperty("cartolab/legend_natural_width_mm", result["natural_width_mm"])
+    legend.setCustomProperty("cartolab/legend_natural_height_mm", result["natural_height_mm"])
+    legend.setCustomProperty("cartolab/legend_fits", result["fits"])
+    return result
 
 
 def _resolve_layers(iface, project: QgsProject) -> List:
@@ -401,6 +503,7 @@ def create_map_sheet(
             layout.addLayoutItem(sub)
 
     # --- legend ----------------------------------------------------------
+    legend = None
     if add_legend:
         legend = QgsLayoutItemLegend(layout)
         legend.setId("cartolab_legend")
@@ -412,28 +515,15 @@ def create_map_sheet(
         legend.setTitle("")
         if hasattr(legend, "rstyle"):
             with suppress(Exception):
-                from qgis.core import QgsLegendStyle
-                for style_attr in ("Title", "Group", "Subgroup", "SymbolLabel"):
-                    style_enum = getattr(QgsLegendStyle, style_attr, getattr(getattr(QgsLegendStyle, "Style", None), style_attr, None))
-                    if style_enum is not None:
-                        tf = legend.rstyle(style_enum).textFormat()
-                        f = _font(9.0 if style_attr == "SymbolLabel" else 10.0)
-                        tf.setFont(f)
-                        tf.setColor(QColor("#0f172a"))
-                        legend.rstyle(style_enum).setTextFormat(tf)
+                _set_legend_typography(legend, 9.0)
         legend.setAutoUpdateModel(False)
         legend.attemptMove(QgsLayoutPoint(map_x + map_w + gap, map_y, _MM))
         legend.attemptResize(QgsLayoutSize(legend_w, map_h, _MM))
         layout.addLayoutItem(legend)
-        # Measure the natural legend, but never let a large layer tree push
-        # furniture beyond its dedicated sidebar or page margin.
+        # Fit text and symbols to the actual sidebar instead of merely clipping
+        # an oversized natural legend at its boundary.
         with suppress(Exception):
-            legend.adjustBoxSize()
-            natural_w = float(legend.rect().width())
-            natural_h = float(legend.rect().height())
-            if natural_w > legend_w or natural_h > map_h:
-                legend.setResizeToContents(False)
-                legend.attemptResize(QgsLayoutSize(legend_w, map_h, _MM))
+            _fit_legend_to_box(legend, legend_w, map_h)
 
     # --- scale bar -------------------------------------------------------
     if add_scalebar:
@@ -493,6 +583,11 @@ def create_map_sheet(
             from .paper_themes import apply_paper_theme
             apply_paper_theme(layout, theme_key=preset)
 
+    # Typography themes may restyle legend text, so fit once more after every
+    # theme has run. This is the final authority on the sidebar dimensions.
+    if legend is not None:
+        _fit_legend_to_box(legend, legend_w, map_h)
+
     project.layoutManager().addLayout(layout)
     layout.refresh()
     return layout
@@ -531,6 +626,8 @@ def _add_drawn_north_arrow(layout, x: float, y: float, size: float = 12.0, color
     label.setFrameEnabled(False)
     label.setFont(_font(8.5, bold=True))
     label.setFontColor(QColor(color))
-    label.adjustSizeToText()
-    label.attemptMove(QgsLayoutPoint(x + half - 2.5, y - 4.5, _MM))
+    label.setHAlign(Qt.AlignmentFlag.AlignHCenter)
+    label.setVAlign(Qt.AlignmentFlag.AlignVCenter)
+    label.attemptResize(QgsLayoutSize(size, 4.5, _MM))
+    label.attemptMove(QgsLayoutPoint(x, y - 4.5, _MM))
     layout.addLayoutItem(label)

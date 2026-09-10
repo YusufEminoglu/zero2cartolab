@@ -6,6 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-09-11
+
+### Fixed
+
+- Centre the north notation `N` and arrow on the same measured layout axis
+  instead of using a font-dependent hard-coded offset.
+- Auto-fit map-sheet legend typography, symbols, and spacing against the real
+  sidebar width and height after publication themes are applied, preventing
+  long layer/category labels from overflowing their allocated area.
+- Add live 150 DPI long-label legend stress output and north-axis geometry
+  regression checks on QGIS 3.44 and QGIS 4.2.
+
 ## [1.3.0] - 2026-09-10
 
 ### Added
