@@ -6,3 +6,8 @@ e2e
 NEXT_AGENT_BRIEF.md
 ENHANCEMENT_PLAN_*.md
 symbology-style.db
+# Repository-only content, not part of the installed plugin.
+# The reference manual is read online and every algorithm's helpUrl() points at
+# the repository's module catalog; no code path opens a local copy.
+# Same convention as planx_geostats.
+CARTOLAB_REFERENCE_MANUAL.html
