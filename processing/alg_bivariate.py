@@ -7,7 +7,7 @@ from qgis.core import (
     QgsProcessing, QgsProcessingAlgorithm, QgsProcessingException,
     QgsProcessingParameterFeatureSink, QgsProcessingParameterFeatureSource,
     QgsProcessingParameterField, QgsProcessingParameterNumber,
-    QgsProcessingParameterEnum, QgsProcessingLayerPostProcessorInterface,
+    QgsProcessingParameterEnum,
     QgsProcessingParameterColor,
 )
 from qgis.PyQt.QtCore import QVariant
@@ -16,64 +16,51 @@ from qgis.PyQt.QtGui import QColor
 from ..core.utils import safe_float
 from ..core.bivariate_engine import bivariate_colour_matrix
 from ._help_mixin import CartoLabHelpMixin
+from ._styling import style_output
 
 
-class BivariateSymbologyPostProcessor(QgsProcessingLayerPostProcessorInterface):
-    """Post-processor to automatically apply the bivariate NxN style to the output layer."""
+def apply_bivariate_renderer(layer, n_classes: int, color_ll: str, color_lh: str,
+                             color_hl: str, color_hh: str) -> None:
+    """Apply the bivariate NxN categorized style keyed on ``bivar_class``."""
+    from qgis.core import QgsCategorizedSymbolRenderer, QgsRendererCategory, QgsSymbol
 
-    def __init__(self, n_classes: int, color_ll: str, color_lh: str, color_hl: str, color_hh: str):
-        super().__init__()
-        self.n_classes = n_classes
-        self.color_ll = color_ll
-        self.color_lh = color_lh
-        self.color_hl = color_hl
-        self.color_hh = color_hh
+    matrix = bivariate_colour_matrix(n_classes, color_ll, color_lh, color_hl, color_hh)
+    categories = []
 
-    def postProcessLayer(self, layer, context, feedback) -> None:
-        if not layer:
-            return
+    for r in range(n_classes):
+        for c in range(n_classes):
+            val = f"({c},{r})"
+            color = matrix[r][c]
 
-        from qgis.PyQt.QtGui import QColor
-        from qgis.core import QgsCategorizedSymbolRenderer, QgsRendererCategory, QgsSymbol
+            # Human-readable labels:
+            label_parts = [f"X:{c+1}, Y:{r+1}"]
+            if r == 0 and c == 0:
+                label_parts.append("(Low-Low)")
+            elif r == 0 and c == n_classes - 1:
+                label_parts.append("(High-Low)")
+            elif r == n_classes - 1 and c == 0:
+                label_parts.append("(Low-High)")
+            elif r == n_classes - 1 and c == n_classes - 1:
+                label_parts.append("(High-High)")
+            label = " ".join(label_parts)
 
-        matrix = bivariate_colour_matrix(self.n_classes, self.color_ll, self.color_lh, self.color_hl, self.color_hh)
-        categories = []
+            symbol = QgsSymbol.defaultSymbol(layer.geometryType())
+            if symbol:
+                symbol.setColor(color)
+                # For polygon layers, use clean semi-transparent white outlines
+                if layer.geometryType() == 2:
+                    for idx in range(symbol.symbolLayerCount()):
+                        sl = symbol.symbolLayer(idx)
+                        if hasattr(sl, 'setStrokeColor'):
+                            sl.setStrokeColor(QColor(255, 255, 255, 140))
+                        if hasattr(sl, 'setStrokeWidth'):
+                            sl.setStrokeWidth(0.2)
 
-        for r in range(self.n_classes):
-            for c in range(self.n_classes):
-                val = f"({c},{r})"
-                color = matrix[r][c]
+                cat = QgsRendererCategory(val, symbol, label)
+                categories.append(cat)
 
-                # Human-readable labels:
-                label_parts = [f"X:{c+1}, Y:{r+1}"]
-                if r == 0 and c == 0:
-                    label_parts.append("(Low-Low)")
-                elif r == 0 and c == self.n_classes - 1:
-                    label_parts.append("(High-Low)")
-                elif r == self.n_classes - 1 and c == 0:
-                    label_parts.append("(Low-High)")
-                elif r == self.n_classes - 1 and c == self.n_classes - 1:
-                    label_parts.append("(High-High)")
-                label = " ".join(label_parts)
-
-                symbol = QgsSymbol.defaultSymbol(layer.geometryType())
-                if symbol:
-                    symbol.setColor(color)
-                    # For polygon layers, use clean semi-transparent white outlines
-                    if layer.geometryType() == 2:
-                        for idx in range(symbol.symbolLayerCount()):
-                            sl = symbol.symbolLayer(idx)
-                            if hasattr(sl, 'setStrokeColor'):
-                                sl.setStrokeColor(QColor(255, 255, 255, 140))
-                            if hasattr(sl, 'setStrokeWidth'):
-                                sl.setStrokeWidth(0.2)
-
-                    cat = QgsRendererCategory(val, symbol, label)
-                    categories.append(cat)
-
-        renderer = QgsCategorizedSymbolRenderer("bivar_class", categories)
-        layer.setRenderer(renderer)
-        layer.triggerRepaint()
+    renderer = QgsCategorizedSymbolRenderer("bivar_class", categories)
+    layer.setRenderer(renderer)
 
 
 class BivariateChoroplethAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
@@ -291,16 +278,11 @@ class BivariateChoroplethAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
             sink.addFeature(new_feat, QgsFeatureSink.Flag.FastInsert)
             feedback.setProgress(int(100 * current / total))
 
-        # Register post-processor for automatic layer styling
-        try:
-            if context.willLoadLayerOnCompletion(dest_id):
-                layer_details = context.layerToLoadOnCompletionDetails(dest_id)
-                layer_details.setPostProcessor(BivariateSymbologyPostProcessor(n_classes, color_ll, color_lh, color_hl, color_hh))
-            elif context.willLoadLayerOnCompletion(self.OUTPUT):
-                layer_details = context.layerToLoadOnCompletionDetails(self.OUTPUT)
-                layer_details.setPostProcessor(BivariateSymbologyPostProcessor(n_classes, color_ll, color_lh, color_hl, color_hh))
-        except Exception as exc:
-            feedback.pushWarning(f"Could not apply automatic bivariate symbology: {exc}")
+        style_output(
+            context, dest_id,
+            lambda layer: apply_bivariate_renderer(layer, n_classes, color_ll, color_lh, color_hl, color_hh),
+            feedback,
+        )
 
         return {self.OUTPUT: dest_id}
 

@@ -2,7 +2,6 @@
 """Continuous-Area Cartogram — Processing algorithm."""
 from __future__ import annotations
 
-from contextlib import suppress
 
 from qgis.core import (
     QgsFeatureSink,
@@ -15,11 +14,13 @@ from qgis.core import (
     QgsProcessingParameterField,
     QgsProcessingParameterNumber,
     QgsProcessingOutputNumber,
+    QgsWkbTypes,
 )
 from qgis import processing
 
 from ..core.cartogram_engine import CartogramEngine
 from ._help_mixin import CartoLabHelpMixin
+from ._styling import style_output
 
 
 class CartogramAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
@@ -124,7 +125,9 @@ class CartogramAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
 
         (sink, dest_id) = self.parameterAsSink(
             parameters, self.OUTPUT, context,
-            source.fields(), source.wkbType(), source.sourceCrs(),
+            # The zero-width buffer returns MultiPolygons; declare the sink to
+            # match so file outputs are conformant GeoPackages.
+            source.fields(), QgsWkbTypes.multiType(source.wkbType()), source.sourceCrs(),
         )
 
         # run cartogram engine
@@ -143,6 +146,10 @@ class CartogramAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
         cleaned_layer = context.getMapLayer(cleaned["OUTPUT"])
 
         for feat in cleaned_layer.getFeatures():
+            geom = feat.geometry()
+            if not geom.isNull() and not geom.isMultipart():
+                geom.convertToMultiType()
+                feat.setGeometry(geom)
             sink.addFeature(feat, QgsFeatureSink.Flag.FastInsert)
 
         error_pct = (avg_error - 1.0) * 100.0
@@ -151,11 +158,11 @@ class CartogramAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
             f"residual error: {error_pct:.2f}%"
         )
 
-        out_layer = context.getMapLayer(dest_id)
-        if out_layer:
-            with suppress(Exception):
-                from ..core.publication_styler import auto_style_layer
-                auto_style_layer(out_layer, style_type="cartogram", field_name=field_name, palette_name=pal_name)
+        def _style(out_layer):
+            from ..core.publication_styler import auto_style_layer
+            auto_style_layer(out_layer, style_type="cartogram", field_name=field_name, palette_name=pal_name)
+
+        style_output(context, dest_id, _style, feedback)
 
         return {
             self.OUTPUT: dest_id,

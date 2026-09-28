@@ -2,7 +2,6 @@
 """Choropleth Normalization & Rates — Processing algorithm."""
 from __future__ import annotations
 
-from contextlib import suppress
 
 from qgis.core import (
     QgsFeature, QgsFeatureSink, QgsField, QgsFields, QgsGraduatedSymbolRenderer,
@@ -17,6 +16,7 @@ from qgis.PyQt.QtGui import QColor
 from ..core import normalize as nm
 from ..core import palettes as pal
 from ._help_mixin import CartoLabHelpMixin
+from ._styling import style_output
 
 
 class NormalizeFieldAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
@@ -171,10 +171,13 @@ class NormalizeFieldAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
             f"{n_null} left null (missing / zero denominator)."
         )
 
-        with suppress(Exception):
-            out_layer = context.getMapLayer(dest_id)
-            if out_layer and valid_values:
-                _apply_graduated(out_layer, "norm_value", min(valid_values), max(valid_values), pal_name, n_classes)
+        if valid_values:
+            vmin, vmax = min(valid_values), max(valid_values)
+            style_output(
+                context, dest_id,
+                lambda layer: _apply_graduated(layer, "norm_value", vmin, vmax, pal_name, n_classes),
+                feedback,
+            )
 
         return {self.OUTPUT: dest_id}
 

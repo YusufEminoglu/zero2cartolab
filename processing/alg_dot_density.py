@@ -2,7 +2,6 @@
 """Dot-Density Map — Processing algorithm."""
 from __future__ import annotations
 
-from contextlib import suppress
 
 from qgis.PyQt.QtGui import QColor
 from qgis.core import (
@@ -15,6 +14,7 @@ from qgis.core import (
 
 from ..core.dot_density import dots_for_value, generate_dots
 from ._help_mixin import CartoLabHelpMixin
+from ._styling import style_output
 
 
 def _rings_from_geometry(geom):
@@ -138,15 +138,15 @@ class DotDensityAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
 
         feedback.pushInfo(f"Placed {dots_written} dots (1 dot = {per_dot:g} units).")
 
-        with suppress(Exception):
-            out_layer = context.getMapLayer(dest_id)
-            if out_layer:
-                c_str = f"{dot_color.red()},{dot_color.green()},{dot_color.blue()},{dot_color.alpha()}"
-                symbol = QgsMarkerSymbol.createSimple({
-                    "name": "circle", "size": str(dot_size),
-                    "color": c_str, "outline_style": "no",
-                })
-                out_layer.setRenderer(QgsSingleSymbolRenderer(symbol))
-                out_layer.triggerRepaint()
+        def _style(out_layer):
+            c_str = f"{dot_color.red()},{dot_color.green()},{dot_color.blue()},{dot_color.alpha()}"
+            symbol = QgsMarkerSymbol.createSimple({
+                "name": "circle", "size": str(dot_size),
+                "color": c_str, "outline_style": "no",
+            })
+            out_layer.setRenderer(QgsSingleSymbolRenderer(symbol))
+            out_layer.triggerRepaint()
+
+        style_output(context, dest_id, _style, feedback)
 
         return {self.OUTPUT: dest_id}

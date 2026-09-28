@@ -2,7 +2,6 @@
 """Adaptive Geometric Interval & Advanced Classification — Processing algorithm."""
 from __future__ import annotations
 
-from contextlib import suppress
 
 from qgis.core import (
     QgsClassificationCustom, QgsFeature, QgsFeatureSink, QgsField, QgsFields,
@@ -23,6 +22,7 @@ from ..core.bivariate_engine import (
 from ..core.quick_style import maximum_breaks, pretty_breaks
 from ..core import palettes as pal
 from ._help_mixin import CartoLabHelpMixin
+from ._styling import style_output
 
 
 class GeometricIntervalAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
@@ -169,24 +169,24 @@ class GeometricIntervalAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
             sink.addFeature(new_feat, QgsFeatureSink.Flag.FastInsert)
             feedback.setProgress(int(100 * current / total))
 
-        with suppress(Exception):
-            out_layer = context.getMapLayer(dest_id)
-            if out_layer:
-                num_classes = max(1, len(breaks) - 1)
-                colours = pal.get_palette(pal_name, num_classes)
-                ranges = []
-                for i in range(num_classes):
-                    sym = QgsSymbol.defaultSymbol(out_layer.geometryType())
-                    if sym:
-                        col = colours[min(i, len(colours) - 1)]
-                        sym.setColor(QColor(col))
-                        sym.setOpacity(0.88)
-                        label = f"{breaks[i]:.2f} – {breaks[i+1]:.2f}"
-                        ranges.append(QgsRendererRange(breaks[i], breaks[i+1], sym, label))
-                if ranges:
-                    renderer = QgsGraduatedSymbolRenderer(field_name, ranges)
-                    renderer.setClassificationMethod(QgsClassificationCustom())
-                    out_layer.setRenderer(renderer)
-                    out_layer.triggerRepaint()
+        def _style(out_layer):
+            num_classes = max(1, len(breaks) - 1)
+            colours = pal.get_palette(pal_name, num_classes)
+            ranges = []
+            for i in range(num_classes):
+                sym = QgsSymbol.defaultSymbol(out_layer.geometryType())
+                if sym:
+                    col = colours[min(i, len(colours) - 1)]
+                    sym.setColor(QColor(col))
+                    sym.setOpacity(0.88)
+                    label = f"{breaks[i]:.2f} – {breaks[i+1]:.2f}"
+                    ranges.append(QgsRendererRange(breaks[i], breaks[i+1], sym, label))
+            if ranges:
+                renderer = QgsGraduatedSymbolRenderer(field_name, ranges)
+                renderer.setClassificationMethod(QgsClassificationCustom())
+                out_layer.setRenderer(renderer)
+                out_layer.triggerRepaint()
+
+        style_output(context, dest_id, _style, feedback)
 
         return {self.OUTPUT: dest_id}

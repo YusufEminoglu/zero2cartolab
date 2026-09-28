@@ -2,7 +2,6 @@
 """Proportional Symbols — Processing algorithm."""
 from __future__ import annotations
 
-from contextlib import suppress
 
 from qgis.PyQt.QtCore import QVariant
 from qgis.PyQt.QtGui import QColor
@@ -19,6 +18,7 @@ from qgis.core import (
 from ..core.utils import safe_float
 from ..core import proportional_symbols as ps
 from ._help_mixin import CartoLabHelpMixin
+from ._styling import style_output
 
 
 class ProportionalSymbolsAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
@@ -149,17 +149,17 @@ class ProportionalSymbolsAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
             f"Suggested legend circles: {', '.join(f'{v:g}' for v in legend) or 'n/a'}."
         )
 
-        with suppress(Exception):
-            out_layer = context.getMapLayer(dest_id)
-            if out_layer:
-                fc_str = f"{fill_color.red()},{fill_color.green()},{fill_color.blue()},{fill_color.alpha()}"
-                oc_str = f"{outline_color.red()},{outline_color.green()},{outline_color.blue()},{outline_color.alpha()}"
-                symbol = QgsMarkerSymbol.createSimple({
-                    "name": shape_name, "color": fc_str,
-                    "outline_color": oc_str, "outline_width": "0.3",
-                })
-                symbol.setDataDefinedSize(QgsProperty.fromField("psym_size"))
-                out_layer.setRenderer(QgsSingleSymbolRenderer(symbol))
-                out_layer.triggerRepaint()
+        def _style(out_layer):
+            fc_str = f"{fill_color.red()},{fill_color.green()},{fill_color.blue()},{fill_color.alpha()}"
+            oc_str = f"{outline_color.red()},{outline_color.green()},{outline_color.blue()},{outline_color.alpha()}"
+            symbol = QgsMarkerSymbol.createSimple({
+                "name": shape_name, "color": fc_str,
+                "outline_color": oc_str, "outline_width": "0.3",
+            })
+            symbol.setDataDefinedSize(QgsProperty.fromField("psym_size"))
+            out_layer.setRenderer(QgsSingleSymbolRenderer(symbol))
+            out_layer.triggerRepaint()
+
+        style_output(context, dest_id, _style, feedback)
 
         return {self.OUTPUT: dest_id}

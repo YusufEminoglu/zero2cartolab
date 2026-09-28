@@ -2,7 +2,6 @@
 """Ridge Map (Joyplot) — Processing algorithm."""
 from __future__ import annotations
 
-from contextlib import suppress
 
 from qgis.PyQt.QtGui import QColor
 from qgis.core import (
@@ -21,6 +20,7 @@ from qgis.core import (
 
 from ..core.style_transformer import generate_ridge_lines
 from ._help_mixin import CartoLabHelpMixin
+from ._styling import style_output
 
 
 class RidgeMapAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
@@ -133,16 +133,16 @@ class RidgeMapAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
 
         feedback.pushInfo(f"Ridge map ready: {total} scanlines.")
 
-        with suppress(Exception):
-            out_layer = context.getMapLayer(dest_id)
-            if out_layer:
-                c_str = f"{line_color.red()},{line_color.green()},{line_color.blue()},{line_color.alpha()}"
-                symbol = QgsLineSymbol.createSimple({
-                    "line_style": "solid",
-                    "line_color": c_str,
-                    "line_width": str(line_width),
-                })
-                out_layer.setRenderer(QgsSingleSymbolRenderer(symbol))
-                out_layer.triggerRepaint()
+        def _style(out_layer):
+            c_str = f"{line_color.red()},{line_color.green()},{line_color.blue()},{line_color.alpha()}"
+            symbol = QgsLineSymbol.createSimple({
+                "line_style": "solid",
+                "line_color": c_str,
+                "line_width": str(line_width),
+            })
+            out_layer.setRenderer(QgsSingleSymbolRenderer(symbol))
+            out_layer.triggerRepaint()
+
+        style_output(context, dest_id, _style, feedback)
 
         return {self.OUTPUT: dest_id}

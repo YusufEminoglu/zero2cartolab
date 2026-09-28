@@ -2,7 +2,6 @@
 """Value-by-Alpha — Processing algorithm."""
 from __future__ import annotations
 
-from contextlib import suppress
 
 from qgis.PyQt.QtCore import QVariant
 from qgis.PyQt.QtGui import QColor
@@ -17,6 +16,7 @@ from qgis.core import (
 from ..core.utils import safe_float
 from ..core.bivariate_engine import compute_alpha_values
 from ._help_mixin import CartoLabHelpMixin
+from ._styling import style_output
 
 
 class ValueByAlphaAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
@@ -144,32 +144,36 @@ class ValueByAlphaAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
             "Applied data-defined layer opacity on 'vba_alpha'."
         )
 
-        with suppress(Exception):
-            out_layer = context.getMapLayer(dest_id)
-            if out_layer and out_layer.isSpatial():
-                from qgis.core import QgsGraduatedSymbolRenderer, QgsRendererRange, QgsSymbol, QgsProperty
-                from ..core.quick_style import quantile_breaks
-                from ..core.palettes import get_palette
+        from ..core.quick_style import quantile_breaks
+        from ..core.palettes import get_palette
 
-                colors = get_palette(pal_name, n_classes)
-                breaks = quantile_breaks(primary_vals, n_classes)
-                ranges = []
-                for i in range(len(breaks) - 1):
-                    lo, hi = breaks[i], breaks[i + 1]
-                    c = colors[min(i, len(colors) - 1)]
-                    sym = QgsSymbol.defaultSymbol(out_layer.geometryType())
-                    if sym:
-                        sym.setColor(QColor(c))
-                        sym.setDataDefinedProperty(
-                            QgsSymbol.Property.PropertyOpacity,
-                            QgsProperty.fromExpression("vba_alpha / 255.0 * 100.0")
-                        )
-                        label = f"{lo:.2f} - {hi:.2f}"
-                        ranges.append(QgsRendererRange(lo, hi, sym, label))
-                if ranges:
-                    renderer = QgsGraduatedSymbolRenderer(colour_field, ranges)
-                    renderer.setMode(QgsGraduatedSymbolRenderer.Mode.Quantile)
-                    out_layer.setRenderer(renderer)
-                    out_layer.triggerRepaint()
+        colors = get_palette(pal_name, n_classes)
+        breaks = quantile_breaks(primary_vals, n_classes)
+
+        def _style(out_layer):
+            if not out_layer.isSpatial():
+                return
+            from qgis.core import QgsGraduatedSymbolRenderer, QgsRendererRange, QgsSymbol, QgsProperty
+
+            ranges = []
+            for i in range(len(breaks) - 1):
+                lo, hi = breaks[i], breaks[i + 1]
+                c = colors[min(i, len(colors) - 1)]
+                sym = QgsSymbol.defaultSymbol(out_layer.geometryType())
+                if sym:
+                    sym.setColor(QColor(c))
+                    sym.setDataDefinedProperty(
+                        QgsSymbol.Property.PropertyOpacity,
+                        QgsProperty.fromExpression("vba_alpha / 255.0 * 100.0")
+                    )
+                    label = f"{lo:.2f} - {hi:.2f}"
+                    ranges.append(QgsRendererRange(lo, hi, sym, label))
+            if ranges:
+                renderer = QgsGraduatedSymbolRenderer(colour_field, ranges)
+                renderer.setMode(QgsGraduatedSymbolRenderer.Mode.Quantile)
+                out_layer.setRenderer(renderer)
+                out_layer.triggerRepaint()
+
+        style_output(context, dest_id, _style, feedback)
 
         return {self.OUTPUT: dest_id}

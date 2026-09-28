@@ -401,6 +401,104 @@ ok("quick_style applies categorized renderer",
    isinstance(polys.renderer(), QgsCategorizedSymbolRenderer)
    and len(polys.renderer().categories()) >= 2, str(type(polys.renderer()).__name__))
 
+# ---------------------------------------------------------------------------
+# Output symbology reaches the loaded layer for temporary AND file outputs.
+# Styling inside processAlgorithm only ever reached memory layers; a GeoPackage
+# result is re-read from disk on load and arrived as a plain single symbol.
+# ---------------------------------------------------------------------------
+print("\n--- Output symbology survives file outputs ---")
+from qgis.core import QgsSingleSymbolRenderer, QgsWkbTypes
+from qgis.PyQt.QtCore import Qt
+
+_style_dir = tempfile.mkdtemp(prefix="cartolab_style_")
+
+
+_style_loaded_ids = []
+
+
+def _loaded(algo, params, kind, stem=None):
+    p = dict(params)
+    p["OUTPUT"] = ("TEMPORARY_OUTPUT" if kind == "memory"
+                   else os.path.join(_style_dir, f"{stem or algo}.gpkg"))
+    before = set(QgsProject.instance().mapLayers())
+    try:
+        processing.runAndLoadResults(f"zero2cartolab:{algo}", p)
+    except Exception as exc:
+        traceback.print_exc()
+        return None, str(exc)
+    new_ids = set(QgsProject.instance().mapLayers()) - before
+    _style_loaded_ids.extend(new_ids)
+    new = [QgsProject.instance().mapLayer(i) for i in new_ids]
+    return (new[0] if new else None), f"{len(new)} layers loaded"
+
+
+def _vba_opacity_is_data_defined(layer):
+    if not isinstance(layer.renderer(), QgsGraduatedSymbolRenderer):
+        return False
+    # ranges() returns copies that own their symbols: keep the list alive, or
+    # symbol() is a dangling pointer (segfaults QGIS 4).
+    ranges = layer.renderer().ranges()
+    return bool(ranges) and ranges[0].symbol().dataDefinedProperties().hasActiveProperties()
+
+
+def _dd_size(layer):
+    sym = layer.renderer().symbol() if isinstance(layer.renderer(), QgsSingleSymbolRenderer) else None
+    return sym is not None and sym.dataDefinedSize().isActive()
+
+
+_style_cases = [
+    ("hexbin_aggregate",
+     {"INPUT": points, "CELL_SIZE": 600.0, "WEIGHT": "weight", "STAT": 1},
+     lambda l: isinstance(l.renderer(), QgsGraduatedSymbolRenderer)
+     and l.renderer().classAttribute() == "hex_sum" and len(l.renderer().ranges()) >= 2),
+    ("normalize_field",
+     {"INPUT": polys, "FIELD": "score", "METHOD": 1, "SCALE": 1.0},
+     lambda l: isinstance(l.renderer(), QgsGraduatedSymbolRenderer)
+     and l.renderer().classAttribute() == "norm_value"),
+    ("geometric_interval_classification",
+     {"INPUT": polys, "FIELD": "score", "CLASSES": 5, "METHOD": 0},
+     lambda l: isinstance(l.renderer(), QgsGraduatedSymbolRenderer)
+     and len(l.renderer().ranges()) == 5),
+    ("bivariate_choropleth",
+     {"INPUT": polys, "FIELD_X": "score", "FIELD_Y": "count", "CLASSES": 3, "METHOD": 0},
+     lambda l: isinstance(l.renderer(), QgsCategorizedSymbolRenderer)
+     and l.renderer().classAttribute() == "bivar_class"
+     and len(l.renderer().categories()) == 9),
+    ("value_by_alpha",
+     {"INPUT": polys, "FIELD_COLOUR": "score", "FIELD_ALPHA": "pop",
+      "ALPHA_MIN": 25, "ALPHA_MAX": 255},
+     _vba_opacity_is_data_defined),
+    ("compute_cartogram",
+     {"INPUT": polys, "FIELD": "count", "MAX_ITERATIONS": 4, "MAX_ERROR": 10.0},
+     lambda l: isinstance(l.renderer(), QgsGraduatedSymbolRenderer)),
+    ("bivariate_matrix_export",
+     {"CLASSES": 3, "PALETTE_PRESET": 0, "DIAMOND": False, "CELL_SIZE": 50.0},
+     lambda l: isinstance(l.renderer(), QgsCategorizedSymbolRenderer)
+     and len(l.renderer().categories()) == 9),
+    ("proportional_symbols",
+     {"INPUT": polys, "FIELD": "score", "MAX_SIZE": 12.0, "MIN_SIZE": 1.0, "FLANNERY": True},
+     _dd_size),
+    ("dot_density",
+     {"INPUT": polys, "FIELD": "count", "VALUE_PER_DOT": 100.0, "SEED": 42},
+     lambda l: isinstance(l.renderer(), QgsSingleSymbolRenderer)
+     and l.renderer().symbol().symbolLayer(0).strokeStyle() == Qt.PenStyle.NoPen),
+]
+for _algo, _params, _check in _style_cases:
+    for _kind in ("memory", "gpkg"):
+        _lyr, _info = _loaded(_algo, _params, _kind)
+        _desc = type(_lyr.renderer()).__name__ if _lyr is not None else _info
+        ok(f"{_algo} styled on load ({_kind})",
+           _lyr is not None and bool(_check(_lyr)), _desc)
+
+_carto_lyr, _ = _loaded("compute_cartogram",
+                        {"INPUT": polys, "FIELD": "count", "MAX_ITERATIONS": 4,
+                         "MAX_ERROR": 10.0}, "gpkg", stem="cartogram_multitype")
+ok("cartogram GeoPackage declares a multi-polygon layer",
+   _carto_lyr is not None and QgsWkbTypes.isMultiType(_carto_lyr.wkbType()),
+   QgsWkbTypes.displayString(_carto_lyr.wkbType()) if _carto_lyr else "no layer")
+# later layout tests build legends from the project: leave it as we found it
+QgsProject.instance().removeMapLayers(_style_loaded_ids)
+
 # ===========================================================================
 # LAYOUT SUBSYSTEM (real QgsPrintLayout assembly)
 # ===========================================================================

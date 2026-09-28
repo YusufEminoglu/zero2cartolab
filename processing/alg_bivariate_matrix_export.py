@@ -41,6 +41,7 @@ from ..core.bivariate_engine import (
     bivariate_colour_matrix,
 )
 from ._help_mixin import CartoLabHelpMixin
+from ._styling import style_output
 
 
 class BivariateMatrixExportAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
@@ -335,12 +336,12 @@ class BivariateMatrixExportAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
             '</div>'
         )
 
-        with suppress(Exception):
-            out_layer = context.getMapLayer(dest_id)
-            if out_layer:
-                renderer = QgsCategorizedSymbolRenderer("bivar_class", categories)
-                out_layer.setRenderer(renderer)
-                out_layer.triggerRepaint()
+        def _style(out_layer):
+            renderer = QgsCategorizedSymbolRenderer("bivar_class", categories)
+            out_layer.setRenderer(renderer)
+            out_layer.triggerRepaint()
+
+        style_output(context, dest_id, _style, feedback)
 
         return {
             self.OUTPUT: dest_id,

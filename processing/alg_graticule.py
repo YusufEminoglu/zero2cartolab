@@ -2,7 +2,6 @@
 """Graticule / Reference Grid — Processing algorithm."""
 from __future__ import annotations
 
-from contextlib import suppress
 
 from qgis.PyQt.QtCore import QVariant
 from qgis.PyQt.QtGui import QColor
@@ -17,6 +16,7 @@ from qgis.core import (
 
 from ..core.graticule import nice_interval, graticule_lines
 from ._help_mixin import CartoLabHelpMixin
+from ._styling import style_output
 
 
 class GraticuleAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
@@ -117,16 +117,16 @@ class GraticuleAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
             f"Graticule: {len(lines)} lines (x step {x_step:g}, y step {y_step:g})."
         )
 
-        with suppress(Exception):
-            out_layer = context.getMapLayer(dest_id)
-            if out_layer:
-                c_str = f"{line_color.red()},{line_color.green()},{line_color.blue()},{line_color.alpha()}"
-                symbol = QgsLineSymbol.createSimple({
-                    "line_style": line_style,
-                    "line_color": c_str,
-                    "line_width": str(line_width),
-                })
-                out_layer.setRenderer(QgsSingleSymbolRenderer(symbol))
-                out_layer.triggerRepaint()
+        def _style(out_layer):
+            c_str = f"{line_color.red()},{line_color.green()},{line_color.blue()},{line_color.alpha()}"
+            symbol = QgsLineSymbol.createSimple({
+                "line_style": line_style,
+                "line_color": c_str,
+                "line_width": str(line_width),
+            })
+            out_layer.setRenderer(QgsSingleSymbolRenderer(symbol))
+            out_layer.triggerRepaint()
+
+        style_output(context, dest_id, _style, feedback)
 
         return {self.OUTPUT: dest_id}

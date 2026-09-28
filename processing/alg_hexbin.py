@@ -2,7 +2,6 @@
 """Hexbin Aggregation — Processing algorithm."""
 from __future__ import annotations
 
-from contextlib import suppress
 
 from qgis.core import (
     QgsFeature, QgsFeatureSink, QgsField, QgsFields, QgsGeometry, QgsPointXY,
@@ -17,6 +16,7 @@ from qgis.PyQt.QtGui import QColor
 from ..core.utils import safe_float
 from ..core.hexgrid import point_to_cell, cell_center, hex_vertices
 from ._help_mixin import CartoLabHelpMixin
+from ._styling import style_output
 
 
 class HexbinAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
@@ -154,19 +154,19 @@ class HexbinAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
 
         feedback.pushInfo(f"Aggregated {total} points into {len(bins)} hexagons (statistic: {stat}).")
 
-        with suppress(Exception):
-            out_layer = context.getMapLayer(dest_id)
-            if out_layer and stat_values:
-                _apply_hex_graduated(out_layer, stat_field, stat_values, pal_name, n_classes, clf_idx)
+        if stat_values:
+            breaks, colours = _hex_classes(stat_values, pal_name, n_classes, clf_idx)
+            style_output(
+                context, dest_id,
+                lambda layer: _apply_hex_graduated(layer, stat_field, breaks, colours),
+                feedback,
+            )
 
         return {self.OUTPUT: dest_id}
 
 
-def _apply_hex_graduated(layer, field, values, pal_name, n_classes, clf_idx):
-    """Apply graduated renderer with chosen palette and classifier."""
-    from qgis.core import (
-        QgsGraduatedSymbolRenderer, QgsRendererRange, QgsSymbol,
-    )
+def _hex_classes(values, pal_name, n_classes, clf_idx):
+    """Class breaks and colours for the chosen classifier, computed once."""
     from ..core.palettes import get_palette
     from ..core.quick_style import quantile_breaks, equal_interval_breaks, jenks_breaks, pretty_breaks
 
@@ -179,6 +179,12 @@ def _apply_hex_graduated(layer, field, values, pal_name, n_classes, clf_idx):
         breaks = jenks_breaks(values, n_classes)
     else:
         breaks = pretty_breaks(values, n_classes)
+    return breaks, colours
+
+
+def _apply_hex_graduated(layer, field, breaks, colours):
+    """Apply a graduated renderer built from precomputed breaks and colours."""
+    from qgis.core import QgsGraduatedSymbolRenderer, QgsRendererRange, QgsSymbol
 
     ranges = []
     for i in range(len(breaks) - 1):
@@ -191,6 +197,4 @@ def _apply_hex_graduated(layer, field, values, pal_name, n_classes, clf_idx):
             sym.setOpacity(0.92)
             ranges.append(QgsRendererRange(lo, hi, sym, f"{lo:.2f} – {hi:.2f}"))
     if ranges:
-        renderer = QgsGraduatedSymbolRenderer(field, ranges)
-        layer.setRenderer(renderer)
-        layer.triggerRepaint()
+        layer.setRenderer(QgsGraduatedSymbolRenderer(field, ranges))
