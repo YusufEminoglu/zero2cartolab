@@ -141,6 +141,8 @@ ALGO_GROUPS = [
              "Perceptually compensated graduated point symbols with nested-legend values."),
             ("Bivariate Matrix Export", "zero2cartolab:bivariate_matrix_export",
              "Export high-resolution standalone NxN bivariate legend matrices as SVG/PNG image."),
+            ("Origin-Destination Flow Map", "zero2cartolab:flow_map",
+             "Curved, arrowed desire lines from an OD table - width linear in volume, two directions kept apart."),
         ],
     ),
     (
@@ -149,6 +151,8 @@ ALGO_GROUPS = [
         [
             ("Continuous-Area Cartogram", "zero2cartolab:compute_cartogram",
              "Diffusion method (Gastner & Newman) - polygon areas proportional to field value."),
+            ("Dorling Circle Cartogram", "zero2cartolab:dorling_cartogram",
+             "Non-overlapping circles sized by value (Dorling 1996) - undistorted and directly comparable."),
         ],
     ),
     (
@@ -204,9 +208,11 @@ CATEGORY_GROUPS = {
         "zero2cartolab:dot_density",
         "zero2cartolab:proportional_symbols",
         "zero2cartolab:bivariate_matrix_export",
+        "zero2cartolab:flow_map",
     ],
     "Cartogram Engine": [
         "zero2cartolab:compute_cartogram",
+        "zero2cartolab:dorling_cartogram",
     ],
     "Aggregation": [
         "zero2cartolab:hexbin_aggregate",
@@ -692,6 +698,8 @@ class CartoLabDashboard(_QDialogBase):
             ("Proportional Symbols (Flannery)", "zero2cartolab:proportional_symbols", "Perceptually compensated graduated point symbols.", "proportional.png"),
             ("Hexbin Aggregation", "zero2cartolab:hexbin_aggregate", "Bin point layers into regular pointy-top hexagonal cells with metrics.", "hexbin.png"),
             ("Cartogram Transform", "zero2cartolab:compute_cartogram", "Continuous area cartogram polygon deformation by attribute weight.", "cartogram.png"),
+            ("Dorling Cartogram", "zero2cartolab:dorling_cartogram", "Non-overlapping circles sized by value, placed near home.", "dorling.png"),
+            ("OD Flow Map", "zero2cartolab:flow_map", "Curved, arrowed flows from an origin-destination table.", "flow.png"),
         ]
 
         for i, (name, aid, desc, ic_name) in enumerate(algos):
@@ -1279,6 +1287,8 @@ class CartoLabDashboard(_QDialogBase):
             "zero2cartolab:graticule_grid": "grid.png",
             "zero2cartolab:label_points": "compass.png",
             "zero2cartolab:normalize_field": "style.png",
+            "zero2cartolab:flow_map": "flow.png",
+            "zero2cartolab:dorling_cartogram": "dorling.png",
         }
 
         for group, accent, items in ALGO_GROUPS:
@@ -1935,11 +1945,17 @@ class CartoLabDashboard(_QDialogBase):
         self.qs_reverse_check.toggled.connect(self._update_qs_preview)
         self.qs_outline_check = QCheckBox("White outline")
         self.qs_outline_check.setChecked(True)
+        self.qs_mono_check = QCheckBox("Monochrome print")
+        self.qs_mono_check.setToolTip(
+            "Black-and-white hatch and dot patterns for polygon layers: the map "
+            "survives greyscale printing and photocopies.")
+        self.qs_mono_check.toggled.connect(self._update_qs_preview)
         self.qs_live_check = QCheckBox("Live Auto-Apply ⚡")
         self.qs_live_check.toggled.connect(self._on_live_check_toggled)
         opts.addWidget(self.qs_cbsafe_check)
         opts.addWidget(self.qs_reverse_check)
         opts.addWidget(self.qs_outline_check)
+        opts.addWidget(self.qs_mono_check)
         opts.addWidget(self.qs_live_check)
         opts.addStretch()
         g.addLayout(opts, 9, 0, 1, 2)
@@ -2136,6 +2152,7 @@ class CartoLabDashboard(_QDialogBase):
             "PALETTE": pidx,
             "REVERSE": self.qs_reverse_check.isChecked(),
             "OUTLINE": self.qs_outline_check.isChecked(),
+            "MONOCHROME": self.qs_mono_check.isChecked(),
         }
         try:
             res = processing.run("zero2cartolab:quick_style", params)

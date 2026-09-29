@@ -1190,6 +1190,107 @@ _fallback_themes, _fallback_status = discover_zero2viz_themes({})
 check("02viz adapter remains optional", not _fallback_themes and "built-in" in _fallback_status)
 
 # ===================================================================
+# FLOW MAP — aggregation, arcs, widths, id matching
+# ===================================================================
+section("Flow Map")
+import math as _m
+from zero2cartolab.core import flow_map as fm
+
+_agg = fm.aggregate_flows([("a", "b", 5), ("a", "b", "7"), ("b", "a", 2), ("a", "a", 9),
+                           ("a", "c", -1), ("a", "c", "x"), (None, "c", 3),
+                           ("c", "a", float("nan"))])
+check("flows: duplicates summed, self/negative/text/null/NaN dropped",
+      _agg == {("a", "b"): 12.0, ("b", "a"): 2.0}, str(_agg))
+_two = fm.aggregate_flows([("a", "b", 5), ("b", "a", 2)], directed=False)
+check("flows: undirected merges both directions", _two == {("a", "b"): 7.0}, str(_two))
+_sel = fm.select_flows({("a", "b"): 1.0, ("c", "d"): 9.0, ("e", "f"): 5.0}, min_volume=2.0, top_n=1)
+check("flows: threshold then top-N keeps the largest", _sel == [(("c", "d"), 9.0)], str(_sel))
+check("flows: width linear in volume", abs(fm.flow_width(50, 100, 4.0, 0.0) - 2.0) < 1e-12)
+check("flows: width clamps at max and handles junk",
+      fm.flow_width(500, 100, 4.0, 1.0) == 4.0 and fm.flow_width(None, 100, 4.0, 1.0) == 1.0)
+_arc = fm.flow_arc((0.0, 0.0), (100.0, 0.0), curvature=0.2, segments=20)
+check("flows: arc starts and ends on the zone points",
+      _m.dist(_arc[0], (0, 0)) < 1e-9 and _m.dist(_arc[-1], (100, 0)) < 1e-9)
+check("flows: travelling east, the arc bends right (south)",
+      min(y for _, y in _arc) < -5 and max(y for _, y in _arc) <= 1e-9)
+_back = fm.flow_arc((100.0, 0.0), (0.0, 0.0), curvature=0.2, segments=20)
+check("flows: the reverse direction bends to the other side", min(y for _, y in _back) >= -1e-9)
+_trim = fm.flow_arc((0.0, 0.0), (100.0, 0.0), curvature=0.3, segments=40, trim_start=0.1, trim_end=0.1)
+_full = fm.flow_arc((0.0, 0.0), (100.0, 0.0), curvature=0.3, segments=400)
+check("flows: trims remove 10% of the chord from each end, along the curve",
+      abs((fm.polyline_length(_full) - fm.polyline_length(_trim)) - 20.0) < 0.5,
+      f"{fm.polyline_length(_full) - fm.polyline_length(_trim):.3f}")
+check("flows: straight lines when curvature is 0",
+      fm.flow_arc((0, 0), (10, 0), curvature=0.0) == [(0.0, 0.0), (10.0, 0.0)])
+check("flows: coincident points and over-trimmed lines give nothing",
+      fm.flow_arc((1, 1), (1, 1)) == [] and fm.flow_arc((0, 0), (10, 0), 0.0, trim_start=0.6, trim_end=0.6) == [])
+check("flows: 7, 7.0 and '7' are one zone id",
+      fm.normalise_zone_id(7) == fm.normalise_zone_id(7.0) == fm.normalise_zone_id(" 7 ") == "7")
+check("flows: NULL-like ids are rejected",
+      fm.normalise_zone_id(None) is None and fm.normalise_zone_id("NULL") is None
+      and fm.normalise_zone_id(float("nan")) is None)
+_lk, _dup = fm.zone_lookup([(1, (0, 0)), (1.0, (5, 5)), ("2", (1, 1))])
+check("flows: duplicate zone ids reported, first wins", _lk == {"1": (0, 0), "2": (1, 1)} and _dup == ["1"])
+
+# ===================================================================
+# DORLING — radii, separation, stability
+# ===================================================================
+section("Dorling Cartogram")
+import random as _rnd
+from zero2cartolab.core import dorling as dor
+
+_r = dor.dorling_radii([4.0, 1.0, 0.0, None, -3.0], target_area=_m.pi * 5.0)
+check("dorling: area proportional to value, total = target",
+      abs(_r[0] - 2.0) < 1e-12 and abs(_r[1] - 1.0) < 1e-12 and _r[2:] == [0.0, 0.0, 0.0], str(_r))
+_g = _rnd.Random(5)
+_centers = [(_g.uniform(0, 1000), _g.uniform(0, 1000)) for _ in range(300)]
+_radii = dor.dorling_radii([_g.lognormvariate(2, 1) for _ in range(300)], 0.5 * 1000 * 1000)
+check("dorling: random input starts with heavy overlap",
+      dor.max_overlap(_centers, _radii) > 10.0)
+_pos, _used, _res = dor.dorling_layout(_centers, _radii)
+check("dorling: layout removes overlap (residual < 0.5% of mean radius)",
+      _res < 0.005, f"residual {_res:.5f} after {_used} rounds")
+_brute = max(_radii[i] + _radii[j] - _m.dist(_pos[i], _pos[j])
+             for i in range(300) for j in range(i + 1, 300))
+check("dorling: brute-force pair check agrees with the grid search",
+      abs(_brute - _res * (sum(_radii) / 300)) < 1e-6, f"{_brute} vs grid")
+_mean_r = sum(_radii) / 300
+_shift = sorted(dor.displacement(a, b) for a, b in zip(_centers, _pos))
+check("dorling: circles stay near home (median shift < 2 mean radii)",
+      _shift[150] < 2.0 * _mean_r, f"{_shift[150] / _mean_r:.2f}")
+_same, _, _ = dor.dorling_layout([(0.0, 0.0)] * 3, [1.0, 1.0, 1.0])
+check("dorling: coincident centres are split deterministically",
+      len({(round(x, 6), round(y, 6)) for x, y in _same}) == 3
+      and _same == dor.dorling_layout([(0.0, 0.0)] * 3, [1.0, 1.0, 1.0])[0])
+_calls = []
+dor.dorling_layout(_centers, _radii, callback=lambda n, ph: _calls.append(n) or n >= 3)
+check("dorling: callback can cancel the run", max(_calls) <= 4, str(max(_calls)))
+
+# ===================================================================
+# MONOCHROME HATCH PATTERNS
+# ===================================================================
+section("Monochrome Patterns")
+from zero2cartolab.core import hatch_patterns as hp
+
+for _n in range(2, hp.MAX_GRADUATED + 1):
+    _cov = [hp.ink_coverage(p) for p in hp.graduated_patterns(_n)]
+    check(f"hatch: {_n}-class ramp darkens strictly",
+          len(_cov) == _n and all(a < b for a, b in zip(_cov, _cov[1:])), str(_cov))
+_g5 = hp.graduated_patterns(5)
+check("hatch: ramp runs from blank to solid",
+      _g5[0]["kind"] == "none" and _g5[-1]["kind"] == "solid")
+check("hatch: ramp is clamped to the readable maximum",
+      len(hp.graduated_patterns(40)) == hp.MAX_GRADUATED)
+_cats = hp.categorical_patterns(hp.MAX_CATEGORICAL)
+check("hatch: categorical patterns are all distinct up to the maximum",
+      len({hp.pattern_key(p) for p in _cats}) == hp.MAX_CATEGORICAL)
+check("hatch: categorical patterns repeat only beyond the maximum",
+      hp.pattern_key(hp.categorical_patterns(hp.MAX_CATEGORICAL + 1)[-1]) == hp.pattern_key(_cats[0]))
+check("hatch: coverage formulas",
+      abs(hp.ink_coverage({"kind": "lines", "spacing": 2.0, "width": 0.5}) - 0.25) < 1e-12
+      and abs(hp.ink_coverage({"kind": "cross", "spacing": 2.0, "width": 0.5}) - 0.4375) < 1e-12)
+
+# ===================================================================
 # SUMMARY
 # ===================================================================
 section("RESULTS")

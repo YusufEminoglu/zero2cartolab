@@ -72,8 +72,8 @@ QgsApplication.processingRegistry().addProvider(_prov)
 
 # Regression guard: prevent silent algorithm-count drift
 _algo_count = len(list(_prov.algorithms()))
-assert _algo_count == 14, f"expected 14 algorithms, got {_algo_count}"
-print(f"Provider algorithm count: {_algo_count} (pinned at 14)\n")
+assert _algo_count == 16, f"expected 16 algorithms, got {_algo_count}"
+print(f"Provider algorithm count: {_algo_count} (pinned at 16)\n")
 assert all(alg.helpUrl() == 'https://github.com/YusufEminoglu/zero2cartolab#module-catalog' for alg in _prov.algorithms()), 'helpUrl regression detected'
 
 CRS = "EPSG:3857"
@@ -401,6 +401,38 @@ ok("quick_style applies categorized renderer",
    isinstance(polys.renderer(), QgsCategorizedSymbolRenderer)
    and len(polys.renderer().categories()) >= 2, str(type(polys.renderer()).__name__))
 
+# Monochrome print-safe patterns
+_qs = processing.run("zero2cartolab:quick_style",
+    {"INPUT": polys, "FIELD": "score", "MODE": 1, "CLASSES": 5, "METHOD": 0,
+     "PALETTE": 0, "REVERSE": False, "OUTLINE": True, "MONOCHROME": True})
+_mono = polys.renderer()
+_mono_ranges = _mono.ranges() if isinstance(_mono, QgsGraduatedSymbolRenderer) else []
+_kinds = [[type(_mono_ranges[i].symbol().symbolLayer(k)).__name__
+           for k in range(_mono_ranges[i].symbol().symbolLayerCount())]
+          for i in range(len(_mono_ranges))]
+ok("monochrome graduated: 5 classes from blank to solid",
+   len(_kinds) == 5 and _kinds[0] == ["QgsSimpleFillSymbolLayer", "QgsSimpleFillSymbolLayer"]
+   and _mono_ranges[-1].symbol().color().name() == "#000000", str(_kinds))
+ok("monochrome graduated: pattern layers sit between ground and outline",
+   all(k[0] == "QgsSimpleFillSymbolLayer" and k[-1] == "QgsSimpleFillSymbolLayer" for k in _kinds)
+   and any("LinePatternFill" in n for k in _kinds for n in k)
+   and any("PointPatternFill" in n for k in _kinds for n in k), str(_kinds))
+ok("monochrome graduated: summary says patterns", "monochrome" in _qs["SUMMARY"], _qs["SUMMARY"])
+_qs = processing.run("zero2cartolab:quick_style",
+    {"INPUT": polys, "FIELD": "floors", "MODE": 2, "PALETTE": 0, "REVERSE": False,
+     "OUTLINE": True, "MONOCHROME": True})
+_mono_cats = polys.renderer().categories()  # keep the copies alive: they own the symbols
+_cat_syms = [c.symbol() for c in _mono_cats]
+_sigs = {tuple((type(s.symbolLayer(k)).__name__,
+                round(getattr(s.symbolLayer(k), "lineAngle", lambda: -1)(), 1))
+               for k in range(s.symbolLayerCount())) for s in _cat_syms}
+ok("monochrome categories: every category gets a distinct texture",
+   len(_cat_syms) == 6 and len(_sigs) == 6, f"{len(_cat_syms)} cats, {len(_sigs)} textures")
+_qs = processing.run("zero2cartolab:quick_style",
+    {"INPUT": points, "FIELD": "weight", "MODE": 1, "CLASSES": 5, "METHOD": 0,
+     "PALETTE": 0, "REVERSE": False, "OUTLINE": True, "MONOCHROME": True})
+ok("monochrome on points falls back to a grey ramp", "Greys" in _qs["SUMMARY"], _qs["SUMMARY"])
+
 # ---------------------------------------------------------------------------
 # Output symbology reaches the loaded layer for temporary AND file outputs.
 # Styling inside processAlgorithm only ever reached memory layers; a GeoPackage
@@ -496,6 +528,99 @@ _carto_lyr, _ = _loaded("compute_cartogram",
 ok("cartogram GeoPackage declares a multi-polygon layer",
    _carto_lyr is not None and QgsWkbTypes.isMultiType(_carto_lyr.wkbType()),
    QgsWkbTypes.displayString(_carto_lyr.wkbType()) if _carto_lyr else "no layer")
+# ---------------------------------------------------------------------------
+# Origin-destination flow map
+# ---------------------------------------------------------------------------
+print("\n--- Flow map ---")
+import math as _math
+
+od = QgsVectorLayer("None?field=o:string&field=d:integer&field=v:double", "od", "memory")
+_od_rows = [("0", 24, 100.0), ("0", 24, 50.0), ("24", 0, 30.0), ("3", 3, 99.0),
+            ("5", 999, 40.0), ("1", 2, 10.0), ("7.0", 8, 0.0)]
+_od_feats = []
+for _o, _d, _v in _od_rows:
+    _f = QgsFeature(od.fields())
+    _f.setAttributes([_o, _d, _v])
+    _od_feats.append(_f)
+od.dataProvider().addFeatures(_od_feats)
+_zone_pt = {f["uid"]: f.geometry().pointOnSurface().asPoint() for f in polys.getFeatures()}
+
+_flow_params = {"ZONES": polys, "ZONE_ID": "uid", "FLOWS": od, "ORIGIN": "o",
+                "DEST": "d", "VOLUME": "v", "CURVATURE": 0.25, "MAX_WIDTH": 5.0,
+                "MIN_WIDTH": 0.5, "END_GAP": 5.0, "OUTPUT": "memory:"}
+out, _ = run("zero2cartolab:flow_map", dict(_flow_params), "flow_map_directed")
+if out:
+    lyr = out["OUTPUT"]
+    by_pair = {(f["flow_o"], f["flow_d"]): f for f in lyr.getFeatures()}
+    ok("flow map: duplicates summed, self-flow / zero / unknown zone dropped",
+       sorted(by_pair) == [("0", "24"), ("1", "2"), ("24", "0")], str(sorted(by_pair)))
+    if ("0", "24") in by_pair and ("24", "0") in by_pair:
+        fwd, back = by_pair[("0", "24")], by_pair[("24", "0")]
+        ok("flow map: largest pair has rank 1 and full width",
+           fwd["flow_vol"] == 150.0 and fwd["flow_rank"] == 1
+           and abs(fwd["flow_width"] - 5.0) < 1e-9, f"{fwd['flow_vol']} {fwd['flow_rank']} {fwd['flow_width']}")
+        ok("flow map: width is linear in volume",
+           abs(back["flow_width"] - (0.5 + 4.5 * 30.0 / 150.0)) < 1e-6, str(back["flow_width"]))
+        ok("flow map: shares sum to 100%",
+           abs(sum(f["flow_share"] for f in lyr.getFeatures()) - 100.0) < 1e-2)
+        # opposite directions bend to opposite sides of the chord
+        a, b = _zone_pt[0], _zone_pt[24]
+        def _side(feat):
+            g = feat.geometry()
+            line = g.asMultiPolyline()[0] if g.isMultipart() else g.asPolyline()
+            m = line[len(line) // 2]
+            return (b.x() - a.x()) * (m.y() - a.y()) - (b.y() - a.y()) * (m.x() - a.x())
+        ok("flow map: A->B and B->A are separate arcs on opposite sides",
+           _side(fwd) * _side(back) < 0, f"{_side(fwd)} {_side(back)}")
+        chord = _math.hypot(b.x() - a.x(), b.y() - a.y())
+        _fg = fwd.geometry()
+        start = (_fg.asMultiPolyline()[0] if _fg.isMultipart() else _fg.asPolyline())[0]
+        ok("flow map: end gap trims 5% of the chord along the curve",
+           abs(_math.hypot(start.x() - a.x(), start.y() - a.y()) - 0.05 * chord) < 0.01 * chord,
+           f"{_math.hypot(start.x() - a.x(), start.y() - a.y()):.1f} vs {0.05 * chord:.1f}")
+    r = lyr.renderer()
+    ok("flow map: graduated renderer draws large flows first with arrowheads",
+       isinstance(r, QgsGraduatedSymbolRenderer) and r.orderByEnabled()
+       and r.ranges() and r.ranges()[0].symbol().symbolLayerCount() == 2,
+       type(r).__name__)
+
+_undirected = dict(_flow_params, DIRECTED=False)
+out, _ = run("zero2cartolab:flow_map", _undirected, "flow_map_two_way")
+if out:
+    vols = sorted(f["flow_vol"] for f in out["OUTPUT"].getFeatures())
+    ok("flow map: two-way mode merges directions", vols == [10.0, 180.0], str(vols))
+
+out, _ = run("zero2cartolab:flow_map", dict(_flow_params, TOP_N=1), "flow_map_top1")
+if out:
+    ok("flow map: top-N keeps the largest", out["OUTPUT"].featureCount() == 1
+       and next(out["OUTPUT"].getFeatures())["flow_vol"] == 150.0)
+
+# ---------------------------------------------------------------------------
+# Dorling circle cartogram
+# ---------------------------------------------------------------------------
+print("\n--- Dorling cartogram ---")
+out, _ = run("zero2cartolab:dorling_cartogram",
+             {"INPUT": polys, "FIELD": "count", "SIZE_FACTOR": 0.6, "OUTPUT": "memory:"},
+             "dorling_cartogram")
+if out:
+    lyr = out["OUTPUT"]
+    circles = list(lyr.getFeatures())
+    ok("dorling: one circle per positive value", len(circles) == 25, str(len(circles)))
+    ratios = [c.geometry().area() / c["dor_value"] for c in circles]
+    ok("dorling: circle area proportional to value",
+       max(ratios) / min(ratios) < 1.001, f"{min(ratios):.2f}..{max(ratios):.2f}")
+    poly_area = sum(f.geometry().area() for f in polys.getFeatures())
+    ok("dorling: total circle area = size factor x layer area (within 1%)",
+       abs(sum(c.geometry().area() for c in circles) / (0.6 * poly_area) - 1.0) < 0.01)
+    worst = 0.0
+    for i, ci in enumerate(circles):
+        for cj in circles[i + 1:]:
+            if ci.geometry().intersects(cj.geometry()):
+                worst = max(worst, ci.geometry().intersection(cj.geometry()).area())
+    ok("dorling: circles do not overlap (<0.5% of the smallest circle)",
+       worst < 0.005 * min(c.geometry().area() for c in circles), f"worst overlap {worst:.1f}")
+    ok("dorling: residual output reported", out.get("RESIDUAL", 1.0) <= 0.01, str(out.get("RESIDUAL")))
+
 # later layout tests build legends from the project: leave it as we found it
 QgsProject.instance().removeMapLayers(_style_loaded_ids)
 

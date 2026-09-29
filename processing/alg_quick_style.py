@@ -20,15 +20,61 @@ from qgis.core import (
     QgsRendererCategory,
     QgsGraduatedSymbolRenderer,
     QgsCategorizedSymbolRenderer,
+    QgsWkbTypes,
 )
 
 from ..core import palettes as pal
 from ..core import quick_style as qs
+from ..core import hatch_patterns as hp
 from ..core.utils import safe_float
 from ._help_mixin import CartoLabHelpMixin
 
 _MODE_AUTO, _MODE_GRAD, _MODE_CAT = 0, 1, 2
 _MAX_CATS = 100
+
+
+def hatch_fill_symbol(pattern, outline: bool = True):
+    """Black-on-white fill symbol for a ``core.hatch_patterns`` pattern."""
+    from qgis.core import (
+        QgsFillSymbol, QgsLinePatternFillSymbolLayer, QgsLineSymbol,
+        QgsMarkerSymbol, QgsPointPatternFillSymbolLayer, QgsSimpleFillSymbolLayer,
+    )
+    kind = pattern["kind"]
+    # bottom to top: opaque ground, pattern, outline (so patterns never cover it)
+    base = QgsFillSymbol.createSimple({
+        "color": "0,0,0,255" if kind == "solid" else "255,255,255,255",
+        "outline_style": "no",
+    })
+    if kind in ("lines", "cross"):
+        angles = [pattern["angle"]]
+        if kind == "cross":
+            angles.append(pattern["angle"] + 90.0)
+        for angle in angles:
+            layer = QgsLinePatternFillSymbolLayer()
+            layer.setLineAngle(float(angle))
+            layer.setDistance(float(pattern["spacing"]))
+            layer.setLineWidth(float(pattern["width"]))
+            layer.setSubSymbol(QgsLineSymbol.createSimple({
+                "line_color": "0,0,0,255", "line_width": str(pattern["width"]),
+            }))
+            base.appendSymbolLayer(layer)
+    elif kind == "dots":
+        layer = QgsPointPatternFillSymbolLayer()
+        spacing = float(pattern["spacing"])
+        layer.setDistanceX(spacing)
+        layer.setDistanceY(spacing)
+        layer.setDisplacementX(spacing / 2.0)  # staggered rows read as texture, not a grid
+        layer.setSubSymbol(QgsMarkerSymbol.createSimple({
+            "name": "circle", "color": "0,0,0,255", "outline_style": "no",
+            "size": str(pattern["size"]),
+        }))
+        base.appendSymbolLayer(layer)
+    if outline:
+        border = QgsSimpleFillSymbolLayer.create({
+            "style": "no", "outline_color": "35,35,35,255", "outline_width": "0.26",
+        })
+        base.appendSymbolLayer(border)
+    return base
 
 
 class QuickStyleAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
@@ -41,6 +87,7 @@ class QuickStyleAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
     PALETTE = "PALETTE"
     REVERSE = "REVERSE"
     OUTLINE = "OUTLINE"
+    MONOCHROME = "MONOCHROME"
     SUMMARY = "SUMMARY"
 
     MODES = [("Auto (detect field type)", "auto"),
@@ -89,7 +136,12 @@ class QuickStyleAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
             "choropleth with ColorBrewer / colour-blind-safe palettes; string fields "
             "become a categorized map.\n\n"
             "In 'Auto' mode the layer field type decides whether graduated or "
-            "categorized is applied."
+            "categorized is applied.\n\n"
+            "Monochrome print-safe: polygon layers get black-and-white hatch and "
+            "dot patterns instead of colours, so the map survives greyscale "
+            "printing and photocopies. Graduated classes darken strictly with "
+            "the value (up to 10 classes); categories differ by texture and "
+            "orientation (up to 16 before patterns repeat)."
         )
 
     def initAlgorithm(self, config=None):
@@ -111,6 +163,8 @@ class QuickStyleAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
             self.REVERSE, "Reverse palette", defaultValue=False))
         self.addParameter(QgsProcessingParameterBoolean(
             self.OUTLINE, "Thin white outline", defaultValue=True))
+        self.addParameter(QgsProcessingParameterBoolean(
+            self.MONOCHROME, "Monochrome print-safe patterns (polygons)", defaultValue=False))
         self.addOutput(QgsProcessingOutputString(self.SUMMARY, "Summary of changes"))
 
     def processAlgorithm(self, parameters, context, feedback):
@@ -124,6 +178,7 @@ class QuickStyleAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
         palette_idx = self.parameterAsEnum(parameters, self.PALETTE, context)
         reverse = self.parameterAsBool(parameters, self.REVERSE, context)
         outline = self.parameterAsBool(parameters, self.OUTLINE, context)
+        monochrome = self.parameterAsBool(parameters, self.MONOCHROME, context)
 
         mode = self.MODES[mode_idx][1]
         method = self.METHODS[method_idx][1]
@@ -140,10 +195,20 @@ class QuickStyleAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
         else:
             target_mode = mode
 
+        if monochrome and layer.geometryType() != QgsWkbTypes.PolygonGeometry:
+            feedback.pushWarning(
+                "Monochrome patterns need a polygon layer; using the 'Greys' palette instead.")
+            monochrome, palette = False, "Greys"
+        if monochrome and target_mode == "graduated" and classes > hp.MAX_GRADUATED:
+            feedback.pushWarning(
+                f"Monochrome ramps stay readable up to {hp.MAX_GRADUATED} classes; "
+                f"using {hp.MAX_GRADUATED}.")
+            classes = hp.MAX_GRADUATED
+
         if target_mode == "graduated":
-            summary = self._graduated(layer, field, classes, method, palette, reverse, outline)
+            summary = self._graduated(layer, field, classes, method, palette, reverse, outline, monochrome)
         else:
-            summary = self._categorized(layer, field, palette, reverse, outline, feedback)
+            summary = self._categorized(layer, field, palette, reverse, outline, feedback, monochrome)
 
         layer.triggerRepaint()
         return {self.SUMMARY: summary}
@@ -166,7 +231,7 @@ class QuickStyleAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
         cols = pal.get_palette(palette, n)
         return list(reversed(cols)) if reverse else cols
 
-    def _graduated(self, layer, field, classes, method, palette, reverse, outline):
+    def _graduated(self, layer, field, classes, method, palette, reverse, outline, monochrome=False):
         values = [safe_float(f[field]) for f in layer.getFeatures() if safe_float(f[field]) is not None]
         if not values:
             raise QgsProcessingException(f"Field '{field}' has no numeric values.")
@@ -177,17 +242,27 @@ class QuickStyleAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
             # a valid, if plain, map — better than failing outright.
             v = values[0]
             ranges_lh = [(v, v)]
-        colors = self._colors(palette, len(ranges_lh), reverse)
+        if monochrome:
+            patterns = hp.graduated_patterns(len(ranges_lh))
+            if reverse:
+                patterns.reverse()
+            symbols = [hatch_fill_symbol(p, outline) for p in patterns]
+        else:
+            symbols = [self._symbol(layer, c, outline)
+                       for c in self._colors(palette, len(ranges_lh), reverse)]
         ranges = []
-        for (lo, hi), col in zip(ranges_lh, colors):
+        for (lo, hi), sym in zip(ranges_lh, symbols):
             label = f"{lo:.4g} - {hi:.4g}"
-            ranges.append(QgsRendererRange(lo, hi, self._symbol(layer, col, outline), label))
+            ranges.append(QgsRendererRange(lo, hi, sym, label))
         layer.setRenderer(QgsGraduatedSymbolRenderer(field, ranges))
+        if monochrome:
+            return (f"Quick Style: graduated '{field}' into {len(ranges)} classes "
+                    f"({method}) with monochrome print-safe patterns.")
         return (f"Quick Style: graduated '{field}' into {len(ranges)} classes "
                 f"({method}) with palette '{palette}'"
                 f"{' (colour-blind safe)' if pal.is_colorblind_safe(palette) else ''}.")
 
-    def _categorized(self, layer, field, palette, reverse, outline, feedback):
+    def _categorized(self, layer, field, palette, reverse, outline, feedback, monochrome=False):
         seen = []
         for f in layer.getFeatures():
             v = f[field]
@@ -201,11 +276,19 @@ class QuickStyleAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
         if len(cats) >= _MAX_CATS:
             feedback.pushInfo(
                 f"Field has many unique values; styling the first {_MAX_CATS}.")
-        colors = self._colors(palette, len(cats), reverse)
+        if monochrome:
+            if len(cats) > hp.MAX_CATEGORICAL:
+                feedback.pushWarning(
+                    f"{len(cats)} categories: monochrome patterns repeat after "
+                    f"{hp.MAX_CATEGORICAL}. Consider grouping categories.")
+            symbols = [hatch_fill_symbol(p, outline) for p in hp.categorical_patterns(len(cats))]
+        else:
+            symbols = [self._symbol(layer, c, outline)
+                       for c in self._colors(palette, len(cats), reverse)]
         categories = []
-        for value, col in zip(cats, colors):
-            categories.append(
-                QgsRendererCategory(value, self._symbol(layer, col, outline), str(value)))
+        for value, sym in zip(cats, symbols):
+            categories.append(QgsRendererCategory(value, sym, str(value)))
         layer.setRenderer(QgsCategorizedSymbolRenderer(field, categories))
+        style = "monochrome print-safe patterns" if monochrome else f"palette '{palette}'"
         return (f"Quick Style: categorized '{field}' into {len(categories)} "
-                f"classes with palette '{palette}'.")
+                f"classes with {style}.")

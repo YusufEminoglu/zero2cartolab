@@ -21,6 +21,8 @@ from .alg_graticule import GraticuleAlgorithm
 from .alg_normalize_field import NormalizeFieldAlgorithm
 from .alg_quick_style import QuickStyleAlgorithm
 from .alg_bivariate_matrix_export import BivariateMatrixExportAlgorithm
+from .alg_flow_map import FlowMapAlgorithm
+from .alg_dorling import DorlingCartogramAlgorithm
 
 
 class CartoLabProvider(QgsProcessingProvider):
@@ -56,3 +58,5 @@ class CartoLabProvider(QgsProcessingProvider):
         self.addAlgorithm(NormalizeFieldAlgorithm())
         self.addAlgorithm(QuickStyleAlgorithm())
         self.addAlgorithm(BivariateMatrixExportAlgorithm())
+        self.addAlgorithm(FlowMapAlgorithm())
+        self.addAlgorithm(DorlingCartogramAlgorithm())
