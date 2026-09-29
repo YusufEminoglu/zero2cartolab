@@ -1,10 +1,10 @@
 [general]
 name=02CartoLab
-version=1.3.3
+version=1.4.0
 hasProcessingProvider=yes
 
 category=Vector
-tags=cartography, thematic map, choropleth, layout, print layout, atlas, map book, bivariate, 2.5d, buildings, cartogram, dot-density, hexbin, value-by-alpha, ridge-maps, legend, north arrow, scale bar, graticule, palettes, accessibility, cvd, colorbrewer, export, zero2
+tags=cartography, thematic map, choropleth, flow map, origin-destination, od matrix, dorling, monochrome, hatching, black and white, layout, print layout, atlas, map book, bivariate, 2.5d, buildings, cartogram, dot-density, hexbin, value-by-alpha, ridge-maps, legend, north arrow, scale bar, graticule, palettes, accessibility, cvd, colorbrewer, export, zero2
 
 description=Unified cartographic studio and print layout automation for QGIS: publication-grade thematic styling, bivariate maps, 2.5D extrusion, and one-click layout generation with template gallery, custom graticules, and map book atlas automation.
 about=02CartoLab is a unified thematic mapping and print layout automation studio for QGIS. It bridges map symbology and publication print layouts in one cohesive workflow: builds publication-ready choropleths (including bivariate and Value-by-Alpha), continuous-area cartograms, ridge-line relief maps, dot-density and Flannery proportional-symbol maps, hexbin aggregation, and native 2.5D building styling - then assembles complete print layouts (with template gallery, legend, scale bar, north arrow, coordinate graticules, and credits) in one click. Includes an embedded Layout Designer studio dock, automated multi-page map book atlas engine, CVD accessibility inspector, and a comprehensive Processing provider. No external dependencies - pure QGIS. Online Documentation: https://geophilo.com/zero2cartolab/ | Repository: https://github.com/YusufEminoglu/zero2cartolab
@@ -22,6 +22,7 @@ qgisMinimumVersion=3.28
 qgisMaximumVersion=4.99
 
 changelog=
+    02CartoLab 1.4.0 - Added an Origin-Destination Flow Map (curved, arrowed, direction-separated desire lines from any OD table), a Dorling Circle Cartogram, and monochrome print-safe hatch patterns in Quick Style. Fixed styled Processing outputs losing their symbology when saved to a GeoPackage or Shapefile, and the Bivariate Choropleth output never being styled.
     02CartoLab 1.1.0 - Expanded Print Layout Studio to 10 publication templates and 7 reusable grid compositions; added Grid and QPT Studio, dependency-aware template inspection, dependency-free UTM migration, print preflight, atomic exports, stable layout IDs, atlas and scale corrections, and QGIS 3/4 visual regression coverage.
     02CartoLab 1.0.1 - Fixed Isometric Layer Stacker selection when projects contain duplicate layer names by resolving stable QGIS layer IDs in user-selected order. Replaced the main plugin icon with a new text-free, transparent, full-bleed cartographic studio mark.
     02CartoLab 1.0.0 - Initial release: Unified cartographic studio and print layout automation for QGIS. Includes Publication Layout Template Gallery (Report Figure, Academic Journal, Exhibition Poster, Fact Sheet, Comparative Diptych), Palette & Accessibility Inspector with 5-mode CVD simulation, 14 Processing algorithms, and embedded Print Layout Designer studio dock.

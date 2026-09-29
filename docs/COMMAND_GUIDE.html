@@ -16,7 +16,7 @@
 </head>
 <body>
   <h1>02CartoLab — Command Guide v1.4</h1>
-  <p>All 14 Processing algorithms in the <strong>02CartoLab</strong> provider. Each entry includes the algorithm ID (for PyQGIS) and its purpose.</p>
+  <p>All 16 Processing algorithms in the <strong>02CartoLab</strong> provider. Each entry includes the algorithm ID (for PyQGIS) and its purpose.</p>
 
   <h2>Classification</h2>
   <div class="card">
@@ -46,7 +46,16 @@
     <p>Place a point at each feature centroid whose symbol size is proportional to a numeric field. Flannery compensation corrects perceptual area under-estimation. Adds <code>psym_size</code> (mm) for data-defined marker size.</p>
   </div>
 
+  <div class="card">
+    <p><code>flow_map</code></p>
+    <p>Draw origin-destination desire lines between zones from any OD layer or table (a CSV works). Repeated pairs are summed and ids match as text. Curved flows bend to the right of travel so both directions stay visible; width is linear in volume and large flows are drawn underneath small ones. Adds <code>flow_o</code>, <code>flow_d</code>, <code>flow_vol</code>, <code>flow_rank</code>, <code>flow_share</code>, <code>flow_width</code> and <code>flow_len</code>.</p>
+  </div>
+
   <h2>Cartogram</h2>
+  <div class="card">
+    <p><code>dorling_cartogram</code></p>
+    <p>Replace each areal unit with a circle whose area is proportional to a value, then separate the circles until none overlap while keeping them near home (Dorling 1996). Adds <code>dor_value</code>, <code>dor_radius</code> and <code>dor_shift</code>; reports the residual overlap.</p>
+  </div>
   <div class="card">
     <p><code>compute_cartogram</code></p>
     <p>Distort polygon areas to be proportional to a numeric field using the diffusion method (Gastner &amp; Newman). Iteratively displaces polygon boundaries until each region's area represents its field value.</p>

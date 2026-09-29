@@ -385,11 +385,13 @@
     <li><a href="#algo17">17. Solar Position &amp; Sun Lighting</a></li>
     <li><a href="#algo18">18. Scientific Color Ramps Library</a></li>
     <li><a href="#algo19">19. Export Bivariate 2D Legend Matrix</a></li>
+    <li><a href="#algo20">20. Dorling Circle Cartogram</a></li>
+    <li><a href="#algo21">21. Origin-Destination Flow Map</a></li>
   </ul>
 
   <div class="sidebar-footer">
     <p>02CartoLab by Yusuf Emino&#x11F;lu<br>
-    v1.1.0 &middot; QGIS 3.x / 4.x<br>
+    v1.4.0 &middot; QGIS 3.x / 4.x<br>
     Cartography &amp; Thematic Mapping</p>
   </div>
 </aside>
@@ -398,7 +400,7 @@
 <main class="main" id="main-content">
 
   <h1>CartoLab <em>Academic Reference Manual</em></h1>
-  <p class="subtitle">Mathematical formulations, theoretical foundations, and verified literature for all 19 Processing algorithms and 5 advanced Layout Studio systems. Version 1.1.0.</p>
+  <p class="subtitle">Mathematical formulations, theoretical foundations, and verified literature for all 21 Processing algorithms and advanced Layout Studio systems. Version 1.4.0.</p>
 
   <p style="color:var(--muted); max-width:760px;">
     This manual provides the complete theoretical apparatus behind every algorithm and layout engine in
@@ -1368,6 +1370,30 @@
       </tbody>
     </table>
 
+    <h3>Monochrome Print-Safe Patterns</h3>
+    <p>
+      With <em>Monochrome print-safe patterns</em> enabled, polygon classes are drawn
+      with black-and-white hatch and dot fills instead of colours, so the map keeps its
+      meaning in greyscale journals, theses and photocopies. For a graduated map the
+      patterns are ordered by ink coverage $c$, the share of the area printed black, and
+      every class is strictly darker than the one below it:
+    </p>
+    <div class="eq-block">
+      <strong>Ink coverage.</strong>
+      $$ c_{\text{lines}} = \frac{w}{s}, \qquad
+         c_{\text{cross}} = 1 - \left(1 - \frac{w}{s}\right)^2, \qquad
+         c_{\text{dots}} = \frac{\pi (d/2)^2}{s^2} $$
+      where $w$ is the line width, $s$ the pattern spacing and $d$ the dot diameter
+      (millimetres on paper). The ramp runs from blank through dots, single hatching and
+      cross-hatching to solid black; up to 10 graduated classes stay distinguishable.
+    </div>
+    <p>
+      Categorical maps vary texture and orientation instead of darkness (45&deg;, 135&deg;,
+      horizontal and vertical hatching, square and diagonal grids, dots), each in a sparse
+      and a dense form: 16 categories before a pattern repeats. Point and line layers fall
+      back to the <em>Greys</em> ramp, because hatching needs an area to fill.
+    </p>
+
     <h3>Output Description</h3>
     <p>
       The output is an in-place styled layer: no new layer is created; the existing
@@ -2232,6 +2258,198 @@
       print-layout element, or shared as a lightweight HTML reference &mdash; instead of relying on
       a Bivariate Choropleth run's auto-generated categorized-renderer legend alone.
     </div>
+  </section>
+
+  <!-- ═══════════════ ALGORITHM 20 ═══════════════ -->
+  <section class="algo-section" id="algo20">
+    <span class="algo-id">dorling_cartogram</span>
+    <span class="algo-group">Cartogram Engine</span>
+    <h2>20. Dorling Circle Cartogram</h2>
+
+    <h3>Theoretical Background</h3>
+    <p>
+      A Dorling cartogram replaces every areal unit with a circle whose area is
+      proportional to a value and moves the circles apart until none overlap (Dorling
+      1996). Unlike a continuous-area cartogram (<a href="#algo5">Algorithm 5</a>), no
+      shape is deformed: each unit becomes an undistorted, directly comparable symbol, and
+      small units with large values &mdash; dense city districts, small states with large
+      populations &mdash; become visible instead of vanishing. The cost is contiguity: the
+      reader locates a circle by its neighbours and its label rather than by an outline.
+    </p>
+    <p>
+      CartoLab starts each circle on the unit's interior point (a point guaranteed to lie
+      inside the polygon, unlike the centroid of a concave shape). Overlapping pairs are
+      pushed apart along the line joining their centres, the smaller circle moving more.
+      A pull back toward home keeps the arrangement geographically recognisable; it fades
+      to zero, after which the layout only removes overlap, so the result never overlaps
+      by more than a small tolerance. Neighbour search uses a uniform hash grid sized by
+      the median radius, keeping each round close to linear in the number of units even
+      when a few values are very large.
+    </p>
+
+    <h3>Mathematical Formulation</h3>
+    <div class="eq-block">
+      <strong>Radius.</strong>
+      $$ r_i = \sqrt{\frac{k\,v_i}{\pi}}, \qquad k = \frac{F \cdot A}{\sum_j v_j} $$
+      so circle area $\pi r_i^2$ is proportional to the value $v_i$ and the circles'
+      total area equals the size factor $F$ times the input layer's area $A$.
+      \tag{1}
+    </div>
+    <div class="eq-block">
+      <strong>Separation of an overlapping pair.</strong>
+      $$ o_{ij} = r_i + r_j + g - \lVert \mathbf{p}_j - \mathbf{p}_i \rVert > 0, \qquad
+         \mathbf{p}_i \leftarrow \mathbf{p}_i - o_{ij}\,\frac{r_j^2}{r_i^2 + r_j^2}\,\hat{\mathbf{u}}_{ij}, \quad
+         \mathbf{p}_j \leftarrow \mathbf{p}_j + o_{ij}\,\frac{r_i^2}{r_i^2 + r_j^2}\,\hat{\mathbf{u}}_{ij} $$
+      where $g$ is the requested gap and $\hat{\mathbf{u}}_{ij}$ the unit vector from
+      $\mathbf{p}_i$ to $\mathbf{p}_j$.
+      \tag{2}
+    </div>
+    <div class="eq-block">
+      <strong>Fading attraction (round $t$ of $T$ settling rounds).</strong>
+      $$ \mathbf{p}_i \leftarrow \mathbf{p}_i + \alpha\left(1 - \frac{t}{T}\right)(\mathbf{h}_i - \mathbf{p}_i) $$
+      with $\mathbf{h}_i$ the unit's interior point and $\alpha$ the attraction.
+      Separation-only rounds follow until the worst overlap is below 0.5% of the mean radius.
+      \tag{3}
+    </div>
+
+    <h3>Parameters</h3>
+    <table>
+      <thead>
+        <tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Areal units</td><td>Polygon layer</td><td>&mdash;</td><td>Use a projected CRS: circles are built in layer units</td></tr>
+        <tr><td>Value field</td><td>Numeric field</td><td>&mdash;</td><td>Missing, zero or negative values are omitted</td></tr>
+        <tr><td>Size factor</td><td>Double</td><td>0.5</td><td>$F$ in Eq. 1 (0.01&ndash;2); lower values leave more space and move circles less</td></tr>
+        <tr><td>Attraction</td><td>Double</td><td>0.1</td><td>$\alpha$ in Eq. 3 (0&ndash;1)</td></tr>
+        <tr><td>Gap between circles</td><td>Double</td><td>0</td><td>$g$ in Eq. 2, layer units</td></tr>
+        <tr><td>Settling iterations</td><td>Integer</td><td>150</td><td>$T$ in Eq. 3</td></tr>
+        <tr><td>Colour ramp</td><td>Enum</td><td>Viridis</td><td>Quantile classes on the value</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Output Description</h3>
+    <p>
+      One circle polygon per unit with every input field plus <code>dor_value</code>,
+      <code>dor_radius</code> and <code>dor_shift</code> (distance moved from the interior
+      point, layer units). The algorithm also returns the number of rounds used and the
+      residual overlap as a fraction of the mean radius; a warning is raised above 1%.
+      The layer is styled with a graduated ramp whether it is saved as a temporary layer
+      or to a file.
+    </p>
+
+    <h3>Interpretation Guide</h3>
+    <div class="interpret-box">
+      <strong>Interpretation</strong>
+      Compare circle areas, not diameters: a circle twice as wide represents four times
+      the value. Large <code>dor_shift</code> values mark crowded regions where position
+      is least reliable; label those circles. If circles drift far from home, lower the
+      size factor rather than raising the attraction.
+    </div>
+
+    <h3>References</h3>
+    <ol class="ref-list">
+      <li>Dorling, D. <em>Area Cartograms: Their Use and Creation</em>. Concepts and Techniques in Modern Geography (CATMOG) 59. University of East Anglia, 1996.</li>
+      <li>Tobler, W. R. <em>Thirty Five Years of Computer Cartograms</em>. Annals of the Association of American Geographers, 94(1): 58&#x2013;73, 2004.</li>
+      <li>Nusrat, S. &amp; Kobourov, S. <em>The State of the Art in Cartograms</em>. Computer Graphics Forum, 35(3): 619&#x2013;642, 2016.</li>
+    </ol>
+  </section>
+
+  <!-- ═══════════════ ALGORITHM 21 ═══════════════ -->
+  <section class="algo-section" id="algo21">
+    <span class="algo-id">flow_map</span>
+    <span class="algo-group">Thematic Mapping</span>
+    <h2>21. Origin-Destination Flow Map</h2>
+
+    <h3>Theoretical Background</h3>
+    <p>
+      Flow maps draw movement between places &mdash; commuting, migration, trade, trips
+      &mdash; as lines whose width encodes volume (Tobler 1987). Two design choices decide
+      whether such a map is readable. First, straight lines between the same pair of
+      zones overprint each other in both directions; CartoLab curves every flow to the
+      right of its direction of travel, so A&rarr;B and B&rarr;A become two separate
+      arcs, each with its own arrowhead. Second, many small flows can hide under a few
+      large ones; flows are drawn largest first, so small ones stay on top, and colour
+      repeats volume in quantile classes. Curved flows, arrowheads at the destination and
+      small flows drawn above large ones follow the design principles evaluated by
+      Jenny et al. (2018).
+    </p>
+    <p>
+      Zones may be polygons, lines or points; polygons are represented by an interior
+      point. The OD table can be any layer or a table without geometry, such as a CSV.
+      Repeated pairs are summed, self-flows are dropped, and ids are matched as text,
+      so <code>7</code>, <code>7.0</code> and <code>"7"</code> refer to the same zone;
+      ids without a zone are reported rather than silently dropped.
+    </p>
+
+    <h3>Mathematical Formulation</h3>
+    <div class="eq-block">
+      <strong>Curved flow (quadratic B&eacute;zier).</strong>
+      $$ \mathbf{B}(t) = (1-t)^2\,\mathbf{p}_0 + 2(1-t)t\,\mathbf{c} + t^2\,\mathbf{p}_1, \qquad
+         \mathbf{c} = \frac{\mathbf{p}_0 + \mathbf{p}_1}{2} + \kappa\,(\Delta y, -\Delta x) $$
+      where $(\Delta x, \Delta y) = \mathbf{p}_1 - \mathbf{p}_0$ and $\kappa$ is the
+      curvature; $(\Delta y, -\Delta x)$ points to the right of travel. $\kappa = 0$
+      draws straight lines.
+      \tag{1}
+    </div>
+    <div class="eq-block">
+      <strong>End gap.</strong> The curve is cut at arc lengths $\gamma L$ and
+      $\ell - \gamma L$, where $L = \lVert\mathbf{p}_1 - \mathbf{p}_0\rVert$ is the
+      chord, $\ell$ the curve length and $\gamma$ the end gap, so arrowheads stop short
+      of the zone point.
+      \tag{2}
+    </div>
+    <div class="eq-block">
+      <strong>Line width (linear in volume).</strong>
+      $$ w_i = w_{\min} + (w_{\max} - w_{\min})\,\frac{v_i}{v_{\max}} $$
+      Width is a length, so linear scaling keeps perceived magnitude proportional,
+      unlike area symbols, which need a square-root or Flannery exponent
+      (<a href="#algo9">Algorithm 9</a>).
+      \tag{3}
+    </div>
+
+    <h3>Parameters</h3>
+    <table>
+      <thead>
+        <tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Zones layer / Zone id field</td><td>Any vector layer / field</td><td>&mdash;</td><td>The first feature wins when an id repeats (reported)</td></tr>
+        <tr><td>OD table / Origin / Destination / Volume</td><td>Layer or table / fields</td><td>&mdash;</td><td>Repeated pairs are summed; non-positive volumes are skipped</td></tr>
+        <tr><td>Keep directions separate</td><td>Boolean</td><td>True</td><td>False merges A&rarr;B and B&rarr;A into straight two-way lines without arrowheads</td></tr>
+        <tr><td>Minimum volume / Keep only the N largest</td><td>Double / Integer</td><td>0 / 0 (all)</td><td>Filters applied before drawing</td></tr>
+        <tr><td>Curvature</td><td>Double</td><td>0.2</td><td>$\kappa$ in Eq. 1 (0&ndash;1)</td></tr>
+        <tr><td>Maximum / minimum line width</td><td>Double (mm)</td><td>5.0 / 0.3</td><td>$w_{\max}$, $w_{\min}$ in Eq. 3</td></tr>
+        <tr><td>Gap at each end</td><td>Double (%)</td><td>4</td><td>$\gamma$ in Eq. 2</td></tr>
+        <tr><td>Draw arrowheads / Colour ramp</td><td>Boolean / Enum</td><td>True / YlOrRd</td><td>Arrowheads scale with line width</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Output Description</h3>
+    <p>
+      A LineString layer with <code>flow_o</code>, <code>flow_d</code>, <code>flow_vol</code>,
+      <code>flow_rank</code> (1 = largest), <code>flow_share</code> (% of mapped volume),
+      <code>flow_width</code> (mm, used for data-defined width) and <code>flow_len</code>
+      (map units). The layer is styled with graduated colour, data-defined width, arrowheads
+      and largest-first drawing order, for temporary and file outputs alike.
+    </p>
+
+    <h3>Interpretation Guide</h3>
+    <div class="interpret-box">
+      <strong>Interpretation</strong>
+      A full OD matrix of $n$ zones has up to $n(n-1)$ flows; beyond a few hundred lines
+      the map turns into a hairball. Keep the top 50&ndash;150 flows or set a minimum
+      volume, and state the filter in the caption. Use two-way mode when direction does
+      not matter (total interaction), and directed mode for net imbalances such as
+      commuting into a centre.
+    </div>
+
+    <h3>References</h3>
+    <ol class="ref-list">
+      <li>Tobler, W. R. <em>Experiments in Migration Mapping by Computer</em>. The American Cartographer, 14(2): 155&#x2013;163, 1987.</li>
+      <li>Jenny, B., Stephen, D. M., Muehlenhaus, I., Marston, B. E., Sharma, R., Zhang, E. &amp; Jenny, H. <em>Design Principles for Origin-Destination Flow Maps</em>. Cartography and Geographic Information Science, 45(1): 62&#x2013;75, 2018.</li>
+      <li>Slocum, T. A., McMaster, R. B., Kessler, F. C. &amp; Howard, H. H. <em>Thematic Cartography and Geovisualization</em> (3rd ed.). Pearson Prentice Hall, 2009.</li>
+    </ol>
   </section>
 
 </main>

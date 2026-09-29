@@ -6,6 +6,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-09-29
+
+### Added
+
+- **Origin-Destination Flow Map** (`flow_map`): curved, arrowed desire lines
+  from any OD layer or table, including a CSV without geometry. Repeated pairs
+  are summed, self-flows dropped, and ids match as text (7, 7.0 and "7" are one
+  zone); unmatched ids are reported. Curves bend to the right of travel, so
+  A→B and B→A are two separate arcs. Width is linear in volume, colour classes
+  are quantiles, large flows are drawn underneath small ones, and end gaps are
+  measured along the curve. Two-way mode, minimum-volume and top-N filters.
+- **Dorling Circle Cartogram** (`dorling_cartogram`): circles with area
+  proportional to a value, separated until none overlap while a fading pull
+  keeps them near home. Neighbour search on a median-radius hash grid keeps
+  5,000 units at about 9 s; residual overlap is reported (< 0.5% of the mean
+  radius by default) and the run is cancellable.
+- **Monochrome print-safe patterns** in Quick Style (Processing and dashboard):
+  polygon classes get black-and-white hatch and dot fills instead of colours.
+  Graduated ramps darken strictly with the value (ink coverage is computed and
+  tested); categories differ by texture and orientation (16 before a repeat).
+- Reference manual sections 20 and 21, and a Quick Style section on the
+  monochrome ramp.
+
+### Fixed
+
+- **Output symbology was lost for file outputs.** Ten algorithms styled their
+  result inside `processAlgorithm`, which only reaches the project for
+  temporary layers; a GeoPackage or Shapefile output arrived as a plain single
+  symbol. Styling now also runs as a layer post-processor on whatever layer
+  QGIS loads.
+- **Bivariate Choropleth output was never styled**, not even as a temporary
+  layer: its post-processor was garbage-collected before the layer loaded.
+- The cartogram declared a Polygon sink but wrote MultiPolygons, producing a
+  non-conformant GeoPackage; the sink is now multi-polygon.
+
 ## [1.3.3] - 2026-09-11
 
 ### Fixed

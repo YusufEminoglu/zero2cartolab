@@ -50,12 +50,14 @@ Everything is reachable from the **02CartoLab Dashboard** (`Plugins → 02CartoL
 
 | Module | What it does | Surface |
 |---|---|---|
-| **Quick Style** | One click: graduated (numeric) or categorized (text) renderer with quantile / equal-interval / geometric-interval breaks and a colour-palette picker | Dashboard panel + Processing |
+| **Quick Style** | One click: graduated (numeric) or categorized (text) renderer with quantile / equal-interval / geometric-interval breaks and a colour-palette picker; **Monochrome print** swaps colours for black-and-white hatch and dot patterns that darken with the value, for greyscale journals and photocopies | Dashboard panel + Processing |
 | **Colour Palettes & Accessibility** | 24+ ramps (ColorBrewer + Scientific viridis/magma/cividis) with live 5-mode CVD simulation (Deuteranopia, Protanopia, Tritanopia, Achromatopsia) and WCAG 2.1 contrast scoring | Dashboard → Symbology Studio |
 | **2.5D Building Styling** | Height/floor-field extrusion, material presets, shadows, wall shading, stepped floors, per-floor colour bands, QML export | Dashboard panel + Processing |
 | **Bivariate Choropleth** | Two variables, one map; 3×3 palettes incl. custom corner colours; diamond/square legends | Processing + layout |
 | **Value-by-Alpha** | Value drives hue, reliability drives opacity | Processing |
 | **Cartogram** | Continuous-area distortion proportional to a value field | Processing |
+| **Dorling Cartogram** | Non-overlapping circles with area proportional to a value, kept close to home — no shape distortion, small units with large values stay visible | Dashboard + Processing |
+| **Origin-Destination Flow Map** | Curved, arrowed desire lines from any OD table (a CSV works): A→B and B→A kept apart, width linear in volume, large flows drawn underneath, top-N and threshold filters | Dashboard + Processing |
 | **Ridge Map** | Raster surface → stacked ridge lines | Processing |
 | **Adaptive Classification** | Geometric Interval, Fisher-Jenks, Head/Tail Breaks | Processing |
 | **Dot-Density Map** | Seeded, hole-aware dots inside polygons — one dot per N units of a count field | Processing |
