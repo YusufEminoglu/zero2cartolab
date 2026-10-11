@@ -119,10 +119,12 @@ class HexbinAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
             w = 1.0
             if weight_field:
                 w = safe_float(feat[weight_field])
-            entry = bins.setdefault(cell, [0, 0.0])
+            # [point count, weight sum, number of non-NULL weights]
+            entry = bins.setdefault(cell, [0, 0.0, 0])
             entry[0] += 1
             if w is not None:
                 entry[1] += w
+                entry[2] += 1
             feedback.setProgress(int(50 * current / total))
 
         out_fields = QgsFields()
@@ -136,20 +138,25 @@ class HexbinAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
             parameters, self.OUTPUT, context,
             out_fields, QgsWkbTypes.Type.Polygon, source.sourceCrs(),
         )
+        if sink is None:
+            raise QgsProcessingException(self.invalidSinkError(parameters, self.OUTPUT))
 
         stat_field = {"count": "hex_count", "sum": "hex_sum", "mean": "hex_mean"}[stat]
         stat_values = []
         n_cells = len(bins) or 1
-        for idx, ((q, r), (count, wsum)) in enumerate(bins.items()):
+        for idx, ((q, r), (count, wsum, n_valid)) in enumerate(bins.items()):
             cx, cy = cell_center(q, r, size)
             ring = [QgsPointXY(x, y) for (x, y) in hex_vertices(cx, cy, size)]
             ring.append(ring[0])
             nf = QgsFeature(out_fields)
             nf.setGeometry(QgsGeometry.fromPolygonXY([ring]))
-            mean = wsum / count if count else 0.0
+            # mean over the points that carry a weight; NULL when none does
+            mean = wsum / n_valid if n_valid else None
             nf.setAttributes([q, r, count, wsum, mean])
             sink.addFeature(nf, QgsFeatureSink.Flag.FastInsert)
-            stat_values.append(count if stat == "count" else (wsum if stat == "sum" else mean))
+            stat_val = count if stat == "count" else (wsum if stat == "sum" else mean)
+            if stat_val is not None:
+                stat_values.append(stat_val)
             feedback.setProgress(50 + int(50 * idx / n_cells))
 
         feedback.pushInfo(f"Aggregated {total} points into {len(bins)} hexagons (statistic: {stat}).")

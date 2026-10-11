@@ -40,6 +40,40 @@ def _validate_values(values: List[float]) -> List[float]:
     return sorted(clean)
 
 
+def class_index(value: float, breaks: List[float]) -> int:
+    """0-based class of ``value`` for ``breaks`` [b0, b1, ..., bn].
+
+    Classes follow the QGIS graduated-renderer convention: the first class is
+    b0 <= v <= b1 and every later one is b(i) < v <= b(i+1). Values outside
+    the break range are clamped into the first / last class.
+    """
+    n_cls = len(breaks) - 1
+    if n_cls < 1:
+        return 0
+    return bisect_left(breaks, value, 1, n_cls) - 1
+
+
+def class_labels(n_classes: int) -> List[str]:
+    """Ordinal low-to-high names for ``n_classes`` classes."""
+    named = {
+        1: ["All"],
+        2: ["Low", "High"],
+        3: ["Low", "Medium", "High"],
+        4: ["Low", "Medium-Low", "Medium-High", "High"],
+        5: ["Very Low", "Low", "Medium", "High", "Very High"],
+        6: ["Very Low", "Low", "Medium-Low", "Medium-High", "High", "Very High"],
+        7: ["Very Low", "Low", "Medium-Low", "Medium", "Medium-High", "High", "Very High"],
+    }
+    if n_classes in named:
+        return list(named[n_classes])
+    if n_classes < 1:
+        return []
+    labels = [f"Class {i + 1}" for i in range(n_classes)]
+    labels[0] += " (Lowest)"
+    labels[-1] += " (Highest)"
+    return labels
+
+
 # ---------------------------------------------------------------------------
 # Adaptive Geometric Interval Classifier
 # ---------------------------------------------------------------------------
@@ -207,10 +241,14 @@ def fisher_jenks_breaks(values: List[float], n_classes: int = 5) -> List[float]:
     if n_classes >= n:
         return [clean[0]] + clean[1:n_classes] + [clean[-1] + 1e-9]
 
-    # sample if too large
+    # sample if too large; the maximum must survive sampling or the top
+    # class would end below the data (and the outer break would be wrong).
     if n > 5000:
-        step = n // 5000
-        clean = clean[::step]
+        step = math.ceil(n / 5000)
+        sample = clean[::step]
+        if sample[-1] != clean[-1]:
+            sample.append(clean[-1])
+        clean = sample
         n = len(clean)
 
     # cumulative sums for fast variance computation
@@ -240,12 +278,13 @@ def fisher_jenks_breaks(values: List[float], n_classes: int = 5) -> List[float]:
             dp[k][j] = best
             split[k][j] = best_i
 
-    # backtrack
+    # backtrack. Each interior break is the *upper bound* of the class below
+    # it (its last member), so classes read lo < v <= hi as QGIS ranges do.
     breaks = [clean[-1] + 1e-9]
     pos = n
     for k in range(n_classes, 1, -1):
         pos = split[k][pos]
-        breaks.append(clean[pos])
+        breaks.append(clean[pos - 1])
     breaks.append(clean[0])
     breaks.sort()
     return breaks
@@ -291,7 +330,8 @@ def standard_deviation_breaks(
         k_steps = [-2.5 * step * 2, -1.5 * step * 2, -0.5 * step * 2, 0.5 * step * 2, 1.5 * step * 2]
     else:
         # Generic symmetrical class generation
-        half = (n_classes - 1) / 2.0
+        # n_classes - 1 interior breaks, centred on the mean
+        half = (n_classes - 2) / 2.0
         k_steps = [(i - half) * step * 2 for i in range(n_classes - 1)]
 
     raw_breaks = [mean_val + k * std_val for k in k_steps]
@@ -443,30 +483,34 @@ def equal_area_breaks(
 # Curated Bivariate Palettes & Colour Matrix
 # ---------------------------------------------------------------------------
 
+# Corner keys name the X class first, then the Y class: "lh" is the colour of
+# features with LOW X and HIGH Y (top-left of the legend), "hl" is HIGH X and
+# LOW Y (bottom-right). This matches the corner parameters of the Processing
+# algorithms ("Top-Left colour (Low X, High Y)").
 BIVARIATE_PALETTE_PRESETS = {
     "teal_brown": {
         "label": "Teal - Brown (Environment & Resilience)",
-        "ll": "#e8e8e8", "lh": "#5ab4ac", "hl": "#d8b365", "hh": "#8c510a",
+        "ll": "#e8e8e8", "lh": "#d8b365", "hl": "#5ab4ac", "hh": "#8c510a",
     },
     "stevens_pink_cyan": {
         "label": "Stevens Pink - Cyan (Demographics & Social)",
-        "ll": "#e8e8e8", "lh": "#00bbf9", "hl": "#f72585", "hh": "#4a0e4e",
+        "ll": "#e8e8e8", "lh": "#f72585", "hl": "#00bbf9", "hh": "#4a0e4e",
     },
     "blue_orange": {
         "label": "Blue - Orange (Density & Economy)",
-        "ll": "#f0f3f8", "lh": "#2b5c8f", "hl": "#e27c38", "hh": "#3d2645",
+        "ll": "#f0f3f8", "lh": "#e27c38", "hl": "#2b5c8f", "hh": "#3d2645",
     },
     "purple_green": {
         "label": "Purple - Green (Land Use & Canopy)",
-        "ll": "#f3f3f3", "lh": "#38b000", "hl": "#7b2cbf", "hh": "#1b4332",
+        "ll": "#f3f3f3", "lh": "#7b2cbf", "hl": "#38b000", "hh": "#1b4332",
     },
     "pink_green": {
         "label": "Pink - Green (Vulnerability & Health)",
-        "ll": "#e8e8e8", "lh": "#2a9d8f", "hl": "#e76f51", "hh": "#264653",
+        "ll": "#e8e8e8", "lh": "#e76f51", "hl": "#2a9d8f", "hh": "#264653",
     },
     "night_neon": {
         "label": "Night Neon (Dark Theme Visuals)",
-        "ll": "#222831", "lh": "#00fff5", "hl": "#ff007f", "hh": "#7900ff",
+        "ll": "#222831", "lh": "#ff007f", "hl": "#00fff5", "hh": "#7900ff",
     },
 }
 
@@ -474,8 +518,8 @@ BIVARIATE_PALETTE_PRESETS = {
 def bivariate_colour_matrix_hex(
     size: int = 3,
     color_ll: str = "#e8e8e8",
-    color_lh: str = "#5ab4ac",
-    color_hl: str = "#d8b365",
+    color_lh: str = "#d8b365",
+    color_hl: str = "#5ab4ac",
     color_hh: str = "#8c510a",
     preset: Optional[str] = None,
     n_classes: Optional[int] = None,
@@ -501,17 +545,20 @@ def bivariate_colour_matrix_hex(
 def bivariate_colour_matrix(
     size: int = 4,
     color_ll: str | QColor = "#e8e8e8",
-    color_lh: str | QColor = "#5ab4ac",
-    color_hl: str | QColor = "#d8b365",
+    color_lh: str | QColor = "#d8b365",
+    color_hl: str | QColor = "#5ab4ac",
     color_hh: str | QColor = "#8c510a",
 ) -> List[List[QColor]]:
     """
     Generate a size×size bivariate colour legend matrix.
 
-    Uses a perceptually grounded 2D interpolation between four corner
-    colours: low-low, low-high, high-low, high-high.
+    Bilinear interpolation between four corner colours named X-class first:
+    ``color_ll`` low X / low Y, ``color_lh`` low X / high Y,
+    ``color_hl`` high X / low Y, ``color_hh`` high X / high Y.
 
-    Returns a nested list [row][col] of QColor.
+    Returns a nested list [row][col] of QColor where ``row`` is the Y class
+    and ``col`` the X class (both 0 = low), the indexing used by the
+    ``bivar_class`` value "(col,row)".
     """
     c_ll = QColor(color_ll) if isinstance(color_ll, str) else color_ll
     c_lh = QColor(color_lh) if isinstance(color_lh, str) else color_lh
@@ -527,20 +574,20 @@ def bivariate_colour_matrix(
             # bilinear interpolation
             r = int(
                 (1 - y_frac) * (1 - x_frac) * c_ll.red()
-                + (1 - y_frac) * x_frac * c_lh.red()
-                + y_frac * (1 - x_frac) * c_hl.red()
+                + y_frac * (1 - x_frac) * c_lh.red()
+                + (1 - y_frac) * x_frac * c_hl.red()
                 + y_frac * x_frac * c_hh.red()
             )
             g = int(
                 (1 - y_frac) * (1 - x_frac) * c_ll.green()
-                + (1 - y_frac) * x_frac * c_lh.green()
-                + y_frac * (1 - x_frac) * c_hl.green()
+                + y_frac * (1 - x_frac) * c_lh.green()
+                + (1 - y_frac) * x_frac * c_hl.green()
                 + y_frac * x_frac * c_hh.green()
             )
             b = int(
                 (1 - y_frac) * (1 - x_frac) * c_ll.blue()
-                + (1 - y_frac) * x_frac * c_lh.blue()
-                + y_frac * (1 - x_frac) * c_hl.blue()
+                + y_frac * (1 - x_frac) * c_lh.blue()
+                + (1 - y_frac) * x_frac * c_hl.blue()
                 + y_frac * x_frac * c_hh.blue()
             )
             row_cols.append(QColor(
@@ -612,7 +659,5 @@ def compute_alpha_values(
         if fv is None:
             result.append(alpha_min)
             continue
-        idx = bisect_left(breaks, fv) - 1
-        idx = max(0, min(idx, len(alpha_steps) - 1))
-        result.append(alpha_steps[idx])
+        result.append(alpha_steps[min(class_index(fv, breaks), len(alpha_steps) - 1)])
     return result

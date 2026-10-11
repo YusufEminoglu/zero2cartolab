@@ -13,6 +13,7 @@ comparable standardised values.
 from __future__ import annotations
 
 import math
+from bisect import bisect_left, bisect_right
 from typing import List, Optional
 
 METHODS = [
@@ -108,7 +109,10 @@ def min_max(values, lo: float = 0.0, hi: float = 1.0) -> List[Optional[float]]:
 
 
 def percentile_rank(values) -> List[Optional[float]]:
-    """0-100 rank: pct of values below each, plus half the ties (mid-rank)."""
+    """0-100 rank: pct of values below each, plus half the ties (mid-rank).
+
+    O(n log n): the values are sorted once and each rank is two bisections.
+    """
     c = _clean(values)
     n = len(c)
     if n == 0:
@@ -120,8 +124,8 @@ def percentile_rank(values) -> List[Optional[float]]:
         if fv is None or math.isnan(fv) or math.isinf(fv):
             out.append(None)
             continue
-        below = sum(1 for x in ordered if x < fv)
-        equal = sum(1 for x in ordered if x == fv)
+        below = bisect_left(ordered, fv)
+        equal = bisect_right(ordered, fv) - below
         out.append(100.0 * (below + 0.5 * equal) / n)
     return out
 

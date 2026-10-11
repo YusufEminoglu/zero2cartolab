@@ -6,7 +6,7 @@ from __future__ import annotations
 from qgis.PyQt.QtCore import QVariant
 from qgis.PyQt.QtGui import QColor
 from qgis.core import (
-    QgsFeature, QgsFeatureSink, QgsField, QgsFields, QgsProcessing,
+    QgsFeature, QgsFeatureSink, QgsProcessing,
     QgsProcessingAlgorithm, QgsProcessingException,
     QgsProcessingParameterBoolean, QgsProcessingParameterColor,
     QgsProcessingParameterEnum, QgsProcessingParameterFeatureSink,
@@ -17,6 +17,7 @@ from qgis.core import (
 
 from ..core.utils import safe_float
 from ..core import proportional_symbols as ps
+from ._fields import extend_fields, output_attributes
 from ._help_mixin import CartoLabHelpMixin
 from ._styling import style_output
 
@@ -114,16 +115,15 @@ class ProportionalSymbolsAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
         v_max = max(values)
         v_min = min(values)
 
-        out_fields = QgsFields()
-        for f in source.fields():
-            out_fields.append(QgsField(f.name(), f.type()))
-        out_fields.append(QgsField("psym_value", QVariant.Double))
-        out_fields.append(QgsField("psym_size", QVariant.Double))
+        out_fields, out_idx = extend_fields(
+            source.fields(), (("psym_value", QVariant.Double), ("psym_size", QVariant.Double)))
 
         (sink, dest_id) = self.parameterAsSink(
             parameters, self.OUTPUT, context,
             out_fields, QgsWkbTypes.Type.Point, source.sourceCrs(),
         )
+        if sink is None:
+            raise QgsProcessingException(self.invalidSinkError(parameters, self.OUTPUT))
 
         total = len(features_raw) or 1
         for current, feat in enumerate(features_raw):
@@ -134,9 +134,7 @@ class ProportionalSymbolsAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
                 continue
             fv = safe_float(feat[field_name], 0.0)
             size = ps.symbol_size(fv, v_max, max_size, min_size, flannery)
-            attrs = feat.attributes()[:]
-            attrs.append(fv)
-            attrs.append(size)
+            attrs = output_attributes(feat, out_fields, out_idx, {"psym_value": fv, "psym_size": size})
             nf = QgsFeature(out_fields)
             nf.setGeometry(geom.pointOnSurface())
             nf.setAttributes(attrs)

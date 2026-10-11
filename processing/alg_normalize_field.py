@@ -4,7 +4,7 @@ from __future__ import annotations
 
 
 from qgis.core import (
-    QgsFeature, QgsFeatureSink, QgsField, QgsFields, QgsGraduatedSymbolRenderer,
+    QgsFeature, QgsFeatureSink, QgsGraduatedSymbolRenderer,
     QgsProcessing, QgsProcessingAlgorithm, QgsProcessingException,
     QgsProcessingParameterEnum, QgsProcessingParameterFeatureSink,
     QgsProcessingParameterFeatureSource, QgsProcessingParameterField,
@@ -15,6 +15,7 @@ from qgis.PyQt.QtGui import QColor
 
 from ..core import normalize as nm
 from ..core import palettes as pal
+from ._fields import extend_fields, output_attributes
 from ._help_mixin import CartoLabHelpMixin
 from ._styling import style_output
 
@@ -137,16 +138,15 @@ class NormalizeFieldAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
         else:
             raise QgsProcessingException(f"Unknown method: {method}")
 
-        out_fields = QgsFields()
-        for f in source.fields():
-            out_fields.append(QgsField(f.name(), f.type()))
-        out_fields.append(QgsField("norm_value", QVariant.Double))
-        out_fields.append(QgsField("norm_method", QVariant.String))
+        out_fields, out_idx = extend_fields(
+            source.fields(), (("norm_value", QVariant.Double), ("norm_method", QVariant.String)))
 
         (sink, dest_id) = self.parameterAsSink(
             parameters, self.OUTPUT, context,
             out_fields, source.wkbType(), source.sourceCrs(),
         )
+        if sink is None:
+            raise QgsProcessingException(self.invalidSinkError(parameters, self.OUTPUT))
 
         valid_values = []
         total = len(features_raw) or 1
@@ -154,9 +154,10 @@ class NormalizeFieldAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
             if feedback.isCanceled():
                 break
             val = norm[i]
-            attrs = feat.attributes()[:]
-            attrs.append(float(val) if val is not None else None)
-            attrs.append(method)
+            attrs = output_attributes(feat, out_fields, out_idx, {
+                "norm_value": float(val) if val is not None else None,
+                "norm_method": method,
+            })
             nf = QgsFeature(out_fields)
             nf.setGeometry(feat.geometry())
             nf.setAttributes(attrs)

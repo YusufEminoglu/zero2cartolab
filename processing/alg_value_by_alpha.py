@@ -6,7 +6,7 @@ from __future__ import annotations
 from qgis.PyQt.QtCore import QVariant
 from qgis.PyQt.QtGui import QColor
 from qgis.core import (
-    QgsFeature, QgsFeatureSink, QgsField, QgsFields,
+    QgsFeature, QgsFeatureSink,
     QgsProcessing, QgsProcessingAlgorithm, QgsProcessingException,
     QgsProcessingParameterEnum, QgsProcessingParameterFeatureSink,
     QgsProcessingParameterFeatureSource, QgsProcessingParameterField,
@@ -15,6 +15,7 @@ from qgis.core import (
 
 from ..core.utils import safe_float
 from ..core.bivariate_engine import compute_alpha_values
+from ._fields import extend_fields, output_attributes
 from ._help_mixin import CartoLabHelpMixin
 from ._styling import style_output
 
@@ -104,34 +105,47 @@ class ValueByAlphaAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
         for feat in source.getFeatures():
             pv = safe_float(feat[colour_field])
             rv = safe_float(feat[alpha_field])
-            primary_vals.append(pv if pv is not None else 0.0)
-            reliability_vals.append(rv if rv is not None else 0.0)
+            # NULLs stay None: they must not enter the colour breaks or the
+            # alpha classification as fake zeros.
+            primary_vals.append(pv)
+            reliability_vals.append(rv)
             features_raw.append(feat)
 
         if not features_raw:
             raise QgsProcessingException("No features in input layer.")
+        if all(v is None for v in primary_vals):
+            raise QgsProcessingException(f"No valid numeric values in field '{colour_field}'.")
+        if all(v is None for v in reliability_vals):
+            raise QgsProcessingException(f"No valid numeric values in field '{alpha_field}'.")
 
+        # NULL reliability -> alpha_min (least certain), explicitly.
         alpha_values = compute_alpha_values(primary_vals, reliability_vals, alpha_min, alpha_max)
+        n_null_r = sum(1 for v in reliability_vals if v is None)
+        n_null_p = sum(1 for v in primary_vals if v is None)
+        if n_null_r or n_null_p:
+            feedback.pushInfo(
+                f"{n_null_p} feature(s) with NULL '{colour_field}' are excluded from the colour classes; "
+                f"{n_null_r} with NULL '{alpha_field}' get the minimum opacity ({alpha_min}).")
 
         # Build output schema
-        out_fields = QgsFields()
-        for f in source.fields():
-            out_fields.append(QgsField(f.name(), f.type()))
-        out_fields.append(QgsField("vba_alpha", QVariant.Int))
-        out_fields.append(QgsField("vba_alpha_pct", QVariant.Int))
+        out_fields, out_idx = extend_fields(
+            source.fields(), (("vba_alpha", QVariant.Int), ("vba_alpha_pct", QVariant.Int)))
 
         (sink, dest_id) = self.parameterAsSink(
             parameters, self.OUTPUT, context,
             out_fields, source.wkbType(), source.sourceCrs(),
         )
+        if sink is None:
+            raise QgsProcessingException(self.invalidSinkError(parameters, self.OUTPUT))
 
         total = len(features_raw)
         for i, feat in enumerate(features_raw):
             if feedback.isCanceled():
                 break
-            attrs = feat.attributes()[:]
-            attrs.append(alpha_values[i])
-            attrs.append(int(100 * alpha_values[i] / 255))
+            attrs = output_attributes(feat, out_fields, out_idx, {
+                "vba_alpha": alpha_values[i],
+                "vba_alpha_pct": int(100 * alpha_values[i] / 255),
+            })
 
             new_feat = QgsFeature(out_fields)
             new_feat.setGeometry(feat.geometry())
@@ -148,7 +162,7 @@ class ValueByAlphaAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
         from ..core.palettes import get_palette
 
         colors = get_palette(pal_name, n_classes)
-        breaks = quantile_breaks(primary_vals, n_classes)
+        breaks = quantile_breaks([v for v in primary_vals if v is not None], n_classes)
 
         def _style(out_layer):
             if not out_layer.isSpatial():

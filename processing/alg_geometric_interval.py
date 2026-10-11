@@ -4,7 +4,7 @@ from __future__ import annotations
 
 
 from qgis.core import (
-    QgsClassificationCustom, QgsFeature, QgsFeatureSink, QgsField, QgsFields,
+    QgsClassificationCustom, QgsFeature, QgsFeatureSink,
     QgsGraduatedSymbolRenderer, QgsProcessing, QgsProcessingAlgorithm,
     QgsProcessingException, QgsProcessingParameterFeatureSink,
     QgsProcessingParameterFeatureSource, QgsProcessingParameterField,
@@ -17,10 +17,11 @@ from qgis.PyQt.QtGui import QColor
 from ..core.utils import safe_float
 from ..core.bivariate_engine import (
     geometric_interval_breaks, head_tail_breaks, fisher_jenks_breaks,
-    standard_deviation_breaks, box_plot_breaks,
+    standard_deviation_breaks, box_plot_breaks, class_index, class_labels,
 )
 from ..core.quick_style import maximum_breaks, pretty_breaks
 from ..core import palettes as pal
+from ._fields import extend_fields, output_attributes
 from ._help_mixin import CartoLabHelpMixin
 from ._styling import style_output
 
@@ -110,12 +111,16 @@ class GeometricIntervalAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
             fv = safe_float(feat[field_name])
             if fv is not None:
                 values.append(fv)
-                features_raw.append(feat)
+            # NULL / non-numeric features are kept and written with NULL class fields
+            features_raw.append(feat)
 
         if not values:
             raise QgsProcessingException(f"No valid numeric values in field '{field_name}'.")
 
         feedback.pushInfo(f"Classifying {len(values)} values using {method} into {n_classes} classes.")
+        n_null = len(features_raw) - len(values)
+        if n_null:
+            feedback.pushInfo(f"{n_null} feature(s) without a numeric value keep NULL class fields.")
 
         if method == "geometric":
             breaks = geometric_interval_breaks(values, n_classes)
@@ -136,38 +141,39 @@ class GeometricIntervalAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
 
         feedback.pushInfo(f"Breaks: {[round(b, 4) for b in breaks]}")
 
-        out_fields = QgsFields()
-        for f in source.fields():
-            out_fields.append(QgsField(f.name(), f.type()))
-        out_fields.append(QgsField("gic_class", QVariant.Int))
-        out_fields.append(QgsField("gic_label", QVariant.String))
+        out_fields, out_idx = extend_fields(
+            source.fields(), (("gic_class", QVariant.Int), ("gic_label", QVariant.String)))
 
         (sink, dest_id) = self.parameterAsSink(
             parameters, self.OUTPUT, context,
             out_fields, source.wkbType(), source.sourceCrs(),
         )
+        if sink is None:
+            raise QgsProcessingException(self.invalidSinkError(parameters, self.OUTPUT))
 
-        labels = ["Very Low", "Low", "Medium", "High", "Very High"]
-        total = len(features_raw)
+        # Labels follow the number of classes the method actually produced
+        # (Head/Tail, Box Plot and Std-Dev do not honour the requested count).
+        labels = class_labels(max(1, len(breaks) - 1))
+        total = len(features_raw) or 1
         for current, feat in enumerate(features_raw):
             if feedback.isCanceled():
                 break
-            val = safe_float(feat[field_name], 0.0)
-            class_idx = 0
-            for i in range(len(breaks) - 1):
-                if breaks[i] <= val <= breaks[i + 1]:
-                    class_idx = i
-                    break
-            attrs = feat.attributes()[:]
-            attrs.append(class_idx)
-            label = labels[class_idx] if class_idx < len(labels) else f"Class {class_idx + 1}"
-            attrs.append(label)
+            val = safe_float(feat[field_name])
+            if val is None:
+                class_idx, label = None, None
+            else:
+                class_idx = class_index(val, breaks)
+                label = labels[class_idx]
+            attrs = output_attributes(feat, out_fields, out_idx, {
+                "gic_class": class_idx, "gic_label": label})
 
             new_feat = QgsFeature(out_fields)
             new_feat.setGeometry(feat.geometry())
             new_feat.setAttributes(attrs)
             sink.addFeature(new_feat, QgsFeatureSink.Flag.FastInsert)
             feedback.setProgress(int(100 * current / total))
+
+        v_lo, v_hi = min(values), max(values)
 
         def _style(out_layer):
             num_classes = max(1, len(breaks) - 1)
@@ -179,8 +185,12 @@ class GeometricIntervalAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
                     col = colours[min(i, len(colours) - 1)]
                     sym.setColor(QColor(col))
                     sym.setOpacity(0.88)
-                    label = f"{breaks[i]:.2f} – {breaks[i+1]:.2f}"
-                    ranges.append(QgsRendererRange(breaks[i], breaks[i+1], sym, label))
+                    # outer ranges reach the data extremes so every classified
+                    # feature is drawn (some methods stop short of min / max)
+                    lo = min(breaks[i], v_lo) if i == 0 else breaks[i]
+                    hi = max(breaks[i + 1], v_hi) if i == num_classes - 1 else breaks[i + 1]
+                    label = f"{lo:.2f} – {hi:.2f}"
+                    ranges.append(QgsRendererRange(lo, hi, sym, label))
             if ranges:
                 renderer = QgsGraduatedSymbolRenderer(field_name, ranges)
                 renderer.setClassificationMethod(QgsClassificationCustom())

@@ -71,10 +71,14 @@ def generate_ridge_lines(
     if block is None or not block.isValid() or block.isEmpty():
         raise ValueError("No data in raster block.")
 
-    # read values into 2D grid
+    # read values into a [row][col] grid. QgsRasterBlock.value takes
+    # (row, col); NoData cells contribute no deformation (0).
     grid: List[List[float]] = []
     for row in range(rows):
-        grid.append([block.value(col, row) for col in range(cols)])
+        grid.append([
+            0.0 if block.isNoData(row, col) else block.value(row, col)
+            for col in range(cols)
+        ])
 
     # determine scanline Y positions
     y_start = ext.yMinimum()
@@ -93,10 +97,11 @@ def generate_ridge_lines(
     layer.updateFields()
 
     for line_idx, baseline_y in enumerate(y_positions):
-        # map baseline_y to nearest raster row
-        raster_row = int(
-            (baseline_y - ext.yMinimum()) / ext.height() * (rows - 1)
-        )
+        # map baseline_y to the nearest raster row; raster row 0 is the
+        # TOP (yMaximum) of the extent, so the bottom scanline reads the last row
+        raster_row = int(round(
+            (ext.yMaximum() - baseline_y) / ext.height() * (rows - 1)
+        )) if ext.height() > 0 else 0
         raster_row = max(0, min(rows - 1, raster_row))
 
         points = []

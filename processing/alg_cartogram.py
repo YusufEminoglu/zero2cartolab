@@ -129,10 +129,15 @@ class CartogramAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
             # match so file outputs are conformant GeoPackages.
             source.fields(), QgsWkbTypes.multiType(source.wkbType()), source.sourceCrs(),
         )
+        if sink is None:
+            raise QgsProcessingException(self.invalidSinkError(parameters, self.OUTPUT))
 
         # run cartogram engine
         engine = CartogramEngine(memory_layer, field_name, max_iter, max_error)
-        iterations, avg_error = engine.run(feedback)
+        try:
+            iterations, avg_error = engine.run(feedback)
+        except ValueError as exc:
+            raise QgsProcessingException(str(exc)) from exc
 
         engine.write_to_layer(memory_layer)
 

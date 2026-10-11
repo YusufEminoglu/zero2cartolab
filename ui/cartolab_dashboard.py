@@ -3094,13 +3094,16 @@ class CartoLabDashboard(_QDialogBase):
         return layout
 
     def _bivar_colors(self):
-        preset = self.bivar_palette_combo.currentData()
-        return {
-            "teal_brown": ("#e8e8e8", "#5ab4ac", "#d8b365", "#8c510a"),
-            "purple_green": ("#e8e8e8", "#7fbf7b", "#af8dc3", "#762a83"),
-            "blue_orange": ("#e8e8e8", "#fdae61", "#abd9e9", "#2c7bb6"),
-            "pink_green": ("#e8e8e8", "#a1d76a", "#e9a3c9", "#c51b7d"),
-        }.get(preset, ("#e8e8e8", "#5ab4ac", "#d8b365", "#8c510a"))
+        """Corner colours (ll, lh, hl, hh) of the chosen preset.
+
+        Taken from the same presets the Bivariate Choropleth algorithm uses,
+        so a legend added here matches the map: lh is low X / high Y.
+        """
+        from ..core.bivariate_engine import BIVARIATE_PALETTE_PRESETS
+
+        preset = BIVARIATE_PALETTE_PRESETS.get(
+            self.bivar_palette_combo.currentData(), BIVARIATE_PALETTE_PRESETS["teal_brown"])
+        return preset["ll"], preset["lh"], preset["hl"], preset["hh"]
 
     def _open_in_designer(self, layout) -> None:
         with suppress(Exception):

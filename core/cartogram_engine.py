@@ -161,7 +161,10 @@ class CartogramEngine:
             self.features.append(cf)
 
         if len(self.features) < 2:
-            raise ValueError("Cartogram requires at least 2 valid features.")
+            raise ValueError(
+                "A cartogram needs at least 2 polygon features with valid geometry "
+                f"(found {len(self.features)}): with a single region there is nothing to "
+                "redistribute area between.")
 
         self._total_area = sum(f.area for f in self.features)
         self._total_value = sum(f.value for f in self.features)
@@ -184,24 +187,17 @@ class CartogramEngine:
 
         prev_error = float("inf")
         damping = 0.3
+        # defined up front so a cancel before the first iteration (or
+        # max_iterations == 0) still reports the untouched input's error
+        done = 0
+        avg_error = None
 
         for iteration in range(self.max_iter):
             if feedback and feedback.isCanceled():
                 break
+            done = iteration + 1
 
-            # compute masses and size errors
-            for f in self.features:
-                target_area = f.value * self._area_value_ratio
-                if target_area > 0:
-                    f.mass = math.sqrt(target_area / math.pi) - f.radius
-                else:
-                    f.mass = 0.0
-                if min(f.area, target_area) > 0:
-                    f.size_error = max(f.area, target_area) / min(f.area, target_area)
-                else:
-                    f.size_error = 1.0
-
-            avg_error = sum(f.size_error for f in self.features) / n
+            avg_error = self._update_errors()
 
             if feedback:
                 progress_pct = int(100 * iteration / self.max_iter)
@@ -227,7 +223,23 @@ class CartogramEngine:
             for f in self.features:
                 f.recompute_properties()
 
-        return min(iteration + 1, self.max_iter), avg_error
+        if avg_error is None:
+            avg_error = self._update_errors()
+        return done, avg_error
+
+    def _update_errors(self) -> float:
+        """Refresh each feature's mass and size error; return the mean size error."""
+        for f in self.features:
+            target_area = f.value * self._area_value_ratio
+            if target_area > 0:
+                f.mass = math.sqrt(target_area / math.pi) - f.radius
+            else:
+                f.mass = 0.0
+            if min(f.area, target_area) > 0:
+                f.size_error = max(f.area, target_area) / min(f.area, target_area)
+            else:
+                f.size_error = 1.0
+        return sum(f.size_error for f in self.features) / len(self.features)
 
     def _diffusion_step(self, damping: float, cutoff: float, sigma2: float) -> None:
         """

@@ -1291,6 +1291,153 @@ check("hatch: coverage formulas",
       and abs(hp.ink_coverage({"kind": "cross", "spacing": 2.0, "width": 0.5}) - 0.4375) < 1e-12)
 
 # ===================================================================
+# REGRESSIONS — classification, colour, CVD, dots, cartogram, ranks
+# ===================================================================
+section("Regressions — audit fixes")
+
+# Fisher-Jenks sampling keeps the maximum, and n in 5001..9999 is sampled
+_big = [float(i) for i in range(10001)]  # step 3 would skip the last value
+_fj_big = be.fisher_jenks_breaks(_big, 2)
+check("Fisher-Jenks sample keeps the maximum", _fj_big[-1] >= 10000.0, str(_fj_big[-1]))
+check("Fisher-Jenks large n returns n+1 breaks", len(_fj_big) == 3, str(_fj_big))
+
+# Jenks interior breaks are class upper bounds (lo < v <= hi like QGIS ranges)
+_fj_up = be.fisher_jenks_breaks([1, 2, 3, 10, 11, 12], 2)
+check("Fisher-Jenks break is upper bound of lower class", _fj_up[1] == 3.0, str(_fj_up))
+check("class_index: break value belongs to the class it closes",
+      be.class_index(3.0, _fj_up) == 0 and be.class_index(10.0, _fj_up) == 1)
+check("class_index: below first break -> first class", be.class_index(-5, [0, 1, 2]) == 0)
+check("class_index: above last break -> last class (not class 0)", be.class_index(99, [0, 1, 2]) == 1)
+check("class_index: first class includes its lower bound", be.class_index(0, [0, 1, 2]) == 0)
+
+# compute_alpha_values: every member of a natural cluster gets the same alpha
+_rel = [1, 1, 1, 10, 10, 10, 20, 20, 20, 30, 30, 30, 40, 40, 40]
+_al = be.compute_alpha_values(_rel, _rel, 30, 255)
+_groups = [_al[i:i + 3] for i in range(0, 15, 3)]
+check("VbA alpha uniform within each Jenks class", all(len(set(g)) == 1 for g in _groups), str(_al))
+check("VbA alpha increases with reliability",
+      all(_groups[i][0] < _groups[i + 1][0] for i in range(4)), str(_al))
+
+# Bivariate corners: "lh" = LOW X / HIGH Y, "hl" = HIGH X / LOW Y; matrix[row=Y][col=X]
+_bm = be.bivariate_colour_matrix(2, "#ffffff", "#ff0000", "#0000ff", "#000000")
+check("Bivariate lh colours low-X/high-Y cell", _bm[1][0].name() == "#ff0000", _bm[1][0].name())
+check("Bivariate hl colours high-X/low-Y cell", _bm[0][1].name() == "#0000ff", _bm[0][1].name())
+check("Bivariate presets keep their on-map appearance",
+      be.bivariate_colour_matrix_hex(2, preset="teal_brown") == [["#e8e8e8", "#5ab4ac"], ["#d8b365", "#8c510a"]])
+
+# Class labels follow the class count
+for _n in range(1, 21):
+    _lb = be.class_labels(_n)
+    check(f"class_labels({_n}) has {_n} distinct labels", len(_lb) == _n and len(set(_lb)) == _n, str(_lb))
+check("class_labels(5) keeps the classic names",
+      be.class_labels(5) == ["Very Low", "Low", "Medium", "High", "Very High"])
+check("class_labels(7) ends High-most", be.class_labels(7)[-1] == "Very High" and be.class_labels(7)[0] == "Very Low")
+
+# Std-dev breaks symmetric for >= 7 classes
+_sd7 = be.standard_deviation_breaks(list(range(-50, 51)), 7, interval_std=0.25)
+check("Std-dev 7 classes gives 8 breaks", len(_sd7) == 8, str(_sd7))
+check("Std-dev 7 classes symmetric about the mean",
+      all(abs(_sd7[i] + _sd7[-1 - i]) < 1e-6 for i in range(1, 4)), str(_sd7))
+_sd8 = be.standard_deviation_breaks(list(range(-500, 501)), 8, interval_std=0.25)
+_mid8 = _sd8[1:-1]
+check("Std-dev 8 classes has a break at the mean", any(abs(b) < 1e-6 for b in _mid8), str(_sd8))
+
+# CVD: Machado 2009 in linear RGB
+check("CVD Machado deuteranopia of red", ca.simulate_cvd_hex("#ff0000", "deuteranopia") == "#a39000",
+      ca.simulate_cvd_hex("#ff0000", "deuteranopia"))
+check("CVD Machado protanopia of red", ca.simulate_cvd_hex("#ff0000", "protanopia") == "#6d5f00",
+      ca.simulate_cvd_hex("#ff0000", "protanopia"))
+check("CVD Machado tritanopia of blue", ca.simulate_cvd_hex("#0000ff", "tritanopia") == "#006b96",
+      ca.simulate_cvd_hex("#0000ff", "tritanopia"))
+for _t in ("deuteranopia", "protanopia", "tritanopia", "achromatopsia"):
+    check(f"CVD {_t} keeps neutral greys",
+          [ca.simulate_cvd_hex(h, _t) for h in ("#000000", "#808080", "#ffffff")] == ["#000000", "#808080", "#ffffff"])
+_ach = ca.simulate_cvd_hex("#3b82f6", "achromatopsia")
+check("CVD achromatopsia preserves relative luminance",
+      abs(ca.relative_luminance(_ach) - ca.relative_luminance("#3b82f6")) < 0.01, _ach)
+check("CVD severity 0 is identity", ca.simulate_cvd_hex("#3b82f6", "protanopia", severity=0.0) == "#3b82f6")
+check("CVD protanomaly uses the protan matrix",
+      ca.simulate_cvd_hex("#ff0000", "protanomaly", severity=0.5)
+      == ca.simulate_cvd_hex("#ff0000", "protanopia", severity=0.5))
+check("CVD red/green confusable for deuteranopes",
+      ca.delta_e_cie76(ca.simulate_cvd_hex("#d62728", "deuteranopia"), ca.simulate_cvd_hex("#2ca02c", "deuteranopia"))
+      < ca.delta_e_cie76("#d62728", "#2ca02c") / 2)
+
+# Dot density: far-apart islands and sparse shapes still get every dot
+_isl_a = [[(0, 0), (1, 0), (1, 1), (0, 1), (0, 0)]]
+_isl_b = [[(1000, 1000), (1003, 1000), (1003, 1001), (1000, 1001), (1000, 1000)]]
+_mp = dd.generate_dots_in_parts([_isl_a, _isl_b], 200, seed=5)
+check("dots multipart: all requested dots placed", len(_mp) == 200, str(len(_mp)))
+_in_a = sum(1 for x, y in _mp if dd.point_in_polygon(_isl_a, x, y))
+_in_b = sum(1 for x, y in _mp if dd.point_in_polygon(_isl_b, x, y))
+check("dots multipart: shared by area (1:3)", _in_a == 50 and _in_b == 150, f"{_in_a}/{_in_b}")
+check("dots multipart deterministic", _mp == dd.generate_dots_in_parts([_isl_a, _isl_b], 200, seed=5))
+_sq = [[(0, 0), (10, 0), (10, 10), (0, 10), (0, 0)]]
+check("dots single part matches generate_dots",
+      dd.generate_dots_in_parts([_sq], 40, seed=9) == dd.generate_dots(_sq[0:1], (0, 0, 10, 10), 40, seed=9))
+_thin_l = [[(0, 0), (100, 0), (100, 0.5), (0.5, 0.5), (0.5, 100), (0, 100), (0, 0)]]  # ~1% of its bbox
+check("dots sparse L-shape gets all dots", len(dd.generate_dots(_thin_l, (0, 0, 100, 100), 300, seed=2)) == 300)
+check("allocate_by_area sums to count", sum(dd.allocate_by_area([1.0, 2.0, 0.0, 3.3], 17)) == 17)
+check("polygon_area subtracts holes", abs(dd.polygon_area([_sq[0], [(2, 2), (4, 2), (4, 4), (2, 4), (2, 2)]]) - 96.0) < 1e-9)
+
+# Cartogram: cancel before the first iteration must not raise UnboundLocalError
+class _CancelFB:
+    def isCanceled(self): return True
+    def setProgress(self, p): pass
+    def pushInfo(self, m): pass
+
+class _PreloadedCartogram(ce.CartogramEngine):
+    def _load_features(self):
+        for i, (area, val) in enumerate(((100.0, 1.0), (100.0, 3.0))):
+            f = ce.CartogramFeature(i, FakeGeometry(), val)
+            f.area, f.radius, f.cx, f.cy = area, math.sqrt(area / math.pi), i * 10.0, 0.0
+            self.features.append(f)
+        self._area_value_ratio = 200.0 / 4.0
+
+try:
+    _it, _err = _PreloadedCartogram(None, "v", 10, 5.0).run(_CancelFB())
+    check("Cartogram cancel before first iteration returns cleanly", _it == 0 and _err > 1.0, f"{_it}, {_err}")
+except Exception as _e:
+    check("Cartogram cancel before first iteration returns cleanly", False, repr(_e))
+try:
+    _it0, _ = _PreloadedCartogram(None, "v", 0, 5.0).run(None)
+    check("Cartogram max_iterations=0 returns cleanly", _it0 == 0)
+except Exception as _e:
+    check("Cartogram max_iterations=0 returns cleanly", False, repr(_e))
+
+class _OneFeatureLayer:
+    def getFeatures(self):
+        class _F:
+            def geometry(self): return FakeGeometry()
+            def id(self): return 1
+            def __getitem__(self, k): return 5.0
+        return [_F()]
+
+_orig_geom = ce.QgsGeometry
+class _StaticGeom(FakeGeometry):
+    @staticmethod
+    def fromWkt(wkt): return FakeGeometry(wkt)
+ce.QgsGeometry = _StaticGeom
+try:
+    ce.CartogramEngine(_OneFeatureLayer(), "v").run(None)
+    check("Cartogram single feature raises a clear ValueError", False)
+except ValueError as _e:
+    check("Cartogram single feature raises a clear ValueError", "at least 2" in str(_e), str(_e))
+finally:
+    ce.QgsGeometry = _orig_geom
+
+# Percentile rank: O(n log n) and still mid-rank for ties
+import time as _time
+check("percentile_rank ties use mid-rank", norm.percentile_rank([1, 2, 2, 3]) == [12.5, 50.0, 50.0, 87.5],
+      str(norm.percentile_rank([1, 2, 2, 3])))
+_t0 = _time.perf_counter()
+_pr = norm.percentile_rank([float((i * 7919) % 30011) for i in range(30000)] + [None])
+check("percentile_rank 30k values runs fast (sort + bisect)", _time.perf_counter() - _t0 < 2.0)
+check("percentile_rank keeps None aligned", _pr[-1] is None and len(_pr) == 30001)
+check("decile_rank built on fast ranks", norm.decile_rank([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) == list(range(1, 11)),
+      str(norm.decile_rank(list(range(1, 11)))))
+
+# ===================================================================
 # SUMMARY
 # ===================================================================
 section("RESULTS")

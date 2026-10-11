@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from qgis.core import (
-    QgsFeature, QgsFeatureSink, QgsField, QgsFields, QgsGeometry, QgsPointXY,
+    QgsFeature, QgsFeatureSink, QgsGeometry, QgsPointXY,
     QgsProcessing, QgsProcessingAlgorithm, QgsProcessingException,
     QgsProcessingParameterFeatureSink, QgsProcessingParameterFeatureSource,
     QgsProcessingParameterNumber, QgsWkbTypes,
@@ -11,6 +11,7 @@ from qgis.core import (
 from qgis.PyQt.QtCore import QVariant
 
 from ..core.label_points import polylabel, polygon_orientation_angle
+from ._fields import extend_fields, output_attributes
 from ._help_mixin import CartoLabHelpMixin
 
 
@@ -95,16 +96,15 @@ class LabelPointsAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
             raise QgsProcessingException(self.invalidSourceError(parameters, self.INPUT))
         precision = self.parameterAsDouble(parameters, self.PRECISION, context)
 
-        out_fields = QgsFields()
-        for f in source.fields():
-            out_fields.append(QgsField(f.name(), f.type()))
-        out_fields.append(QgsField("lbl_dist", QVariant.Double))
-        out_fields.append(QgsField("lbl_angle", QVariant.Double))
+        out_fields, out_idx = extend_fields(
+            source.fields(), (("lbl_dist", QVariant.Double), ("lbl_angle", QVariant.Double)))
 
         (sink, dest_id) = self.parameterAsSink(
             parameters, self.OUTPUT, context,
             out_fields, QgsWkbTypes.Type.Point, source.sourceCrs(),
         )
+        if sink is None:
+            raise QgsProcessingException(self.invalidSinkError(parameters, self.OUTPUT))
 
         total = source.featureCount() or 1
         written = 0
@@ -120,9 +120,7 @@ class LabelPointsAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
                 prec = max(min(bb.width(), bb.height()) / 100.0, 1e-9)
             x, y, dist = polylabel(rings, prec)
             angle = polygon_orientation_angle(rings[0])
-            attrs = feat.attributes()[:]
-            attrs.append(dist)
-            attrs.append(angle)
+            attrs = output_attributes(feat, out_fields, out_idx, {"lbl_dist": dist, "lbl_angle": angle})
             nf = QgsFeature(out_fields)
             nf.setGeometry(QgsGeometry.fromPointXY(QgsPointXY(x, y)))
             nf.setAttributes(attrs)

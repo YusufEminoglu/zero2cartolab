@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from qgis.core import (
-    QgsFeature, QgsFeatureSink, QgsField, QgsFields,
+    QgsFeature, QgsFeatureSink,
     QgsProcessing, QgsProcessingAlgorithm, QgsProcessingException,
     QgsProcessingParameterFeatureSink, QgsProcessingParameterFeatureSource,
     QgsProcessingParameterField, QgsProcessingParameterNumber,
@@ -14,14 +14,19 @@ from qgis.PyQt.QtCore import QVariant
 from qgis.PyQt.QtGui import QColor
 
 from ..core.utils import safe_float
-from ..core.bivariate_engine import bivariate_colour_matrix
+from ..core.bivariate_engine import bivariate_colour_matrix, class_index
+from ._fields import extend_fields, output_attributes
 from ._help_mixin import CartoLabHelpMixin
 from ._styling import style_output
 
 
 def apply_bivariate_renderer(layer, n_classes: int, color_ll: str, color_lh: str,
                              color_hl: str, color_hh: str) -> None:
-    """Apply the bivariate NxN categorized style keyed on ``bivar_class``."""
+    """Apply the bivariate NxN categorized style keyed on ``bivar_class``.
+
+    Corner colours are named X class first: ``color_lh`` colours LOW X /
+    HIGH Y features (``bivar_class`` "(0,n-1)"), ``color_hl`` HIGH X / LOW Y.
+    """
     from qgis.core import QgsCategorizedSymbolRenderer, QgsRendererCategory, QgsSymbol
 
     matrix = bivariate_colour_matrix(n_classes, color_ll, color_lh, color_hl, color_hh)
@@ -223,7 +228,8 @@ class BivariateChoroplethAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
             color_hl = c_hl.name() if hasattr(c_hl, "name") else str(c_hl)
             color_hh = c_hh.name() if hasattr(c_hh, "name") else str(c_hh)
 
-        # collect paired values
+        # collect paired values; features missing either value are still
+        # written, with NULL class fields, instead of vanishing from the output
         x_vals, y_vals = [], []
         features_raw = []
         for feat in source.getFeatures():
@@ -232,7 +238,7 @@ class BivariateChoroplethAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
             if fx is not None and fy is not None:
                 x_vals.append(fx)
                 y_vals.append(fy)
-                features_raw.append(feat)
+            features_raw.append(feat)
 
         if not x_vals:
             raise QgsProcessingException("No valid paired numeric values found.")
@@ -248,29 +254,38 @@ class BivariateChoroplethAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
         )
 
         # Build output schema with bivariate fields
-        out_fields = QgsFields()
-        for f in source.fields():
-            out_fields.append(QgsField(f.name(), f.type()))
-        out_fields.append(QgsField("bivar_x_class", QVariant.Int))
-        out_fields.append(QgsField("bivar_y_class", QVariant.Int))
-        out_fields.append(QgsField("bivar_class", QVariant.String))
+        out_fields, out_idx = extend_fields(source.fields(), (
+            ("bivar_x_class", QVariant.Int),
+            ("bivar_y_class", QVariant.Int),
+            ("bivar_class", QVariant.String),
+        ))
 
         (sink, dest_id) = self.parameterAsSink(
             parameters, self.OUTPUT, context,
             out_fields, source.wkbType(), source.sourceCrs(),
         )
+        if sink is None:
+            raise QgsProcessingException(self.invalidSinkError(parameters, self.OUTPUT))
 
-        total = len(features_raw)
+        n_null = len(features_raw) - len(x_vals)
+        if n_null:
+            feedback.pushInfo(f"{n_null} feature(s) missing an X or Y value keep NULL class fields.")
+
+        total = len(features_raw) or 1
         for current, feat in enumerate(features_raw):
             if feedback.isCanceled():
                 break
-            col_idx = _break_index(safe_float(feat[field_x], 0.0), x_breaks)
-            row_idx = _break_index(safe_float(feat[field_y], 0.0), y_breaks)
+            fx = safe_float(feat[field_x])
+            fy = safe_float(feat[field_y])
+            if fx is None or fy is None:
+                col_idx = row_idx = bivar = None
+            else:
+                col_idx = _break_index(fx, x_breaks)
+                row_idx = _break_index(fy, y_breaks)
+                bivar = f"({col_idx},{row_idx})"
 
-            attrs = feat.attributes()[:]
-            attrs.append(col_idx)
-            attrs.append(row_idx)
-            attrs.append(f"({col_idx},{row_idx})")
+            attrs = output_attributes(feat, out_fields, out_idx, {
+                "bivar_x_class": col_idx, "bivar_y_class": row_idx, "bivar_class": bivar})
 
             new_feat = QgsFeature(out_fields)
             new_feat.setGeometry(feat.geometry())
@@ -288,13 +303,7 @@ class BivariateChoroplethAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
 
 
 def _break_index(value: float, breaks: list) -> int:
+    """Class of ``value`` using the QGIS range convention (lo < v <= hi)."""
     if not breaks or len(breaks) < 2:
         return 0
-    if value <= breaks[0]:
-        return 0
-    if value >= breaks[-1]:
-        return len(breaks) - 2
-    for i in range(len(breaks) - 1):
-        if breaks[i] <= value < breaks[i + 1]:
-            return i
-    return len(breaks) - 2
+    return class_index(value, breaks)

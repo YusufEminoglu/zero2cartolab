@@ -71,6 +71,11 @@ from qgis.core import (
 
 print(f"QGIS version: {Qgis.QGIS_VERSION}")
 
+try:
+    from qgis.core import NULL as NULL_VALUE
+except ImportError:  # QGIS builds without the NULL alias
+    NULL_VALUE = None
+
 from zero2cartolab.processing.cartolab_provider import CartoLabProvider
 from zero2cartolab.core.dot_density import dots_for_value
 
@@ -633,6 +638,270 @@ if out:
 
 # later layout tests build legends from the project: leave it as we found it
 QgsProject.instance().removeMapLayers(_style_loaded_ids)
+
+# ===========================================================================
+# AUDIT REGRESSIONS (core + processing fixes)
+# ===========================================================================
+print("\n--- Audit regressions ---")
+
+
+def _is_null(v):
+    return v is None or v == NULL_VALUE or (hasattr(v, "isNull") and v.isNull())
+
+
+def _mem(geom_type, fields, rows, name="reg"):
+    lyr = QgsVectorLayer(f"{geom_type}?crs={CRS}&" + "&".join(f"field={n}:{t}" for n, t in fields),
+                         name, "memory")
+    feats = []
+    for wkt, attrs in rows:
+        f = QgsFeature(lyr.fields())
+        f.setGeometry(QgsGeometry.fromWkt(wkt))
+        f.setAttributes(attrs)
+        feats.append(f)
+    lyr.dataProvider().addFeatures(feats)
+    lyr.updateExtents()
+    return lyr
+
+
+def _sq(x, y, s=10):
+    return f"POLYGON(({x} {y},{x + s} {y},{x + s} {y + s},{x} {y + s},{x} {y}))"
+
+
+# 1) Ridge map reads block.value(row, col) and zeroes NoData
+def _ridge_raster():
+    from osgeo import gdal, osr
+    import struct
+    path = os.path.join(tempfile.gettempdir(), f"cartolab_e2e_ridge_{os.getpid()}.tif")
+    ds = gdal.GetDriverByName("GTiff").Create(path, 4, 3, 1, gdal.GDT_Float32)
+    ds.SetGeoTransform([0.0, 100.0, 0.0, 300.0, 0.0, -100.0])
+    srs = osr.SpatialReference()
+    srs.ImportFromEPSG(3857)
+    ds.SetProjection(srs.ExportToWkt())
+    band = ds.GetRasterBand(1)
+    band.SetNoDataValue(-9999.0)
+    for r in range(3):
+        vals = [r * 10.0 + c for c in range(4)]
+        if r == 1:
+            vals[2] = -9999.0
+        band.WriteRaster(0, r, 4, 1, struct.pack("<4f", *vals))
+    band.FlushCache()
+    ds = None
+    return path
+
+
+try:
+    from zero2cartolab.core.style_transformer import generate_ridge_lines
+    _rr = QgsRasterLayer(_ridge_raster(), "ridge_reg")
+    _rl = generate_ridge_lines(_rr, n_lines=3, vertical_scale=1.0, smooth_iterations=0)
+    _offs = {}
+    for _f in _rl.getFeatures():
+        _base = [0.0, 150.0, 300.0][_f["line_id"]]
+        _offs[_f["line_id"]] = [round(v.y() - _base, 6) for v in _f.geometry().vertices()]
+    ok("ridge: top scanline follows raster row 0 (row, col order)",
+       _offs.get(2) == [0.0, 1.0, 2.0, 3.0], str(_offs.get(2)))
+    ok("ridge: bottom scanline follows the last raster row",
+       _offs.get(0) == [20.0, 21.0, 22.0, 23.0], str(_offs.get(0)))
+    ok("ridge: NoData cell gives no deformation",
+       _offs.get(1) == [10.0, 11.0, 0.0, 13.0], str(_offs.get(1)))
+except Exception as _exc:
+    traceback.print_exc()
+    ok("ridge: row/col + NoData regression", False, repr(_exc))
+
+_reg_polys = _mem("Polygon", [("v", "double")],
+                  [(_sq(i * 10, 0), [float(v) if v is not None else None])
+                   for i, v in enumerate([1, 2, 3, 10, 11, 12, None])])
+
+# 2/3/6) Advanced Classification keeps NULL features; Jenks upper bounds
+out, _ = run("zero2cartolab:geometric_interval_classification",
+             {"INPUT": _reg_polys, "FIELD": "v", "CLASSES": 2, "METHOD": 2, "OUTPUT": "memory:"},
+             "gic_null")
+if out:
+    _feats = list(out["OUTPUT"].getFeatures())
+    _rows = {f["v"]: f["gic_class"] for f in _feats if not _is_null(f["v"])}
+    _null_rows = [f for f in _feats if _is_null(f["v"])]
+    ok("classification keeps NULL features", len(_feats) == 7, str(len(_feats)))
+    ok("classification NULL feature has NULL class and label",
+       len(_null_rows) == 1 and _is_null(_null_rows[0]["gic_class"]) and _is_null(_null_rows[0]["gic_label"]))
+    ok("classification Jenks classes use upper bounds (3 low, 10 high)",
+       _rows.get(3.0) == 0 and _rows.get(10.0) == 1, str(_rows))
+
+_seq = _mem("Polygon", [("v", "double")], [(_sq(i * 10, 0), [float(i)]) for i in range(70)])
+for _mi in range(7):
+    out, _ = run("zero2cartolab:geometric_interval_classification",
+                 {"INPUT": _seq, "FIELD": "v", "CLASSES": 4, "METHOD": _mi, "OUTPUT": "memory:"},
+                 f"gic_method_{_mi}")
+    if out:
+        _cls = {f["v"]: f["gic_class"] for f in out["OUTPUT"].getFeatures()}
+        ok(f"classification method {_mi}: maximum value is in the top class",
+           _cls[69.0] == max(_cls.values()) and _cls[69.0] > 0, str(_cls[69.0]))
+
+# 9) labels follow the class count
+out, _ = run("zero2cartolab:geometric_interval_classification",
+             {"INPUT": _seq, "FIELD": "v", "CLASSES": 7, "METHOD": 2, "OUTPUT": "memory:"}, "gic_7")
+if out:
+    _pairs = {(f["gic_class"], f["gic_label"]) for f in out["OUTPUT"].getFeatures()}
+    ok("classification 7 classes -> 7 distinct labels",
+       len(_pairs) == 7 and len({lab for _, lab in _pairs}) == 7, str(sorted(_pairs)))
+    ok("classification top class labelled highest", (6, "Very High") in _pairs, str(sorted(_pairs)))
+
+# 5) Re-running on own output overwrites the computed fields
+out1, _ = run("zero2cartolab:normalize_field",
+              {"INPUT": _seq, "FIELD": "v", "METHOD": 1, "OUTPUT": "memory:"}, "norm_first")
+if out1:
+    out2, _ = run("zero2cartolab:normalize_field",
+                  {"INPUT": out1["OUTPUT"], "FIELD": "v", "METHOD": 4, "OUTPUT": "memory:"}, "norm_rerun")
+    if out2:
+        _l2 = out2["OUTPUT"]
+        _vals = {f["v"]: (f["norm_value"], f["norm_method"]) for f in _l2.getFeatures()}
+        ok("normalize rerun overwrites norm_value / norm_method",
+           abs(_vals[69.0][0] - 1.0) < 1e-9 and _vals[0.0][0] == 0.0 and _vals[0.0][1] == "minmax",
+           str(_vals[0.0]))
+        ok("normalize rerun does not duplicate fields",
+           _l2.fields().count() == out1["OUTPUT"].fields().count(), str(_l2.fields().names()))
+
+_rerun_cases = [
+    ("geometric_interval_classification", {"FIELD": "v", "CLASSES": 2, "METHOD": 6},
+     {"FIELD": "v", "CLASSES": 5, "METHOD": 6}, "gic_class"),
+    ("bivariate_choropleth", {"FIELD_X": "v", "FIELD_Y": "v", "CLASSES": 2, "METHOD": 3},
+     {"FIELD_X": "v", "FIELD_Y": "v", "CLASSES": 4, "METHOD": 3}, "bivar_class"),
+    ("value_by_alpha", {"FIELD_COLOUR": "v", "FIELD_ALPHA": "v", "ALPHA_MIN": 10, "ALPHA_MAX": 100},
+     {"FIELD_COLOUR": "v", "FIELD_ALPHA": "v", "ALPHA_MIN": 120, "ALPHA_MAX": 255}, "vba_alpha"),
+    ("proportional_symbols", {"FIELD": "v", "MAX_SIZE": 5.0, "MIN_SIZE": 1.0},
+     {"FIELD": "v", "MAX_SIZE": 20.0, "MIN_SIZE": 2.0}, "psym_size"),
+]
+for _alg, _p1, _p2, _fld in _rerun_cases:
+    _o1, _ = run(f"zero2cartolab:{_alg}", dict(_p1, INPUT=_seq, OUTPUT="memory:"), f"{_alg}_first")
+    _fresh, _ = run(f"zero2cartolab:{_alg}", dict(_p2, INPUT=_seq, OUTPUT="memory:"), f"{_alg}_fresh")
+    if _o1 and _fresh:
+        _o2, _ = run(f"zero2cartolab:{_alg}", dict(_p2, INPUT=_o1["OUTPUT"], OUTPUT="memory:"),
+                     f"{_alg}_rerun")
+        if _o2:
+            _a = sorted((f["v"], f[_fld]) for f in _o2["OUTPUT"].getFeatures())
+            _b = sorted((f["v"], f[_fld]) for f in _fresh["OUTPUT"].getFeatures())
+            ok(f"{_alg} rerun on own output matches a fresh run", _a == _b, f"{_a[-3:]} vs {_b[-3:]}")
+            ok(f"{_alg} rerun keeps one '{_fld}' column",
+               _o2["OUTPUT"].fields().names().count(_fld) == 1, str(_o2["OUTPUT"].fields().names()))
+
+_lp1, _ = run("zero2cartolab:label_points", {"INPUT": _seq, "PRECISION": 0.0, "OUTPUT": "memory:"},
+              "lbl_first")
+if _lp1:
+    _lp_poly = processing.run("native:buffer",
+                              {"INPUT": _lp1["OUTPUT"], "DISTANCE": 2.0, "SEGMENTS": 32,
+                               "OUTPUT": "memory:"})["OUTPUT"]
+    _lp2, _ = run("zero2cartolab:label_points", {"INPUT": _lp_poly, "PRECISION": 0.0, "OUTPUT": "memory:"},
+                  "lbl_rerun")
+    if _lp2:
+        _dists = [f["lbl_dist"] for f in _lp2["OUTPUT"].getFeatures()]
+        ok("label_points rerun writes new lbl_dist (circle radius ~2, not stale ~5)",
+           all(abs(d - 2.0) < 0.2 for d in _dists), str(_dists[:3]))
+        ok("label_points rerun keeps one lbl_dist column",
+           _lp2["OUTPUT"].fields().names().count("lbl_dist") == 1)
+
+# 4/6) Bivariate custom corners and NULL features
+from qgis.PyQt.QtGui import QColor as _QColor
+_bv = _mem("Polygon", [("x", "double"), ("y", "double")],
+           [(_sq(0, 0), [1.0, 1.0]), (_sq(20, 0), [9.0, 1.0]), (_sq(40, 0), [1.0, 9.0]),
+            (_sq(60, 0), [9.0, 9.0]), (_sq(80, 0), [None, 5.0])])
+_custom = {"PALETTE_PRESET": 5, "COLOR_LL": _QColor("#ffffff"), "COLOR_LH": _QColor("#ff0000"),
+           "COLOR_HL": _QColor("#0000ff"), "COLOR_HH": _QColor("#000000")}
+out, _ = run("zero2cartolab:bivariate_choropleth",
+             dict(_custom, INPUT=_bv, FIELD_X="x", FIELD_Y="y", CLASSES=2, METHOD=3, OUTPUT="memory:"),
+             "bivariate_custom")
+if out:
+    _bl = out["OUTPUT"]
+    _cats = {c.value(): c.symbol().color().name() for c in _bl.renderer().categories()}
+    _col = {(f["x"], f["y"]): _cats[f["bivar_class"]]
+            for f in _bl.getFeatures() if not _is_null(f["bivar_class"])}
+    ok("bivariate Top-Left colour (Low X, High Y) on low-X/high-Y feature",
+       _col.get((1.0, 9.0)) == "#ff0000", str(_col))
+    ok("bivariate Bottom-Right colour (High X, Low Y) on high-X/low-Y feature",
+       _col.get((9.0, 1.0)) == "#0000ff", str(_col))
+    _nulls = [f for f in _bl.getFeatures() if _is_null(f["x"])]
+    ok("bivariate keeps the NULL feature with NULL class",
+       _bl.featureCount() == 5 and len(_nulls) == 1 and _is_null(_nulls[0]["bivar_class"]))
+
+out, _ = run("zero2cartolab:bivariate_matrix_export",
+             dict(_custom, CLASSES=2, OUTPUT="memory:"), "bivariate_matrix_custom")
+if out:
+    _cells = {(f["col"], f["row"]): f["hex_color"] for f in out["OUTPUT"].getFeatures()}
+    ok("bivariate legend export: corners match the map (Top-Left = Low X / High Y)",
+       _cells.get((0, 1)) == "#ff0000" and _cells.get((1, 0)) == "#0000ff", str(_cells))
+
+# 7) Value-by-Alpha excludes NULLs from breaks and gives NULL reliability alpha_min
+_pv = _mem("Polygon", [("c", "double"), ("a", "double")],
+           [(_sq(i * 10, 0), [100.0 + i, 50.0 + i]) for i in range(8)] + [(_sq(200, 0), [None, None])])
+out, _ = run("zero2cartolab:value_by_alpha",
+             {"INPUT": _pv, "FIELD_COLOUR": "c", "FIELD_ALPHA": "a", "ALPHA_MIN": 25,
+              "ALPHA_MAX": 255, "OUTPUT": "memory:"}, "vba_null")
+if out:
+    _vl = out["OUTPUT"]
+    _lows = [r.lowerValue() for r in _vl.renderer().ranges()]
+    ok("value_by_alpha colour breaks ignore NULL (no 0.0 class)", min(_lows) >= 100.0, str(_lows))
+    _al = {f["a"]: f["vba_alpha"] for f in _vl.getFeatures() if not _is_null(f["a"])}
+    _null_alpha = [f["vba_alpha"] for f in _vl.getFeatures() if _is_null(f["a"])]
+    ok("value_by_alpha NULL reliability -> alpha_min", _null_alpha == [25], str(_null_alpha))
+    ok("value_by_alpha lowest real reliability in the first alpha class", _al[50.0] == 25, str(_al))
+    ok("value_by_alpha highest reliability opaque", _al[57.0] == 255, str(_al))
+
+# 8) Hexbin mean ignores NULL weights
+_hp = _mem("Point", [("w", "double")],
+           [("POINT(0 0)", [10.0]), ("POINT(0.1 0)", [None]), ("POINT(100 100)", [1.0])])
+out, _ = run("zero2cartolab:hexbin_aggregate",
+             {"INPUT": _hp, "CELL_SIZE": 5.0, "WEIGHT": "w", "STAT": 2, "OUTPUT": "memory:"}, "hexbin_null")
+if out:
+    _hx = sorted((f["hex_count"], f["hex_sum"], f["hex_mean"]) for f in out["OUTPUT"].getFeatures())
+    ok("hexbin mean divides by non-NULL weights only", (2, 10.0, 10.0) in _hx, str(_hx))
+
+# 12) Dot density on far-apart multipart islands places every dot
+_mp_wkt = ("MULTIPOLYGON(((0 0,10 0,10 10,0 10,0 0)),"
+           "((5000 5000,5010 5000,5010 5010,5000 5010,5000 5000)))")
+_dmp = _mem("MultiPolygon", [("n", "double")], [(_mp_wkt, [400.0])])
+out, _ = run("zero2cartolab:dot_density",
+             {"INPUT": _dmp, "FIELD": "n", "VALUE_PER_DOT": 1.0, "SEED": 3, "OUTPUT": "memory:"},
+             "dots_multipart")
+if out:
+    ok("dot density multipart islands get all 400 dots", out["OUTPUT"].featureCount() == 400,
+       str(out["OUTPUT"].featureCount()))
+
+
+class _WarnFeedback(QgsProcessingFeedback):
+    def __init__(self):
+        super().__init__()
+        self.warnings = []
+
+    def pushWarning(self, msg):
+        self.warnings.append(msg)
+        super().pushWarning(msg)
+
+
+_sliver = _mem("Polygon", [("n", "double")],
+               [("POLYGON((0 0,1000 1000,1000 1000.001,0 0))", [20.0])])
+_wfb = _WarnFeedback()
+try:
+    _sctx = QgsProcessingContext()
+    _sres = processing.run("zero2cartolab:dot_density",
+                           {"INPUT": _sliver, "FIELD": "n", "VALUE_PER_DOT": 1.0, "SEED": 1,
+                            "OUTPUT": "memory:"}, context=_sctx, feedback=_wfb)
+    _sl = _sres["OUTPUT"]
+    if isinstance(_sl, str):
+        _sl = _sctx.getMapLayer(_sl)
+    _placed = _sl.featureCount() if _sl is not None else -1
+    ok("dot density shortfall is reported as a warning",
+       0 <= _placed < 20 and any("could be placed" in w for w in _wfb.warnings), f"{_placed} {_wfb.warnings}")
+except Exception as _exc:
+    traceback.print_exc()
+    ok("dot density shortfall is reported as a warning", False, repr(_exc))
+
+# 13) Cartogram on a single feature: clear QgsProcessingException
+from qgis.core import QgsProcessingException as _QPE
+_one = _mem("Polygon", [("v", "double")], [(_sq(0, 0), [5.0])])
+try:
+    processing.run("zero2cartolab:compute_cartogram", {"INPUT": _one, "FIELD": "v", "OUTPUT": "memory:"},
+                   feedback=QgsProcessingFeedback())
+    ok("cartogram single feature raises a clear error", False, "no exception")
+except Exception as _exc:
+    ok("cartogram single feature raises a clear error",
+       isinstance(_exc, _QPE) and "at least 2" in str(_exc), f"{type(_exc).__name__}: {_exc}")
 
 # ===========================================================================
 # LAYOUT SUBSYSTEM (real QgsPrintLayout assembly)

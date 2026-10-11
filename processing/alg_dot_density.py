@@ -12,28 +12,30 @@ from qgis.core import (
     QgsProcessingParameterNumber, QgsWkbTypes, QgsMarkerSymbol, QgsSingleSymbolRenderer,
 )
 
-from ..core.dot_density import dots_for_value, generate_dots
+from ..core.dot_density import dots_for_value, generate_dots_in_parts
 from ._help_mixin import CartoLabHelpMixin
 from ._styling import style_output
 
 
-def _rings_from_geometry(geom):
-    """Flatten a (multi)polygon geometry into a list of (x, y) rings.
+def _parts_from_geometry(geom):
+    """Split a (multi)polygon geometry into parts, each a list of (x, y) rings.
 
-    Disjoint multipolygon parts share one even-odd region, so their exterior and
-    hole rings can be pooled for the pure-Python containment test.
+    Parts are kept separate so dots can be shared out by part area and sampled
+    inside each part's own bounding box (islands far apart would otherwise
+    waste most rejection-sampling draws on the empty sea between them).
     """
     if geom is None or geom.isEmpty():
         return []
-    rings = []
     if geom.isMultipart():
         polygons = geom.asMultiPolygon()
     else:
         polygons = [geom.asPolygon()]
-    for poly in polygons:
-        for ring in poly:
-            rings.append([(p.x(), p.y()) for p in ring])
-    return rings
+    return [[[(p.x(), p.y()) for p in ring] for ring in poly] for poly in polygons if poly]
+
+
+def _rings_from_geometry(geom):
+    """Flatten a (multi)polygon geometry into one list of (x, y) rings."""
+    return [ring for part in _parts_from_geometry(geom) for ring in part]
 
 
 class DotDensityAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
@@ -113,20 +115,21 @@ class DotDensityAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
 
         total = source.featureCount() or 1
         dots_written = 0
+        dots_requested = 0
+        short_features = 0
         for current, feat in enumerate(source.getFeatures()):
             if feedback.isCanceled():
                 break
             n_dots = dots_for_value(feat[field_name], per_dot)
             if n_dots > 0:
-                rings = _rings_from_geometry(feat.geometry())
-                if rings:
-                    bbox = feat.geometry().boundingBox()
-                    coords = generate_dots(
-                        rings,
-                        (bbox.xMinimum(), bbox.yMinimum(), bbox.xMaximum(), bbox.yMaximum()),
-                        n_dots,
-                        seed=seed * 1000003 + current,
+                parts = _parts_from_geometry(feat.geometry())
+                if parts:
+                    dots_requested += n_dots
+                    coords = generate_dots_in_parts(
+                        parts, n_dots, seed=seed * 1000003 + current,
                     )
+                    if len(coords) < n_dots:
+                        short_features += 1
                     attrs = feat.attributes()[:]
                     for (x, y) in coords:
                         nf = QgsFeature(out_fields)
@@ -137,6 +140,10 @@ class DotDensityAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
             feedback.setProgress(int(100 * current / total))
 
         feedback.pushInfo(f"Placed {dots_written} dots (1 dot = {per_dot:g} units).")
+        if dots_written < dots_requested:
+            feedback.pushWarning(
+                f"Only {dots_written} of {dots_requested} dots could be placed: "
+                f"{short_features} polygon(s) are too thin / degenerate to hold all their dots.")
 
         def _style(out_layer):
             c_str = f"{dot_color.red()},{dot_color.green()},{dot_color.blue()},{dot_color.alpha()}"

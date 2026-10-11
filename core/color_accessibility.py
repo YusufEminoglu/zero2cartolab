@@ -2,10 +2,11 @@
 """
 PlanX CartoLab — Color Accessibility, CVD Simulation & Contrast Engine.
 
-Provides mathematically accurate Color Vision Deficiency (CVD) simulation
-(Protanopia, Deuteranopia, Tritanopia, Achromatopsia) using the Brettel/Machado
-spectrophotometric matrix model, plus WCAG 2.1 relative luminance and contrast ratio calculations,
-and CIE L*a*b* Delta E perceptual difference metrics.
+Provides Color Vision Deficiency (CVD) simulation using the Machado, Oliveira &
+Fernandes (2009) physiologically-based model for protanopia, deuteranopia and
+tritanopia (severity 1.0 matrices, applied in *linear* RGB), luminance-preserving
+greyscale for achromatopsia, plus WCAG 2.1 relative luminance and contrast ratio
+calculations, and CIE L*a*b* Delta E perceptual difference metrics.
 """
 from __future__ import annotations
 
@@ -167,29 +168,34 @@ def suggest_accessible_color(
 
 
 # ---------------------------------------------------------------------------
-# Color Vision Deficiency (CVD) Simulation Matrices (Machado / Brettel)
+# Color Vision Deficiency (CVD) Simulation (Machado et al. 2009)
 # ---------------------------------------------------------------------------
 
+# Machado, Oliveira & Fernandes (2009), "A Physiologically-based Model for
+# Simulation of Color Vision Deficiency", IEEE TVCG 15(6). Severity-1.0
+# matrices; they operate on LINEAR RGB, not on gamma-encoded sRGB.
+# Achromatopsia maps every colour to the grey of equal relative luminance
+# (Rec. 709 / WCAG coefficients), also in linear RGB.
 CVD_MATRICES: Dict[str, List[List[float]]] = {
     "protanopia": [
-        [0.56667, 0.43333, 0.0],
-        [0.55833, 0.44167, 0.0],
-        [0.0,     0.24167, 0.75833],
+        [0.152286, 1.052583, -0.204868],
+        [0.114503, 0.786281, 0.099216],
+        [-0.003882, -0.048116, 1.051998],
     ],
     "deuteranopia": [
-        [0.625, 0.375, 0.0],
-        [0.70,  0.30,  0.0],
-        [0.0,   0.30,  0.70],
+        [0.367322, 0.860646, -0.227968],
+        [0.280085, 0.672501, 0.047413],
+        [-0.011820, 0.042940, 0.968881],
     ],
     "tritanopia": [
-        [0.95, 0.05,  0.0],
-        [0.0,  0.433, 0.567],
-        [0.0,  0.475, 0.525],
+        [1.255528, -0.076749, -0.178779],
+        [-0.078411, 0.930809, 0.147602],
+        [0.004733, 0.691367, 0.303900],
     ],
     "achromatopsia": [
-        [0.299, 0.587, 0.114],
-        [0.299, 0.587, 0.114],
-        [0.299, 0.587, 0.114],
+        [0.2126, 0.7152, 0.0722],
+        [0.2126, 0.7152, 0.0722],
+        [0.2126, 0.7152, 0.0722],
     ],
 }
 
@@ -204,11 +210,16 @@ def simulate_cvd_rgb(
     """
     Simulate a specific color vision deficiency on an (r, g, b) tuple.
 
-    ``severity`` in [0.0, 1.0] controls the intensity (1.0 = full dichromacy).
+    The sRGB input is decoded to linear RGB, multiplied by the Machado (2009)
+    matrix, clamped to [0, 1] and re-encoded to sRGB. ``severity`` in
+    [0.0, 1.0] blends linearly between the identity and the full dichromat
+    matrix (1.0 = full dichromacy); "-anomaly" types default to 0.6.
+    Unknown types fall back to deuteranopia.
     """
     cvd_key = cvd_type.lower()
-    if cvd_key.endswith("anomaly") and severity == 1.0:
-        severity = 0.6
+    if cvd_key.endswith("anomaly"):
+        if severity == 1.0:
+            severity = 0.6
         cvd_key = cvd_key.replace("anomaly", "anopia")
 
     base_mat = CVD_MATRICES.get(cvd_key, CVD_MATRICES["deuteranopia"])
@@ -223,18 +234,12 @@ def simulate_cvd_rgb(
         for row in range(3)
     ]
 
-    rf = r / 255.0
-    gf = g / 255.0
-    bf = b / 255.0
-
-    sim_r = mat[0][0] * rf + mat[0][1] * gf + mat[0][2] * bf
-    sim_g = mat[1][0] * rf + mat[1][1] * gf + mat[1][2] * bf
-    sim_b = mat[2][0] * rf + mat[2][1] * gf + mat[2][2] * bf
-
-    out_r = int(round(max(0.0, min(1.0, sim_r)) * 255.0))
-    out_g = int(round(max(0.0, min(1.0, sim_g)) * 255.0))
-    out_b = int(round(max(0.0, min(1.0, sim_b)) * 255.0))
-    return (out_r, out_g, out_b)
+    lin = (srgb_to_linear(r / 255.0), srgb_to_linear(g / 255.0), srgb_to_linear(b / 255.0))
+    out = []
+    for row in range(3):
+        v = mat[row][0] * lin[0] + mat[row][1] * lin[1] + mat[row][2] * lin[2]
+        out.append(int(round(linear_to_srgb(max(0.0, min(1.0, v))) * 255.0)))
+    return (out[0], out[1], out[2])
 
 
 def simulate_cvd_hex(
