@@ -4,9 +4,8 @@ name: Quality
 # release-blocking finding shows up on a push instead of after the upload —
 # a blocked Hub version can never be un-blocked, the number is simply burned.
 #
-# QGIS runtime tests are NOT run here: they need a real QGIS install
-# (C:\OSGeo4W\bin\python-qgis-ltr.bat / python-qgis.bat) and stay local.
-# Run them with:  py -3 packaging/pf.py verify <plugin>
+# The QGIS runtime suites run in the official QGIS images: the oldest
+# supported release (qgisMinimumVersion), Ubuntu's 3.34, the LTR and QGIS 4.
 
 on:
   push:
@@ -46,3 +45,59 @@ jobs:
       # skip makes this gate pass while the Hub still blocks.
       - name: Bandit (any finding blocks the Hub)
         run: python -m bandit -q -r . -x ./tests,./e2e,./scratch,./node_modules
+
+  pure-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Core logic suite (no QGIS)
+        run: python tests/test_core.py
+
+  qgis-matrix:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - qgis/qgis:release-3_28
+          - qgis/qgis:release-3_34
+          - qgis/qgis:3.44
+          - qgis/qgis:4.2
+    container:
+      image: ${{ matrix.image }}
+      env:
+        QT_QPA_PLATFORM: offscreen
+        PYTHONDONTWRITEBYTECODE: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: zero2cartolab
+
+      - name: QGIS and Qt versions
+        run: |
+          export PYTHONPATH="/usr/share/qgis/python:$GITHUB_WORKSPACE"
+          python3 -c "from qgis.core import Qgis; from qgis.PyQt.QtCore import QT_VERSION_STR as q; print(Qgis.version(), 'Qt', q)"
+
+      - name: QGIS / Qt API references resolve
+        run: |
+          export PYTHONPATH="/usr/share/qgis/python:$GITHUB_WORKSPACE"
+          python3 zero2cartolab/tests/check_qgis_api.py
+
+      - name: Print Layout Designer dock lifecycle
+        run: |
+          export PYTHONPATH="/usr/share/qgis/python:$GITHUB_WORKSPACE"
+          python3 zero2cartolab/tests/qgis_designer_integration_smoke.py
+
+      - name: Dashboard, plugin lifecycle and map tools
+        run: |
+          export PYTHONPATH="/usr/share/qgis/python:$GITHUB_WORKSPACE"
+          python3 zero2cartolab/tests/qgis_ui_smoke.py
+
+      - name: Every Processing algorithm, template and layout tool
+        run: |
+          export PYTHONPATH="/usr/share/qgis/python:$GITHUB_WORKSPACE"
+          python3 zero2cartolab/e2e/cartolab_e2e_qgis.py

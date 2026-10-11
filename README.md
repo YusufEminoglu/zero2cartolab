@@ -6,12 +6,12 @@
 
 **Publication-grade cartography — without leaving QGIS.**
 
-[![Release](https://img.shields.io/github/v/release/YusufEminoglu/zero2cartolab?color=3b4994&label=release)](https://gitlab.com/geophilo1/zero2cartolab/releases)
+[![Release](https://img.shields.io/github/v/release/YusufEminoglu/zero2cartolab?color=3b4994&label=release)](https://gitlab.com/geophilo1/zero2cartolab/-/releases)
 [![License: GPL v3](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
 [![Documentation](https://img.shields.io/badge/📖_Reference_Manual-13a0a0)](https://geophilo.com/zero2cartolab/)
 [![QGIS](https://img.shields.io/badge/QGIS-3.28%20LTR%20%E2%86%92%204.x-589632?logo=qgis&logoColor=white)](https://qgis.org)
 [![Showcase](https://img.shields.io/badge/showcase-GitHub%20Pages-be64ac)](docs/index.html)
-[![Part of PlanX](https://img.shields.io/badge/suite-PlanX-ff8a3d)](https://gitlab.com/geophilo1/zero2cartolab)
+[![Part of PlanX](https://img.shields.io/badge/suite-PlanX-ff8a3d)](https://github.com/YusufEminoglu/PlanX)
 
 The map types journals and design studios actually ask for —
 **2.5D buildings, bivariate choropleths, Value-by-Alpha, cartograms, ridge maps, dot-density & proportional symbols, hexbins, visual-center labels and automated layouts** — as native QGIS styling, not fragile pasted QML.
@@ -46,7 +46,7 @@ Built for planners, urban researchers, studios and academic cartography workflow
 
 ## 🛠 Module Catalog
 
-Everything is reachable from the **02CartoLab Dashboard** (`Plugins → 02CartoLab`) and the **Processing Toolbox → 02CartoLab** provider:
+Everything is reachable from **02CartoLab Studio** (`Plugins → 02CartoLab → 02CartoLab Studio`) and the **Processing Toolbox → 02CartoLab** provider:
 
 | Module | What it does | Surface |
 |---|---|---|
@@ -70,7 +70,7 @@ Everything is reachable from the **02CartoLab Dashboard** (`Plugins → 02CartoL
 | **Grid Preset Gallery** | 7 idempotent compositions: minimal, UTM engineering, layered UTM field, survey crosshair, marginal ticks, WGS 84 graticule, and dual UTM + geographic reference | Dashboard + Print Layout Designer dock |
 | **QPT Inspector** | Audits page/items/grid stacks, off-page content, stable IDs, and external expression dependencies before importing a QGIS template | Dashboard → Grid + QPT Studio |
 | **Auto Map Sheet** | Complete print layout from the current view — map, legend, scale bar, north arrow, grid, credits — in one click | Dashboard → Layout Studio |
-| **Layout Manager** | List, open, duplicate, delete and export (PNG / PDF / SVG, 96–600 dpi) project layouts | Dashboard → Layout Studio |
+| **Layout Manager** | List, open, duplicate, delete and export (PNG / PDF / SVG at 150, 300 or 600 dpi) project layouts | Dashboard → Layout Studio |
 | **Layout Decorators** | Native bivariate legends, 3D isometric layer stacks, idempotent minimalist grids, typography hierarchy, paper themes | Dashboard → Layout Studio |
 | **Print Preflight** | Non-mutating publication check for page overflow, duplicate IDs, empty/tiny map frames, unlinked legends/scale bars and empty labels | Dashboard or Print Layout Designer dock |
 | **Add Graph** | Native editable bar, grouped/stacked bar, line, multi-series line, area, numeric scatter, pie, donut and histogram charts from vector-layer fields; aggregation, Top-N, persisted edit settings and least-overlap print-safe placement; no web view or external dependency | Print Layout Designer dock |
@@ -111,7 +111,7 @@ More: [Documentation index](docs/README.md) · [Feature showcase](docs/SHOWCASE.
 > `Plugins → Manage and Install Plugins…` → search **02CartoLab** → Install.
 
 **From ZIP**
-> Download the latest zip from [Releases](https://gitlab.com/geophilo1/zero2cartolab/releases) → `Plugins → Install from ZIP`.
+> Download the latest zip from [Releases](https://gitlab.com/geophilo1/zero2cartolab/-/releases) → `Plugins → Install from ZIP`.
 
 | Requirement | Value |
 |---|---|
@@ -144,7 +144,7 @@ zero2cartolab/
 - **Doğru koroplet:** Tek adımda normalleştirme (kişi başına oran, z-skoru, dayanıklı MAD-z, yüzdelik, log) — nüfusu değil *oranı* haritalayın.
 - **Otomatik sayfa düzeni:** Tek tıkla **Otomatik Harita Sayfası** — geçerli görünümden başlıklı harita çerçevesi, lejant, ölçek çubuğu, kuzey oku, koordinat ızgarası ve künye içeren tam bir baskı düzeni oluşturur ve Tasarımcı'da açar. Ayrıca **Düzen Yöneticisi** (aç, çoğalt, sil, PNG/PDF dışa aktar) ve dekoratörler: yerli bivariate lejantlar, izometrik katman istifi, tipografi hiyerarşisi.
 
-Kurulum: QGIS → *Eklentiler → Eklentileri Yönet ve Kur* → **02CartoLab** aratın. Pano: *Eklentiler → 02CartoLab → 02CartoLab Dashboard*.
+Kurulum: QGIS → *Eklentiler → Eklentileri Yönet ve Kur* → **02CartoLab** aratın. Pano: *Eklentiler → 02CartoLab → 02CartoLab Studio*.
 
 ---
 
@@ -154,11 +154,11 @@ This plugin is part of an open-source QGIS plugin ecosystem for urban planning b
 
 | Planning & analysis | CAD & production | 3D & visualization |
 |---|---|---|
-| [PlanX](https://gitlab.com/geophilo1/zero2cartolab) — spatial-planning suite | [PlanX CAD Toolset](https://gitlab.com/geophilo1/zero2cartolab) — drafting-grade CAD | [PlanX 3D City](https://gitlab.com/geophilo1/zero2cartolab) — Three.js city viewer |
-| [GeoStats Lab](https://gitlab.com/geophilo1/zero2cartolab) — spatial statistics | [EasyFillet](https://gitlab.com/geophilo1/zero2cartolab) — tangent-arc fillet | [3D OSM Model](https://gitlab.com/geophilo1/zero2cartolab) — OSM → 3D city in browser |
-| [Suitability Lab](https://gitlab.com/geophilo1/zero2cartolab) — raster MCDA | [Settlement Toolset](https://gitlab.com/geophilo1/zero2cartolab) — 9-stage settlement plans | [OSM Quick 3D](https://gitlab.com/geophilo1/zero2cartolab) — OSM → native QGIS 3D |
-| [DataCube Lab](https://gitlab.com/geophilo1/zero2cartolab) — spatiotemporal cubes | [UIP Toolset](https://gitlab.com/geophilo1/zero2cartolab) — Turkish master-plan automation | [Urban Procedural 3D](https://gitlab.com/geophilo1/zero2cartolab) — parametric zoning lab |
-| [Urban Resilience](https://gitlab.com/geophilo1/zero2cartolab) — 28 resilience tools | [ParcelFlux](https://gitlab.com/geophilo1/zero2cartolab) — parcel subdivision | [02CartoLab](https://gitlab.com/geophilo1/zero2cartolab) — publication cartography |
+| [PlanX](https://github.com/YusufEminoglu/PlanX) — spatial-planning suite | [PlanX CAD Toolset](https://github.com/YusufEminoglu/PlanX-CAD) — drafting-grade CAD | [PlanX 3D City](https://github.com/YusufEminoglu/planx_3d_city) — Three.js city viewer |
+| [GeoStats Lab](https://github.com/YusufEminoglu/planx_geostats) — spatial statistics | [EasyFillet](https://github.com/YusufEminoglu/EasyFillet) — tangent-arc fillet | [3D OSM Model](https://github.com/YusufEminoglu/osm_3d_model) — OSM → 3D city in browser |
+| [Suitability Lab](https://github.com/YusufEminoglu/planx_suitability_lab) — raster MCDA | [Settlement Toolset](https://github.com/YusufEminoglu/PlanX-Settlement) — 9-stage settlement plans | [OSM Quick 3D](https://github.com/YusufEminoglu/osm_quick_3d) — OSM → native QGIS 3D |
+| [DataCube Lab](https://github.com/YusufEminoglu/planx_datacube) — spatiotemporal cubes | [UIP Toolset](https://github.com/YusufEminoglu/PlanX-UIP) — Turkish master-plan automation | [Urban Procedural 3D](https://github.com/YusufEminoglu/planx_urban_procedural_3d) — parametric zoning lab |
+| [Urban Resilience](https://github.com/YusufEminoglu/planx_urban_resilience) — 28 resilience tools | [ParcelFlux](https://github.com/YusufEminoglu/parcelflux) — parcel subdivision | [02CartoLab](https://github.com/YusufEminoglu/zero2cartolab) — publication cartography |
 
 ---
 

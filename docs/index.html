@@ -6,7 +6,7 @@
   <title>02CartoLab — Publication-Grade Cartography Studio for QGIS</title>
   <meta name="description" content="Unified thematic mapping and print layout automation studio for QGIS. Bivariate choropleths, cartograms, ridge maps, dot-density, 2.5D buildings, automated layouts. No pip dependencies." />
   <meta property="og:title" content="02CartoLab QGIS Plugin" />
-  <meta property="og:description" content="Publication-grade cartography without leaving QGIS. 16 algorithms, 5 layout templates, CVD accessibility inspector." />
+  <meta property="og:description" content="Publication-grade cartography without leaving QGIS. 16 algorithms, 10 layout templates, CVD accessibility inspector." />
   <meta property="og:type" content="website" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -221,7 +221,7 @@
   <div class="nav-inner">
     <div class="nav-logo">
       <span>02CartoLab</span>
-      <span class="logo-badge">v1.1.0</span>
+      <span class="logo-badge">v1.5.0</span>
     </div>
     <ul class="nav-links">
       <li><a href="#about">About</a></li>
@@ -230,7 +230,7 @@
       <li><a href="#bivariate">Bivariate</a></li>
       <li><a href="#layouts">Layouts</a></li>
       <li><a href="#install">Install</a></li>
-      <li><a href="https://github.com/YusufEminoglu/zero2cartolab" class="nav-cta">GitHub &#x2197;</a> &middot; <a href="https://gitlab.com/yusufeminoglu/zero2cartolab" class="nav-cta">GitLab &#x2197;</a></li>
+      <li><a href="https://github.com/YusufEminoglu/zero2cartolab" class="nav-cta">GitHub &#x2197;</a> &middot; <a href="https://gitlab.com/geophilo1/zero2cartolab" class="nav-cta">GitLab &#x2197;</a></li>
     </ul>
   </div>
 </nav>
@@ -253,11 +253,11 @@
     </p>
     <div class="hero-actions">
       <a href="https://plugins.qgis.org/plugins/zero2cartolab/" class="btn-primary">&#8659; Install from Plugin Hub</a>
-      <a href="https://github.com/YusufEminoglu/zero2cartolab" class="btn-secondary">&#9733; View on GitHub</a> &middot; <a href="https://gitlab.com/yusufeminoglu/zero2cartolab" class="btn-secondary">&#9733; View on GitLab</a>
+      <a href="https://github.com/YusufEminoglu/zero2cartolab" class="btn-secondary">&#9733; View on GitHub</a> &middot; <a href="https://gitlab.com/geophilo1/zero2cartolab" class="btn-secondary">&#9733; View on GitLab</a>
     </div>
     <div class="hero-stats">
-      <div class="hero-stat"><div class="value">14</div><div class="label">Processing Algorithms</div></div>
-      <div class="hero-stat"><div class="value">5</div><div class="label">Layout Templates</div></div>
+      <div class="hero-stat"><div class="value">16</div><div class="label">Processing Algorithms</div></div>
+      <div class="hero-stat"><div class="value">10</div><div class="label">Layout Templates</div></div>
       <div class="hero-stat"><div class="value">5</div><div class="label">CVD Modes</div></div>
       <div class="hero-stat"><div class="value">0</div><div class="label">pip dependencies</div></div>
     </div>
@@ -311,7 +311,7 @@
         <p style="font-size:0.95rem;color:var(--text-secondary);line-height:1.75;margin-top:0.75rem;">
           Built for planners, urban researchers, studios and academic cartography
           workflows. Includes a CVD accessibility inspector, Layout Designer studio
-          dock, and 14 headless Processing algorithms. No external dependencies &mdash;
+          dock, and 16 headless Processing algorithms. No external dependencies &mdash;
           pure QGIS.
         </p>
         <div style="margin-top:1.5rem;display:flex;gap:1rem;flex-wrap:wrap;">
@@ -351,7 +351,7 @@
         <div style="margin-top:1.75rem;background:var(--card-bg);border:1px solid var(--border);border-radius:var(--radius-md);padding:1.25rem;">
           <div style="font-size:0.78rem;color:var(--text-muted);font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.75rem;">Quick Info</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;font-size:0.85rem;">
-            <div style="color:var(--text-muted);">Version</div><div style="color:var(--text-primary);font-weight:600;">1.0.0</div>
+            <div style="color:var(--text-muted);">Version</div><div style="color:var(--text-primary);font-weight:600;">1.5.0</div>
             <div style="color:var(--text-muted);">Category</div><div style="color:var(--text-primary);">Vector</div>
             <div style="color:var(--text-muted);">License</div><div style="color:var(--purple-light);">GPL-3.0</div>
             <div style="color:var(--text-muted);">QGIS Min</div><div style="color:var(--text-primary);">3.28</div>
@@ -413,8 +413,8 @@
       </div>
       <div class="feature-card">
         <div class="feature-icon fi-r">&#128218;</div>
-        <h3>5 Layout Templates</h3>
-        <p>Report Figure (16:9), Academic Journal (A4 2-col), Exhibition Poster (A1/A2), Fact Sheet, and Comparative Diptych &mdash; each with calibrated margins, typography and grid.</p>
+        <h3>10 Layout Templates</h3>
+        <p>Report Figure (16:9), Academic Journal (A4 2-col), Exhibition Poster (A1/A2), Fact Sheet, Comparative Diptych, UTM Field Sheet, Planning Review Board, Spatial Data Story, Atlas Production Sheet and Emergency Operations Brief &mdash; each with calibrated margins, typography and grid.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon fi-p">&#128202;</div>
@@ -433,7 +433,7 @@
     <div class="section-header">
       <div class="section-eyebrow">Module Catalog</div>
       <h2 class="section-title">16 modules, one dashboard</h2>
-      <p class="section-subtitle">Every module is reachable from the 02CartoLab Dashboard and the Processing Toolbox &mdash; scriptable, composable, modeler-ready.</p>
+      <p class="section-subtitle">Every module is reachable from 02CartoLab Studio and the Processing Toolbox &mdash; scriptable, composable, modeler-ready.</p>
     </div>
 
     <div class="image-full" style="margin-bottom:2.5rem;">
@@ -549,10 +549,10 @@
       <p class="section-subtitle">Release verification runs on both QGIS LTR and the current stable release. Zero external dependencies means zero install friction.</p>
     </div>
     <div class="compat-grid">
-      <div class="compat-card"><div class="compat-icon">&#128994;</div><div class="compat-title">QGIS 3.28+</div><div class="compat-desc">Minimum requirement. Full feature support on all 3.x releases.</div><div><span class="compat-check">&#10004; Verified</span></div></div>
+      <div class="compat-card"><div class="compat-icon">&#128994;</div><div class="compat-title">QGIS 3.28+</div><div class="compat-desc">Minimum requirement. Every algorithm, template and the Designer dock are tested on 3.28.</div><div><span class="compat-check">&#10004; Verified</span></div></div>
       <div class="compat-card"><div class="compat-icon">&#128309;</div><div class="compat-title">QGIS 3.44 LTR</div><div class="compat-desc">Primary release target. Verified before every publish.</div><div><span class="compat-check">&#10004; Release Runtime</span></div></div>
-      <div class="compat-card"><div class="compat-icon">&#9889;</div><div class="compat-title">QGIS 4.2</div><div class="compat-desc">Qt6 / QGIS 4 verified. No deprecated API usage.</div><div><span class="compat-check">&#10004; Release Runtime</span></div></div>
-      <div class="compat-card"><div class="compat-icon">&#128230;</div><div class="compat-title">Zero pip deps</div><div class="compat-desc">Pure QGIS API + NumPy (bundled). No external installs.</div><div><span class="compat-check">&#10004; No Install</span></div></div>
+      <div class="compat-card"><div class="compat-icon">&#9889;</div><div class="compat-title">QGIS 4.2</div><div class="compat-desc">Qt6 / QGIS 4 verified: the same test suites run on 4.2.</div><div><span class="compat-check">&#10004; Release Runtime</span></div></div>
+      <div class="compat-card"><div class="compat-icon">&#128230;</div><div class="compat-title">Zero pip deps</div><div class="compat-desc">Pure QGIS API. No external installs.</div><div><span class="compat-check">&#10004; No Install</span></div></div>
       <div class="compat-card"><div class="compat-icon">&#128203;</div><div class="compat-title">16 Processing Algorithms</div><div class="compat-desc">All algorithms run headlessly in Model Builder and Python scripts.</div><div><span class="compat-check">&#10004; Modeler-Ready</span></div></div>
       <div class="compat-card"><div class="compat-icon">&#128187;</div><div class="compat-title">Win &middot; Linux &middot; macOS</div><div class="compat-desc">Platform-agnostic Python. Tested primarily on Windows (OSGeo4W).</div><div><span class="compat-check">&#10004; Cross-platform</span></div></div>
     </div>
@@ -584,7 +584,7 @@
       <div class="install-card">
         <div class="install-num">03</div>
         <h3>Development Install</h3>
-        <p>Clone the repository and set <span class="mono">QGIS_PLUGINPATH</span> to the parent directory. Access via <em>Plugins &rarr; 02CartoLab Dashboard</em>.</p>
+        <p>Clone the repository and set <span class="mono">QGIS_PLUGINPATH</span> to the parent directory. Access via <em>Plugins &rarr; 02CartoLab &rarr; 02CartoLab Studio</em>.</p>
         <div class="plugin-id">QGIS_PLUGINPATH=.../qgis_plugins</div>
       </div>
     </div>
@@ -665,16 +665,16 @@
       <h3>02CartoLab</h3>
       <p>Unified thematic mapping and print layout automation studio for QGIS. Part of the PlanX urban analytics ecosystem.</p>
       <div style="margin-top:1rem;">
-        <a href="https://github.com/YusufEminoglu/zero2cartolab" class="btn-secondary" style="display:inline-flex;font-size:0.85rem;padding:0.5rem 1.25rem;">GitHub &#x2197;</a> &middot; <a href="https://gitlab.com/yusufeminoglu/zero2cartolab" class="btn-secondary" style="display:inline-flex;font-size:0.85rem;padding:0.5rem 1.25rem;">GitLab &#x2197;</a>
+        <a href="https://github.com/YusufEminoglu/zero2cartolab" class="btn-secondary" style="display:inline-flex;font-size:0.85rem;padding:0.5rem 1.25rem;">GitHub &#x2197;</a> &middot; <a href="https://gitlab.com/geophilo1/zero2cartolab" class="btn-secondary" style="display:inline-flex;font-size:0.85rem;padding:0.5rem 1.25rem;">GitLab &#x2197;</a>
       </div>
     </div>
     <div class="footer-col">
       <h4>Resources</h4>
       <ul class="footer-links">
         <li><a href="https://plugins.qgis.org/plugins/zero2cartolab/">QGIS Plugin Hub</a></li>
-        <li><a href="https://github.com/YusufEminoglu/zero2cartolab/releases">Releases</a> &middot; <a href="https://gitlab.com/yusufeminoglu/zero2cartolab/-/releases">Releases (GitLab)</a></li>
-        <li><a href="https://github.com/YusufEminoglu/zero2cartolab/blob/main/CHANGELOG.md">Changelog</a> &middot; <a href="https://gitlab.com/yusufeminoglu/zero2cartolab/-/blob/main/CHANGELOG.md">Changelog (GitLab)</a></li>
-        <li><a href="https://github.com/YusufEminoglu/zero2cartolab/issues">Bug Reports</a> &middot; <a href="https://gitlab.com/yusufeminoglu/zero2cartolab/-/issues">Bug Reports (GitLab)</a></li>
+        <li><a href="https://github.com/YusufEminoglu/zero2cartolab/releases">Releases</a> &middot; <a href="https://gitlab.com/geophilo1/zero2cartolab/-/releases">Releases (GitLab)</a></li>
+        <li><a href="https://github.com/YusufEminoglu/zero2cartolab/blob/main/CHANGELOG.md">Changelog</a> &middot; <a href="https://gitlab.com/geophilo1/zero2cartolab/-/blob/main/CHANGELOG.md">Changelog (GitLab)</a></li>
+        <li><a href="https://github.com/YusufEminoglu/zero2cartolab/issues">Bug Reports</a> &middot; <a href="https://gitlab.com/geophilo1/zero2cartolab/-/issues">Bug Reports (GitLab)</a></li>
       </ul>
     </div>
     <div class="footer-col">
