@@ -37,6 +37,24 @@ class _Iface:
         return list(self._designers)
 
 
+class _StandInZero2Viz:
+    """Serves the 02viz print-layout theme API (version 1) with one theme."""
+
+    def print_layout_theme_catalog(self):
+        return {
+            "api": "zero2viz.print_layout_themes",
+            "api_version": 1,
+            "themes": [{
+                "id": "studio_light",
+                "label": "Studio Light",
+                "palette": ["#1f77b4", "#ff7f0e", "#2ca02c"],
+                "background": "#ffffff",
+                "text": "#222222",
+                "grid": "#dddddd",
+            }],
+        }
+
+
 def main() -> int:
     app = QgsApplication.instance() or QgsApplication([], False)
     windows_font = Path(os.environ.get("WINDIR", "C:\\Windows")) / "Fonts" / "segoeui.ttf"
@@ -54,9 +72,15 @@ def main() -> int:
     first_designer = _Designer(first_window)
     iface = _Iface([first_designer])
 
-    import zero2viz
+    # 02viz is a separate, optional plugin that offers chart themes. Use the
+    # installed one when it is there; otherwise a stand-in that serves the
+    # same theme API, so the discovery path is still exercised.
     from qgis.utils import plugins
-    plugins["zero2viz"] = zero2viz.classFactory(iface)
+    try:
+        import zero2viz
+        plugins["zero2viz"] = zero2viz.classFactory(iface)
+    except ImportError:
+        plugins["zero2viz"] = _StandInZero2Viz()
 
     integration.setup_designer_integration(iface)
     app.processEvents()

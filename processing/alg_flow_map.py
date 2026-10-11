@@ -16,20 +16,9 @@ from qgis.core import (
 from ..core import flow_map as fm
 from ..core.palettes import get_palette
 from ..core.quick_style import quantile_breaks
+from ..core.utils import symbol_layer_property
 from ._help_mixin import CartoLabHelpMixin
 from ._styling import style_output
-
-
-def _symbol_layer_property(name: str):
-    """``QgsSymbolLayer.Property`` member across QGIS 3 (Property*) and 4."""
-    from qgis.core import QgsSymbolLayer
-    scope = getattr(QgsSymbolLayer, "Property", QgsSymbolLayer)
-    for attr in (name, f"Property{name}"):
-        if hasattr(scope, attr):
-            return getattr(scope, attr)
-        if hasattr(QgsSymbolLayer, attr):
-            return getattr(QgsSymbolLayer, attr)
-    raise AttributeError(name)
 
 
 def flow_line_symbol(color: QColor, arrows: bool):
@@ -42,7 +31,7 @@ def flow_line_symbol(color: QColor, arrows: bool):
         "line_width": "0.6", "capstyle": "round", "joinstyle": "round",
     })
     symbol.symbolLayer(0).setDataDefinedProperty(
-        _symbol_layer_property("StrokeWidth"), QgsProperty.fromField("flow_width"))
+        symbol_layer_property("StrokeWidth"), QgsProperty.fromField("flow_width"))
     if arrows:
         head = QgsMarkerSymbol.createSimple({
             "name": "filled_arrowhead",
@@ -50,7 +39,7 @@ def flow_line_symbol(color: QColor, arrows: bool):
             "outline_style": "no", "size": "2.4",
         })
         head.symbolLayer(0).setDataDefinedProperty(
-            _symbol_layer_property("Size"),
+            symbol_layer_property("Size"),
             QgsProperty.fromExpression('"flow_width" * 1.7 + 1.2'))
         marker_line = QgsMarkerLineSymbolLayer.create({
             "placement": "lastvertex", "placements": "LastVertex", "rotate": "1",

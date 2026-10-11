@@ -181,3 +181,40 @@ def copy_layout_to_clipboard(layout: QgsLayout, dpi: int = 300) -> bool:
     except Exception:
         return False
     return False
+
+
+def set_legend_style_text(legend, style_enum, font, color=None) -> None:
+    """Set a legend style's font (and colour) on QGIS 3.28 to 4.x.
+
+    ``QgsLegendStyle.textFormat()`` arrived in QGIS 3.30; older releases only
+    have ``setFont`` on the style and one font colour for the whole legend.
+    """
+    style = legend.rstyle(style_enum)
+    if hasattr(style, "textFormat"):
+        text_format = style.textFormat()
+        text_format.setFont(font)
+        if font.pointSizeF() > 0:
+            text_format.setSize(font.pointSizeF())
+        if color is not None:
+            text_format.setColor(color)
+        style.setTextFormat(text_format)
+        return
+    style.setFont(font)
+    if color is not None and hasattr(legend, "setFontColor"):
+        legend.setFontColor(color)
+
+
+def zoom_map_to_extent(map_item, extent) -> None:
+    """``zoomToExtent`` that also works on a fresh map item in QGIS 3.28.
+
+    QGIS 3.28 derives the new extent from the current one, so a map item that
+    still has its initial empty extent ends up Empty with a NaN scale. Seeding
+    the extent first makes the aspect-fitted zoom work on every version.
+    """
+    if map_item.extent().isEmpty():
+        # setExtent() also reshapes the frame to the extent's aspect ratio;
+        # put the frame back to its planned size before the real zoom.
+        size = map_item.sizeWithUnits()
+        map_item.setExtent(extent)
+        map_item.attemptResize(size)
+    map_item.zoomToExtent(extent)

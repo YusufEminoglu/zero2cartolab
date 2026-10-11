@@ -55,7 +55,7 @@ except ImportError:
     _MM = 0
 
 from ..core.layout_math import page_size_mm
-from .layout_utils import unique_layout_name
+from .layout_utils import set_legend_style_text, unique_layout_name, zoom_map_to_extent
 from .locator_map import add_locator_inset_map
 from .map_sheet import (
     _add_north_arrow,
@@ -126,7 +126,7 @@ def _create_map_frame(
     if crs is not None and hasattr(crs, "isValid") and crs.isValid():
         map_item.setCrs(crs)
     if extent is not None and hasattr(extent, "isEmpty") and not extent.isEmpty():
-        map_item.zoomToExtent(extent)
+        zoom_map_to_extent(map_item, extent)
     if layers:
         map_item.setLayers(list(layers))
         map_item.setKeepLayerSet(True)
@@ -264,11 +264,8 @@ def _create_legend(
             for style_attr in ("Title", "Group", "Subgroup", "SymbolLabel"):
                 style_enum = getattr(QgsLegendStyle, style_attr, getattr(getattr(QgsLegendStyle, "Style", None), style_attr, None))
                 if style_enum is not None:
-                    tf = legend.rstyle(style_enum).textFormat()
-                    f = _font(8.5 if style_attr == "SymbolLabel" else 9.5)
-                    tf.setFont(f)
-                    tf.setColor(QColor("#0f172a"))
-                    legend.rstyle(style_enum).setTextFormat(tf)
+                    set_legend_style_text(legend, style_enum, _font(8.5 if style_attr == "SymbolLabel" else 9.5),
+                                          QColor("#0f172a"))
     legend.attemptMove(QgsLayoutPoint(x, y, _MM))
     legend.attemptResize(QgsLayoutSize(w, h, _MM))
     layout.addLayoutItem(legend)

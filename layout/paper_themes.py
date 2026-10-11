@@ -145,17 +145,14 @@ def apply_paper_theme(layout: QgsLayout, theme_key: str = "blueprint") -> bool:
                 if hasattr(item, "setFontColor") and text_qcolor:
                     item.setFontColor(text_qcolor)
                 if hasattr(item, "rstyle") and QgsLegendStyle:
+                    from .layout_utils import set_legend_style_text
                     for style_attr in ("Title", "Group", "Subgroup", "SymbolLabel"):
                         with suppress(Exception):
                             style_enum = getattr(QgsLegendStyle, style_attr, getattr(getattr(QgsLegendStyle, "Style", None), style_attr, None))
                             if style_enum is not None:
-                                tf = item.rstyle(style_enum).textFormat()
                                 f_leg = QFont("Segoe UI", 9 if style_attr == "SymbolLabel" else 10)
                                 f_leg.setFamily("Segoe UI")
-                                tf.setFont(f_leg)
-                                if text_qcolor:
-                                    tf.setColor(text_qcolor)
-                                item.rstyle(style_enum).setTextFormat(tf)
+                                set_legend_style_text(item, style_enum, f_leg, text_qcolor or None)
                 with suppress(Exception):
                     item.setAutoUpdateModel(False)
                     item.updateLegend()

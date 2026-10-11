@@ -449,7 +449,9 @@ def field_is_numeric(field) -> bool:
 
 
 def _make_fill_symbol(fill_color: str, outline_color: str, outline_width: float = 0.2, wall_shading: bool = False):
-    from qgis.core import QgsFillSymbol, QgsProperty, QgsSymbolLayer
+    from qgis.core import QgsFillSymbol, QgsProperty
+
+    from .utils import symbol_layer_property
 
     symbol = QgsFillSymbol.createSimple({
         "color": fill_color,
@@ -461,7 +463,7 @@ def _make_fill_symbol(fill_color: str, outline_color: str, outline_width: float 
     })
     if wall_shading and symbol and symbol.symbolLayerCount():
         symbol.symbolLayer(0).setDataDefinedProperty(
-            QgsSymbolLayer.Property.FillColor,
+            symbol_layer_property("FillColor"),
             QgsProperty.fromExpression(build_wall_shading_expression()),
         )
     return symbol

@@ -86,3 +86,19 @@ def safe_int(val: Any, default: Optional[int] = None) -> Optional[int]:
         return int(f)
     except (ValueError, TypeError):
         return default
+
+
+def symbol_layer_property(name: str):
+    """A ``QgsSymbolLayer`` data-defined property key on QGIS 3.28 to 4.x.
+
+    QGIS 3.36 added the scoped ``QgsSymbolLayer.Property.FillColor`` form;
+    older 3.x releases only have ``QgsSymbolLayer.PropertyFillColor``.
+    """
+    from qgis.core import QgsSymbolLayer
+    scope = getattr(QgsSymbolLayer, "Property", QgsSymbolLayer)
+    for attr in (name, f"Property{name}"):
+        if hasattr(scope, attr):
+            return getattr(scope, attr)
+        if hasattr(QgsSymbolLayer, attr):
+            return getattr(QgsSymbolLayer, attr)
+    raise AttributeError(name)

@@ -43,6 +43,11 @@ from ..core.bivariate_engine import (
 from ._help_mixin import CartoLabHelpMixin
 from ._styling import style_output
 
+# QgsWkbTypes.GeometryType.Polygon (QGIS 3.30+, 4.x) was PolygonGeometry before.
+_POLYGON_GEOMETRY = getattr(QgsWkbTypes.GeometryType, "Polygon", None)
+if _POLYGON_GEOMETRY is None:
+    _POLYGON_GEOMETRY = QgsWkbTypes.PolygonGeometry
+
 
 class BivariateMatrixExportAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
     _ICON_NAME = "bivariate.png"
@@ -302,7 +307,7 @@ class BivariateMatrixExportAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
                 sink.addFeature(feat, QgsFeatureSink.Flag.FastInsert)
 
                 # Category symbol for styling
-                sym = QgsSymbol.defaultSymbol(QgsWkbTypes.GeometryType.Polygon)
+                sym = QgsSymbol.defaultSymbol(_POLYGON_GEOMETRY)
                 if sym:
                     sym.setColor(col_color)
                     with suppress(Exception):

@@ -45,7 +45,7 @@ except ImportError:
     _MM = 0
 
 from ..core.layout_math import fitted_scalebar_segments, map_width_to_km, page_size_mm
-from .layout_utils import unique_layout_name
+from .layout_utils import set_legend_style_text, unique_layout_name, zoom_map_to_extent
 
 # A real font fallback chain with standard installed Windows/Unix fonts
 _FONT_FAMILIES = ["Segoe UI", "Arial", "Helvetica", "sans-serif"]
@@ -83,12 +83,8 @@ def _set_legend_typography(legend, label_size: float) -> None:
         style_enum = _legend_style(legend, style_name)
         if style_enum is None:
             continue
-        style = legend.rstyle(style_enum)
-        text_format = style.textFormat()
-        text_format.setFont(_font(size, bold=style_name in ("Title", "Group")))
-        text_format.setSize(size)
-        text_format.setColor(QColor("#0f172a"))
-        style.setTextFormat(text_format)
+        set_legend_style_text(legend, style_enum, _font(size, bold=style_name in ("Title", "Group")),
+                              QColor("#0f172a"))
 
 
 def _legend_model_texts(legend) -> list[str]:
@@ -453,7 +449,7 @@ def create_map_sheet(
     if crs is not None and crs.isValid():
         map_item.setCrs(crs)
     if extent is not None and not extent.isEmpty():
-        map_item.zoomToExtent(extent)
+        zoom_map_to_extent(map_item, extent)
     if layers:
         map_item.setLayers(list(layers))
         map_item.setKeepLayerSet(True)

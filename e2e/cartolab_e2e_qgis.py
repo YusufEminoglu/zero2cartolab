@@ -40,10 +40,17 @@ for font_root in font_roots:
             QFontDatabase.addApplicationFont(str(font_path))
 
 import qgis
-system_plugins_dir = os.path.abspath(os.path.join(os.path.dirname(qgis.__file__), "..", "plugins"))
-if system_plugins_dir in sys.path:
-    sys.path.remove(system_plugins_dir)
-sys.path.insert(0, system_plugins_dir)
+# The Processing plugin ships next to the qgis package on Windows (OSGeo4W)
+# and in /usr/share/qgis/python/plugins on Linux packages and Docker images.
+for system_plugins_dir in (
+    os.path.abspath(os.path.join(os.path.dirname(qgis.__file__), "..", "plugins")),
+    "/usr/share/qgis/python/plugins",
+):
+    if os.path.isdir(os.path.join(system_plugins_dir, "processing")):
+        if system_plugins_dir in sys.path:
+            sys.path.remove(system_plugins_dir)
+        sys.path.insert(0, system_plugins_dir)
+        break
 source_parent = str(Path(__file__).resolve().parents[2])
 if source_parent not in sys.path:
     sys.path.append(source_parent)
@@ -579,9 +586,12 @@ if out:
            abs(_math.hypot(start.x() - a.x(), start.y() - a.y()) - 0.05 * chord) < 0.01 * chord,
            f"{_math.hypot(start.x() - a.x(), start.y() - a.y()):.1f} vs {0.05 * chord:.1f}")
     r = lyr.renderer()
+    # Keep the list alive: a symbol read from a temporary ranges() copy is
+    # freed with it, and symbolLayerCount() then reads freed memory.
+    _ranges = r.ranges() if isinstance(r, QgsGraduatedSymbolRenderer) else []
     ok("flow map: graduated renderer draws large flows first with arrowheads",
        isinstance(r, QgsGraduatedSymbolRenderer) and r.orderByEnabled()
-       and r.ranges() and r.ranges()[0].symbol().symbolLayerCount() == 2,
+       and _ranges and _ranges[0].symbol().symbolLayerCount() == 2,
        type(r).__name__)
 
 _undirected = dict(_flow_params, DIRECTED=False)
