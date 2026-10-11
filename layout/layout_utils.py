@@ -9,7 +9,8 @@ map items, finding a bundled north-arrow SVG, and exporting to PNG/PDF.
 from __future__ import annotations
 
 import os
-import uuid
+import shutil
+import tempfile
 from contextlib import suppress
 from typing import List, Optional
 
@@ -34,22 +35,61 @@ def unique_layout_name(project: QgsProject, base: str) -> str:
     return unique_name(existing, base)
 
 
+_LOCATOR_MAP_IDS = ("cartolab_locator_inset",)
+
+
+def _is_auxiliary_map(item) -> bool:
+    """True for generated overview/locator frames that are never the main map."""
+    item_id = (item.id() or "").lower()
+    return item_id in _LOCATOR_MAP_IDS or "locator" in item_id or "inset" in item_id
+
+
+def _map_area(item) -> float:
+    with suppress(Exception):
+        rect = item.sceneBoundingRect()
+        return float(rect.width()) * float(rect.height())
+    return 0.0
+
+
+def main_map_item(layout: QgsLayout) -> Optional[QgsLayoutItemMap]:
+    """
+    Return the layout's main map frame.
+
+    Preference order: the CartoLab main map id ``cartolab_map``; then the
+    largest ``cartolab_*_map*`` frame (template archetypes); then the largest
+    map that is not a locator/inset; finally the largest map of any kind.
+    Draw order is never used, so an inset added later (and drawn on top) is
+    not mistaken for the main map.
+    """
+    if layout is None:
+        return None
+    maps = map_items(layout)
+    if not maps:
+        return None
+    for item in maps:
+        if item.id() == "cartolab_map":
+            return item
+    named = [m for m in maps
+             if (m.id() or "").startswith("cartolab_") and "_map" in (m.id() or "")
+             and not _is_auxiliary_map(m)]
+    pool = named or [m for m in maps if not _is_auxiliary_map(m)] or maps
+    return max(pool, key=_map_area)
+
+
 def find_map_item(layout: QgsLayout, map_id: str = "") -> Optional[QgsLayoutItemMap]:
     """
     Return a map item from ``layout``.
 
-    Prefers the item whose id matches ``map_id``; otherwise returns the
-    first :class:`QgsLayoutItemMap` found, or ``None`` when the layout has no
-    map frame.
+    Prefers the item whose id matches ``map_id``; otherwise the main map (see
+    :func:`main_map_item`), or ``None`` when the layout has no map frame.
     """
+    if layout is None:
+        return None
     if map_id:
         item = layout.itemById(map_id)
         if isinstance(item, QgsLayoutItemMap):
             return item
-    for item in layout.items():
-        if isinstance(item, QgsLayoutItemMap):
-            return item
-    return None
+    return main_map_item(layout)
 
 
 def map_items(layout: QgsLayout) -> List[QgsLayoutItemMap]:
@@ -108,21 +148,52 @@ def north_arrow_svg_path() -> Optional[str]:
     return candidates[0] if candidates else None
 
 
+_LAST_EXPORT_ERROR = ""
+
+
+def last_export_error() -> str:
+    """Human-readable reason for the most recent failed :func:`export_layout`."""
+    return _LAST_EXPORT_ERROR
+
+
+def _export_result_name(result) -> str:
+    for name in ("Canceled", "MemoryError", "FileError", "PrintError", "SvgLayerError", "IteratorError"):
+        value = getattr(QgsLayoutExporter.ExportResult, name, getattr(QgsLayoutExporter, name, None))
+        if value is not None and result == value:
+            return name
+    return str(result)
+
+
 def export_layout(layout: QgsLayout, path: str, dpi: int = 300) -> bool:
     """
     Export ``layout`` to PNG, PDF or SVG (chosen by the ``path`` extension).
 
     PDF and SVG are vector formats (``dpi`` affects only rasterised effects);
     any other extension is treated as a raster image at ``dpi``. Returns
-    ``True`` on success. Export is written beside the destination and atomically
-    replaced, so a failed render never destroys a previous successful export.
+    ``True`` on success; on failure returns ``False`` and
+    :func:`last_export_error` explains why. QGIS renders into a private
+    temporary folder next to the destination; every page it produces
+    (``map.png``, ``map_2.png`` ... for multi-page image/SVG exports) is then
+    moved to its final name, so a failed render never destroys a previous
+    export and no temporary files are left behind.
     """
+    global _LAST_EXPORT_ERROR
+    _LAST_EXPORT_ERROR = ""
     if layout is None or QgsLayoutExporter is None:
+        _LAST_EXPORT_ERROR = "No layout to export."
+        return False
+    path = os.path.abspath(path)
+    out_dir = os.path.dirname(path)
+    try:
+        os.makedirs(out_dir, exist_ok=True)
+        temp_dir = tempfile.mkdtemp(prefix=".cartolab-export-", dir=out_dir)
+    except OSError as exc:
+        _LAST_EXPORT_ERROR = f"Cannot write to {out_dir}: {exc}"
         return False
     exporter = QgsLayoutExporter(layout)
     ext = os.path.splitext(path)[1].lower()
-    stem, suffix = os.path.splitext(path)
-    temp_path = f"{stem}.cartolab-{uuid.uuid4().hex}{suffix or '.png'}"
+    # Raster exports pick the image format from the suffix; default to PNG.
+    temp_path = os.path.join(temp_dir, os.path.basename(path) + ("" if ext else ".png"))
 
     clear_layout_render_cache(layout)
     try:
@@ -138,39 +209,47 @@ def export_layout(layout: QgsLayout, path: str, dpi: int = 300) -> bool:
             settings = QgsLayoutExporter.ImageExportSettings()
             settings.dpi = dpi
             # Publication PNGs are self-contained; do not create world-file
-            # sidecars next to the atomic temporary destination.
+            # sidecars next to the temporary destination.
             with suppress(Exception):
                 settings.generateWorldFile = False
             result = exporter.exportToImage(temp_path, settings)
-    except Exception:
-        with suppress(OSError):
-            os.remove(temp_path)
+        success = result == QgsLayoutExporter.ExportResult.Success and os.path.exists(temp_path)
+        if success:
+            for name in sorted(os.listdir(temp_dir)):
+                produced = os.path.join(temp_dir, name)
+                os.replace(produced, path if produced == temp_path else os.path.join(out_dir, name))
+        else:
+            detail = ""
+            with suppress(Exception):
+                detail = exporter.errorMessage()
+            _LAST_EXPORT_ERROR = (
+                f"QGIS could not export the layout to {path} "
+                f"({_export_result_name(result)}){': ' + detail if detail else ''}."
+            )
+        return success
+    except Exception as exc:
+        _LAST_EXPORT_ERROR = f"Export to {path} failed: {exc}"
         raise
     finally:
         clear_layout_render_cache(layout)
-    success = result == QgsLayoutExporter.ExportResult.Success and os.path.exists(temp_path)
-    if success:
-        os.replace(temp_path, path)
-    else:
-        with suppress(OSError):
-            os.remove(temp_path)
-    return success
+        shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 def copy_layout_to_clipboard(layout: QgsLayout, dpi: int = 300) -> bool:
     """
     Render first page of ``layout`` at ``dpi`` and copy directly to system clipboard.
     """
-    if layout is None:
+    if layout is None or QgsLayoutExporter is None:
         return False
     try:
+        from qgis.PyQt.QtCore import QSize
         from qgis.PyQt.QtWidgets import QApplication
         exporter = QgsLayoutExporter(layout)
-        settings = QgsLayoutExporter.ImageExportSettings()
-        settings.dpi = dpi
         clear_layout_render_cache(layout)
         try:
-            img = exporter.renderPageToImage(0, settings)
+            # renderPageToImage(page, imageSize, dpi): an invalid QSize lets
+            # QGIS derive the pixel size from the page size and dpi.
+            img = exporter.renderPageToImage(0, QSize(), float(dpi))
             if not img.isNull():
                 cb = QApplication.clipboard()
                 if cb:

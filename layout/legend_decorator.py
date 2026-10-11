@@ -12,7 +12,7 @@ from contextlib import suppress
 from typing import List
 
 try:
-    from qgis.PyQt.QtCore import QPointF
+    from qgis.PyQt.QtCore import QPointF, QRectF
     from qgis.PyQt.QtGui import QColor, QFont, QPolygonF
     from qgis.core import (
         QgsLayout,
@@ -30,12 +30,13 @@ try:
     )
     _MM = QgsUnitTypes.LayoutUnit.LayoutMillimeters
 except ImportError:
-    QPointF = QColor = QFont = QPolygonF = QgsLayout = QgsLayoutItemGroup = QgsLayoutItemLabel = QgsLayoutItemPolygon = QgsLayoutItemShape = QgsLayoutItemScaleBar = QgsLayoutItemPicture = QgsLayoutItemMap = QgsLayoutPoint = QgsLayoutSize = QgsUnitTypes = QgsFillSymbol = None
+    QPointF = QRectF = QColor = QFont = QPolygonF = QgsLayout = QgsLayoutItemGroup = QgsLayoutItemLabel = QgsLayoutItemPolygon = QgsLayoutItemShape = QgsLayoutItemScaleBar = QgsLayoutItemPicture = QgsLayoutItemMap = QgsLayoutPoint = QgsLayoutSize = QgsUnitTypes = QgsFillSymbol = None
     _MM = 0
 
 
 
-from ..core.bivariate_engine import bivariate_colour_matrix
+from ..core.bivariate_engine import BIVARIATE_PALETTE_PRESETS, bivariate_colour_matrix
+from .layout_utils import main_map_item
 from .map_sheet import _configure_scalebar
 
 
@@ -48,8 +49,8 @@ def add_bivariate_legend_to_layout(
     position: tuple = (12.0, 12.0),
     size_mm: tuple = (40.0, 40.0),
     color_ll: str = "#e8e8e8",
-    color_lh: str = "#5ab4ac",
-    color_hl: str = "#d8b365",
+    color_lh: str = "#d8b365",
+    color_hl: str = "#5ab4ac",
     color_hh: str = "#8c510a",
     legend_type: str = "diamond",
     add_card: bool = True,
@@ -66,11 +67,80 @@ def add_bivariate_legend_to_layout(
     else:
         items = _build_diamond(layout, matrix, position, size_mm, x_label, y_label, add_card=add_card)
 
+    _align_items_top_left(items, position)
     if hasattr(layout, "groupItems") and items:
         grp = layout.groupItems(items)
         if grp:
             return grp
     return items
+
+
+def _items_bounds(items):
+    """Union of the items' frames in scene (layout) units.
+
+    Uses the geometric frame (``rect()`` mapped to the scene, rotation
+    included) without stroke bleed, which is what a layout group reports as
+    its position.
+    """
+    bounds = None
+    for item in items:
+        rect = item.mapRectToScene(item.rect())
+        bounds = QRectF(rect) if bounds is None else bounds.united(rect)
+    return bounds
+
+
+def _align_items_top_left(items, position) -> None:
+    """Shift built items so their joint top-left corner sits at ``position``.
+
+    The card, rotated labels and the outer diamond labels extend left/above
+    the anchor the builders draw from, so without this the legend starts
+    off-page and each in-place update drifts it further.
+    """
+    bounds = _items_bounds(items) if items else None
+    if bounds is None:
+        return
+    dx = float(position[0]) - bounds.left()
+    dy = float(position[1]) - bounds.top()
+    if abs(dx) < 1e-6 and abs(dy) < 1e-6:
+        return
+    for item in items:
+        pos = item.positionWithUnits()
+        item.attemptMove(QgsLayoutPoint(pos.x() + dx, pos.y() + dy, pos.units()))
+
+
+def replace_bivariate_legend(layout: QgsLayout, selected, **kwargs):
+    """Rebuild a selected bivariate legend group in place.
+
+    ``selected`` is the designer selection (the group or any of its member
+    items). The old group and all its members are removed and the new legend
+    is placed at the old group's top-left corner, so repeated updates do not
+    move it.
+    """
+    members = []
+    for item in selected or []:
+        group = item if isinstance(item, QgsLayoutItemGroup) else None
+        if group is None:
+            with suppress(Exception):
+                group = item.parentGroup()
+        if group is not None:
+            for child in [group] + list(group.items()):
+                if child not in members:
+                    members.append(child)
+        elif item not in members:
+            members.append(item)
+    drawn = [m for m in members if not isinstance(m, QgsLayoutItemGroup)] or members
+    bounds = _items_bounds(drawn)
+    position = (bounds.left(), bounds.top()) if bounds is not None else (12.0, 12.0)
+    for group in [m for m in members if isinstance(m, QgsLayoutItemGroup)]:
+        with suppress(Exception):
+            layout.ungroupItems(group)
+    for item in members:
+        if isinstance(item, QgsLayoutItemGroup):
+            continue
+        with suppress(Exception):
+            layout.removeLayoutItem(item)
+    kwargs["position"] = position
+    return add_bivariate_legend(layout, **kwargs)
 
 
 def add_bivariate_legend(
@@ -87,7 +157,10 @@ def add_bivariate_legend(
     if colors and len(colors) >= 4:
         cll, clh, chl, chh = colors[0], colors[1], colors[2], colors[3]
     else:
-        cll, clh, chl, chh = "#e8e8e8", "#5ab4ac", "#d8b365", "#8c510a"
+        # Default = teal_brown preset ("lh" = low X / high Y, "hl" = high X / low Y).
+        preset = BIVARIATE_PALETTE_PRESETS.get("teal_brown", {})
+        cll, clh, chl, chh = (preset.get("ll", "#e8e8e8"), preset.get("lh", "#d8b365"),
+                              preset.get("hl", "#5ab4ac"), preset.get("hh", "#8c510a"))
     return add_bivariate_legend_to_layout(
         layout,
         x_label=x_label,
@@ -255,10 +328,7 @@ def add_scalebar_to_layout(
     scalebar = QgsLayoutItemScaleBar(layout)
     scalebar.setId("cartolab_scalebar")
     if map_item is None:
-        for item in layout.items():
-            if isinstance(item, QgsLayoutItemMap):
-                map_item = item
-                break
+        map_item = main_map_item(layout)
 
     if map_item is not None:
         scalebar.setLinkedMap(map_item)
@@ -316,6 +386,26 @@ def add_scalebar_to_layout(
     return scalebar
 
 
+def scale_ratio_expression(map_item) -> str:
+    """Label text whose ratio follows ``map_item``'s live scale.
+
+    The map id is assigned when missing so the expression can address the
+    frame through ``item_variables``.
+    """
+    if map_item is None:
+        return "Scale 1:25,000"
+    if not map_item.id():
+        layout = map_item.layout()
+        base, n = "cartolab_scale_map", 1
+        candidate = base
+        while layout is not None and layout.itemById(candidate) is not None:
+            n += 1
+            candidate = f"{base}_{n}"
+        map_item.setId(candidate)
+    map_id = map_item.id().replace("'", "''")
+    return f"Scale 1:[% format_number(map_get(item_variables('{map_id}'), 'map_scale'), 0) %]"
+
+
 def add_scale_combo_to_layout(
     layout: QgsLayout,
     map_item: QgsLayoutItemMap = None,
@@ -329,10 +419,7 @@ def add_scale_combo_to_layout(
         return None
 
     if map_item is None:
-        for item in layout.items():
-            if isinstance(item, QgsLayoutItemMap):
-                map_item = item
-                break
+        map_item = main_map_item(layout)
 
     sb = add_scalebar_to_layout(
         layout,
@@ -341,9 +428,8 @@ def add_scale_combo_to_layout(
         style_name=style_name,
     )
 
-    scale_val = int(round(map_item.scale())) if map_item else 25000
     lbl = QgsLayoutItemLabel(layout)
-    lbl.setText(f"Scale 1:{scale_val:,}")
+    lbl.setText(scale_ratio_expression(map_item))
     if QFont is not None:
         lbl.setFont(QFont("Inter, Segoe UI", 8, QFont.Weight.Bold))
     if QColor is not None:

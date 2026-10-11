@@ -199,6 +199,27 @@ def attach_cartolab_to_designer(iface, designer) -> bool:
     return True
 
 
+_STANDARD_SCALES = (500, 1000, 2000, 2500, 5000, 10000, 20000, 25000, 50000,
+                    100000, 200000, 250000, 500000, 1000000)
+
+
+def snap_to_standard_scale(scale: float) -> int:
+    """Nearest standard scale denominator (log distance)."""
+    return min(_STANDARD_SCALES, key=lambda s: abs(math.log(s) - math.log(max(1.0, scale))))
+
+
+def export_layout_and_report(layout, path: str, dpi: int) -> tuple:
+    """Export for the dock's "Export & Open" button: ``(ok, message)``.
+
+    A failed export returns ``False`` with the reason so the dock can show it
+    instead of silently doing nothing.
+    """
+    from .layout_utils import export_layout, last_export_error
+    if export_layout(layout, path, dpi=int(dpi)) and os.path.exists(path):
+        return True, path
+    return False, last_export_error() or f"The layout could not be exported to {path}."
+
+
 def _get_cartolab_icon(name: str = "icon.png") -> QIcon:
     base = os.path.dirname(os.path.dirname(__file__))
     path = os.path.join(base, "icons", name)
@@ -620,10 +641,14 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
     fl_bivar.addRow("Y Axis Label:", ylabel_input)
 
     palette_combo = QComboBox()
-    palette_combo.addItem("Teal-Brown", ("#e8e8e8", "#5ab4ac", "#d8b365", "#8c510a"))
-    palette_combo.addItem("Purple-Green", ("#e8e8e8", "#7fbf7b", "#af8dc3", "#762a83"))
-    palette_combo.addItem("Blue-Orange", ("#e8e8e8", "#fdae61", "#abd9e9", "#2c7bb6"))
-    palette_combo.addItem("Pink-Green", ("#e8e8e8", "#a1d76a", "#e9a3c9", "#c51b7d"))
+    # Corner colours (ll, lh, hl, hh) come from the engine's presets so the
+    # legend always matches the bivariate renderer's corner meaning.
+    from ..core.bivariate_engine import BIVARIATE_PALETTE_PRESETS
+    for _preset in BIVARIATE_PALETTE_PRESETS.values():
+        palette_combo.addItem(
+            _preset.get("label", "Palette"),
+            (_preset["ll"], _preset["lh"], _preset["hl"], _preset["hh"]),
+        )
     fl_bivar.addRow("Palette:", palette_combo)
 
     shape_combo = QComboBox()
@@ -665,31 +690,15 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
             QMessageBox.information(parent_win, "Update Legend", "Please select a bivariate legend group in the layout canvas first.")
             return
 
-        # Record position of first selected item in layout mm coordinates
-        first = selected[0]
-        pos_x, pos_y = 12.0, 12.0  # fallback default
-        with suppress(Exception):
-            if hasattr(first, "positionWithUnits"):
-                pt = first.positionWithUnits()
-                pos_x = pt.x()
-                pos_y = pt.y()
-            elif hasattr(first, "pos"):
-                # pos() returns scene points; approximate as mm
-                pos_x = first.pos().x()
-                pos_y = first.pos().y()
-
-        # Remove selected items using the correct PyQGIS method
-        for item in list(selected):
-            with suppress(Exception):
-                layout.removeLayoutItem(item)
-
         colors = palette_combo.currentData()
         ltype = shape_combo.currentData()
         x_lbl = xlabel_input.text().strip() or "Variable X"
         y_lbl = ylabel_input.text().strip() or "Variable Y"
         try:
-            from .legend_decorator import add_bivariate_legend
-            add_bivariate_legend(layout, colors=colors, legend_type=ltype, position=(pos_x, pos_y), x_label=x_lbl, y_label=y_lbl)
+            # Rebuild at the old group's top-left corner so updates never drift.
+            from .legend_decorator import replace_bivariate_legend
+            replace_bivariate_legend(layout, selected, colors=colors, legend_type=ltype,
+                                     x_label=x_lbl, y_label=y_lbl)
             if hasattr(iface, "messageBar"):
                 iface.messageBar().pushSuccess("CartoLab", "Bivariate legend updated in-place.")
         except Exception as exc:
@@ -820,11 +829,8 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
         layout = _get_designer_layout(designer)
         if not layout:
             return
-        main_map = None
-        for item in layout.items():
-            if isinstance(item, QgsLayoutItemMap):
-                main_map = item
-                break
+        from .layout_utils import main_map_item
+        main_map = main_map_item(layout)
         if not main_map:
             QMessageBox.warning(parent_win, "Filter Legend", "No map item found in layout.")
             return
@@ -944,18 +950,17 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
         layout = _get_designer_layout(designer)
         if not layout:
             return
-        for item in layout.items():
-            if isinstance(item, QgsLayoutItemMap):
-                curr = item.scale()
-                scales = [500, 1000, 2000, 2500, 5000, 10000, 20000, 25000, 50000, 100000, 200000, 250000, 500000, 1000000]
-                best = min(scales, key=lambda s: abs(math.log(s) - math.log(max(1.0, curr))))
-                item.setScale(best)
-                item.updateBoundingRect()
-                layout.refresh()
-                if hasattr(iface, "messageBar"):
-                    iface.messageBar().pushSuccess("CartoLab", f"Map scale snapped to 1:{best:,}")
-                return
-        QMessageBox.warning(parent_win, "Snap Scale", "No map item found in layout.")
+        from .layout_utils import main_map_item
+        item = main_map_item(layout)
+        if item is None:
+            QMessageBox.warning(parent_win, "Snap Scale", "No map item found in layout.")
+            return
+        best = snap_to_standard_scale(item.scale())
+        item.setScale(best)
+        item.updateBoundingRect()
+        layout.refresh()
+        if hasattr(iface, "messageBar"):
+            iface.messageBar().pushSuccess("CartoLab", f"Map scale snapped to 1:{best:,}")
 
     btn_snap_scale.clicked.connect(_dock_snap_scale)
     fl_smart.addRow(btn_snap_scale)
@@ -1058,7 +1063,8 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
                 if hasattr(iface, "messageBar"):
                     iface.messageBar().pushSuccess("CartoLab", f"Map Book Atlas configured for '{cov_layer.name()}'.")
             else:
-                QMessageBox.warning(parent_win, "Atlas Setup", "Could not configure atlas on layout.")
+                QMessageBox.warning(parent_win, "Atlas Setup", "Could not configure the atlas: the layout has no atlas support, the filter "
+                                    "is invalid, or the coverage layer has no matching features.")
         except Exception as exc:
             QMessageBox.critical(parent_win, "Atlas Setup Error", str(exc))
 
@@ -1117,13 +1123,16 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
         if not path:
             return
         try:
-            from .layout_utils import export_layout
-            if export_layout(layout, path, dpi=int(dpi)) and os.path.exists(path):
-                QDesktopServices.openUrl(QUrl.fromLocalFile(path))
-                if hasattr(iface, "messageBar"):
-                    iface.messageBar().pushSuccess("CartoLab", f"Exported & Opened: {path}")
+            ok, message = export_layout_and_report(layout, path, int(dpi or 300))
         except Exception as exc:
             QMessageBox.critical(parent_win, "Export Error", str(exc))
+            return
+        if not ok:
+            QMessageBox.warning(parent_win, "Export Error", message)
+            return
+        QDesktopServices.openUrl(QUrl.fromLocalFile(path))
+        if hasattr(iface, "messageBar"):
+            iface.messageBar().pushSuccess("CartoLab", f"Exported & Opened: {path}")
 
     btn_dock_export.clicked.connect(_dock_export)
     fl_exp.addRow(btn_dock_export)

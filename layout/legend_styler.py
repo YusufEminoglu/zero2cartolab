@@ -6,6 +6,7 @@ Provides publication-quality legend styling for QgsLayoutItemLegend items in QGI
 """
 from __future__ import annotations
 
+from contextlib import suppress
 from typing import Optional
 
 try:
@@ -74,18 +75,46 @@ def style_layout_legend(
     target_legend.setSymbolHeight(4.0)
     target_legend.setBoxSpace(2.5)
 
-    # Sanitize layer item titles automatically (e.g. ss_choice_median -> Choice Median)
-    if hasattr(target_legend, "model"):
-        model = target_legend.model()
-        if model and hasattr(model, "rootGroup"):
-            root = model.rootGroup()
-            if root:
-                for child in root.children():
-                    if hasattr(child, "name") and hasattr(child, "setName"):
-                        raw_name = child.name()
-                        clean_name = raw_name.replace("_", " ").title()
-                        clean_name = clean_name.replace("Ss ", "").replace("Gic ", "")
-                        child.setName(clean_name)
+    # Sanitize layer item titles automatically (e.g. ss_choice_median -> Choice Median).
+    # Only the legend's labels change: the legend gets its own layer tree
+    # (auto-update off) and layers get a legend title label, so the project's
+    # layer names are never touched.
+    _clean_legend_labels(target_legend)
 
     layout.refresh()
     return target_legend
+
+
+def _clean_label(raw_name: str) -> str:
+    clean_name = raw_name.replace("_", " ").title()
+    return clean_name.replace("Ss ", "").replace("Gic ", "")
+
+
+def _clean_legend_labels(legend) -> None:
+    """Prettify legend layer/group labels without renaming project layers."""
+    if not hasattr(legend, "model"):
+        return
+    if hasattr(legend, "autoUpdateModel") and legend.autoUpdateModel():
+        # With auto-update on, the legend model's root *is* the project tree.
+        legend.setAutoUpdateModel(False)
+    model = legend.model()
+    root = model.rootGroup() if model is not None and hasattr(model, "rootGroup") else None
+    if root is None:
+        return
+    from qgis.core import QgsLayerTree
+
+    def visit(group):
+        for child in group.children():
+            if QgsLayerTree.isLayer(child):
+                current = child.customProperty("legend/title-label") or child.name()
+                child.setCustomProperty("legend/title-label", _clean_label(str(current)))
+                with suppress(Exception):
+                    model.refreshLayerLegend(child)
+            elif QgsLayerTree.isGroup(child):
+                # Groups belong to the legend's own (cloned) tree here.
+                child.setName(_clean_label(child.name()))
+                visit(child)
+
+    visit(root)
+    with suppress(Exception):
+        legend.updateLegend()

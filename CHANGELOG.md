@@ -6,6 +6,77 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-10-11
+
+A full audit release: every finding below was reproduced first, then fixed
+with a regression test.
+
+### Fixed
+
+- **QGIS 3.28 (the declared minimum) works again.** Auto Map Sheet and the
+  Welcome sample map crashed (`QgsLegendStyle.textFormat` is 3.30+), every
+  template had an empty map frame and a NaN scale (`zoomToExtent` on a new
+  map item), 2.5D wall shading and Bivariate Matrix Export used 3.30/3.36
+  enums, and template legend styling was silently skipped.
+- **Cartographic math:**
+  - Ridge maps read the raster transposed and past the block, flipped the
+    scanlines and drew NoData as spikes.
+  - Fisher-Jenks could drop the maximum from its sample and class it as
+    lowest; its breaks were one value off. Breaks are now each class's upper
+    bound, and Value-by-Alpha and bivariate use the same lo < v <= hi rule
+    as QGIS ranges.
+  - Bivariate custom corner colours were swapped. Presets were swapped with
+    them, so maps look as before; the legend now matches the map.
+  - Standard-deviation breaks were asymmetric for 7+ classes; class labels
+    were wrong for anything but 5 classes.
+  - Colour-blindness simulation is now Machado et al. (2009) in linear RGB,
+    as documented.
+- **Data handling:** re-running an algorithm on its own output kept the old
+  values; NULL features were dropped by classification and bivariate,
+  counted as 0 by Value-by-Alpha and diluted hexbin means; dot density
+  placed too few dots in multipart polygons without saying so; cartograms
+  crashed on cancel and on a single feature; percentile normalisation was
+  quadratic.
+- **Layouts:**
+  - Long legends overflowed the map-sheet sidebar where Qt substitutes a
+    wider font; the legend is now measured with QGIS's own renderer and
+    shrunk or word-wrapped until it fits.
+  - Style Legend renamed the project's layers, not just legend labels.
+  - Scale bars, grids, scale text and Snap Scale attached to the locator
+    inset instead of the main map.
+  - Copy to Clipboard always failed; multi-page PNG/SVG exports left temp
+    files and lost pages 2+; export failures are now reported.
+  - Map sheets with a grid never got one; UTM and emergency templates put
+    grid labels off the page; the bivariate legend drifted on every update;
+    the isometric stack ignored its tilt, hid labels and clipped data; atlas
+    setup overlapped titles and reported success with no pages; the QPT
+    inspector mislabelled item types; subtitles were styled as titles;
+    Auto-Balance left overlaps; the scale text did not follow the map.
+- **Dashboard and plugin:**
+  - Quick Style ran a different break method than the one chosen.
+  - Unloading left the dashboard alive and each reload added another
+    Layout Designer menu.
+  - The Feature Inspector missed features in layers with a different CRS and
+    picked hidden layers.
+  - Sun angles used a fixed latitude and put the sun's height into the
+    projection angle.
+  - Non-spatial tables were offered for styling; the palette choice was lost
+    on rebuild; the overview page was overwritten; Auto-Detect Floor Count
+    detected nothing.
+
+### Changed
+
+- Documentation corrected: 16 Processing algorithms (not 21 or 14), 10
+  layout templates (not 5), the 02CartoLab Studio menu entry, 150/300/600
+  dpi export, no NumPy, and links to each PlanX plugin's own repository.
+
+### Testing
+
+- CI runs the core suite (601 tests) and, in the official QGIS 3.28, 3.34,
+  3.44 and 4.2 images, an API check of every QGIS/Qt name the plugin uses,
+  the Designer and dashboard smoke tests, and the end-to-end suite (356
+  checks).
+
 ## [1.4.0] - 2026-09-29
 
 ### Added

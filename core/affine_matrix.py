@@ -109,13 +109,17 @@ def compute_isometric_layer_offsets(
     """
     Pre-compute isometric offsets for `n_layers` stacked layers.
 
-    Each layer is shifted along the pseudo-Z axis by base_spacing × i.
+    Each layer is shifted along the pseudo-Z axis by base_spacing × i. The
+    tilt ``angle_deg`` swings each step sideways (0° stacks straight up,
+    30° drifts right by half a step), ``elevation_deg`` sets the rise.
     Returns a list of (dx, dy) tuples, one per layer.
     """
+    alpha = math.radians(angle_deg)
     beta = math.radians(elevation_deg)
     offsets = []
     for i in range(n_layers):
         dz = i * base_spacing
+        dx = dz * math.sin(alpha)
         dy = dz * math.sin(beta)
-        offsets.append((0.0, dy))
+        offsets.append((dx, dy))
     return offsets

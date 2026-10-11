@@ -125,34 +125,173 @@ def _legend_text_budget(legend, label_size: float, symbol_width: float,
     return width_mm, height_mm
 
 
+def _legend_natural_size(legend) -> Optional[tuple]:
+    """Natural legend content size in mm, measured by QGIS's own legend renderer.
+
+    This lays the legend out exactly as the item paints it, with the fonts Qt
+    actually resolves on this machine (a requested "Segoe UI" may fall back to
+    a much wider face such as DejaVu Sans), so no font family is assumed.
+    Returns ``None`` when the renderer API is unavailable.
+    """
+    try:
+        from qgis.core import QgsLayoutUtils, QgsLegendRenderer
+        renderer = QgsLegendRenderer(legend.model(), legend.legendSettings())
+        context = QgsLayoutUtils.createRenderContextForLayout(legend.layout(), None)
+        size = renderer.minimumSize(context)
+        return float(size.width()), float(size.height())
+    except Exception:
+        return None
+
+
+def _wrap_text(text: str, max_chars: int) -> str:
+    """Greedy word wrap with newlines (the legend renderer breaks lines on them)."""
+    lines: list = []
+    for paragraph in str(text).split("\n"):
+        line = ""
+        for word in paragraph.split():
+            if line and len(line) + 1 + len(word) > max_chars:
+                lines.append(line)
+                line = word
+            else:
+                line = f"{line} {word}" if line else word
+        lines.append(line)
+    return "\n".join(lines)
+
+
+_WRAPPED_PROPERTY = "cartolab/wrapped_legend_labels"
+
+
+def _legend_layer_nodes(legend) -> list:
+    model = legend.model()
+    root = model.rootGroup() if model is not None else None
+    return list(root.findLayers()) if root is not None else []
+
+
+def _unwrap_legend_labels(legend) -> None:
+    """Remove labels a previous fit wrapped, restoring the natural labels."""
+    from qgis.core import QgsMapLayerLegendUtils
+    model = legend.model()
+    for node in _legend_layer_nodes(legend):
+        wrapped = node.customProperty(_WRAPPED_PROPERTY)
+        if not wrapped:
+            continue
+        for token in str(wrapped).split(","):
+            index = int(token)
+            if index < 0:
+                node.removeCustomProperty("legend/title-label")
+            else:
+                QgsMapLayerLegendUtils.setLegendNodeUserLabel(node, index, "")
+        node.removeCustomProperty(_WRAPPED_PROPERTY)
+        model.refreshLayerLegend(node)
+
+
+def _legend_label_texts(legend) -> list:
+    """(node, index, text) for every layer title (index -1) and symbol label."""
+    model = legend.model()
+    display_role = Qt.ItemDataRole.DisplayRole
+    entries = []
+    for node in _legend_layer_nodes(legend):
+        title = node.customProperty("legend/title-label") or node.name()
+        entries.append((node, -1, str(title)))
+        for index, legend_node in enumerate(model.layerOriginalLegendNodes(node)):
+            text = legend_node.data(display_role)
+            if text:
+                entries.append((node, index, str(text)))
+    return entries
+
+
+def _wrap_legend_labels(legend, max_chars: int) -> None:
+    """Wrap long labels in the legend's own model (project layers untouched)."""
+    from qgis.core import QgsMapLayerLegendUtils
+    model = legend.model()
+    wrapped_by_node: dict = {}
+    for node, index, text in _legend_label_texts(legend):
+        wrapped = _wrap_text(text, max_chars)
+        if wrapped == text:
+            continue
+        if index < 0:
+            node.setCustomProperty("legend/title-label", wrapped)
+        else:
+            QgsMapLayerLegendUtils.setLegendNodeUserLabel(node, index, wrapped)
+        wrapped_by_node.setdefault(id(node), (node, []))[1].append(str(index))
+    for node, indexes in wrapped_by_node.values():
+        node.setCustomProperty(_WRAPPED_PROPERTY, ",".join(indexes))
+        model.refreshLayerLegend(node)
+
+
+def _apply_legend_size(legend, size: float) -> tuple:
+    scale = size / 9.0
+    symbol_width = max(3.2, 6.0 * scale)
+    symbol_height = max(2.6, 4.0 * scale)
+    box_space = max(1.0, 2.0 * scale)
+    _set_legend_typography(legend, size)
+    legend.setSymbolWidth(symbol_width)
+    legend.setSymbolHeight(symbol_height)
+    legend.setBoxSpace(box_space)
+    with suppress(Exception):
+        legend.setColumnSpace(max(1.0, 2.0 * scale))
+    return symbol_width, symbol_height, box_space
+
+
 def _fit_legend_to_box(legend, width_mm: float, height_mm: float) -> dict:
-    """Shrink typography/symbols until the natural legend fits its budget."""
+    """Shrink typography/symbols, then wrap labels, until the legend fits its box.
+
+    Sizes are measured with QGIS's legend renderer (the same layout code the
+    item paints with), so the result holds whatever font Qt falls back to.
+    Type is first reduced to a legible 7 pt; if long labels still overflow,
+    they are word-wrapped (in the legend's own model) before shrinking further.
+    """
     result = {"font_pt": 9.0, "natural_width_mm": 0.0,
               "natural_height_mm": 0.0, "fits": False}
-    for step in range(9):
-        size = 9.0 - step * 0.5
-        scale = size / 9.0
-        symbol_width = max(3.2, 6.0 * scale)
-        symbol_height = max(2.6, 4.0 * scale)
-        box_space = max(1.0, 2.0 * scale)
-        _set_legend_typography(legend, size)
-        legend.setSymbolWidth(symbol_width)
-        legend.setSymbolHeight(symbol_height)
-        legend.setBoxSpace(box_space)
-        with suppress(Exception):
-            legend.setColumnSpace(max(1.0, 2.0 * scale))
-        legend.setResizeToContents(True)
-        legend.adjustBoxSize()
-        metric_w, metric_h = _legend_text_budget(
-            legend, size, symbol_width, symbol_height, box_space
-        )
-        natural_w = max(float(legend.rect().width()), metric_w)
-        natural_h = max(float(legend.rect().height()), metric_h)
-        result = {"font_pt": size, "natural_width_mm": natural_w,
-                  "natural_height_mm": natural_h,
-                  "fits": natural_w <= width_mm and natural_h <= height_mm}
+    with suppress(Exception):
+        _unwrap_legend_labels(legend)
+
+    def measure(size, symbol_width, symbol_height, box_space):
+        natural = _legend_natural_size(legend)
+        if natural is None:
+            legend.setResizeToContents(True)
+            legend.adjustBoxSize()
+            metric_w, metric_h = _legend_text_budget(
+                legend, size, symbol_width, symbol_height, box_space
+            )
+            natural = (max(float(legend.rect().width()), metric_w),
+                       max(float(legend.rect().height()), metric_h))
+        natural_w, natural_h = natural
+        return {"font_pt": size, "natural_width_mm": natural_w,
+                "natural_height_mm": natural_h,
+                "fits": natural_w <= width_mm and natural_h <= height_mm}
+
+    sizes = [9.0 - step * 0.5 for step in range(9)]  # 9.0 ... 5.0 pt
+    for size in sizes:
+        if size < 7.0:
+            break
+        result = measure(size, *_apply_legend_size(legend, size))
         if result["fits"]:
             break
+
+    if not result["fits"]:
+        texts = []
+        with suppress(Exception):
+            texts = [text for _, _, text in _legend_label_texts(legend)]
+        longest = max((len(text) for text in texts), default=0)
+        for size in [s for s in sizes if s <= 7.0]:
+            with suppress(Exception):
+                _unwrap_legend_labels(legend)
+            result = measure(size, *_apply_legend_size(legend, size))
+            if result["fits"] or not longest:
+                break
+            ratio = width_mm / max(1e-6, result["natural_width_mm"])
+            max_chars = max(8, int(longest * ratio * 0.95))
+            while True:
+                with suppress(Exception):
+                    _unwrap_legend_labels(legend)
+                    _wrap_legend_labels(legend, max_chars)
+                result = measure(size, *_apply_legend_size(legend, size))
+                if result["fits"] or result["natural_height_mm"] > height_mm or max_chars <= 8:
+                    break
+                max_chars = max(8, max_chars - max(1, max_chars // 10))
+            if result["fits"]:
+                break
     # Lock the final box: no later refresh may expand it into page margins.
     legend.setResizeToContents(False)
     legend.attemptResize(QgsLayoutSize(width_mm, height_mm, _MM))
@@ -460,17 +599,19 @@ def create_map_sheet(
     layout.addLayoutItem(map_item)
 
     if add_grid:
-        with suppress(Exception):
-            from .coordinate_grid import apply_coordinate_grid_decorator
-            apply_coordinate_grid_decorator(
-                layout,
-                map_item=map_item,
-                target_divisions_x=6,
-                target_divisions_y=5,
-                grid_style="Solid",
-                frame_style="Zebra",
-                show_annotations=True,
-            )
+        from .coordinate_grid import apply_coordinate_grid_decorator
+        # Annotations go inside the frame: the sheet leaves only a 4 mm gap
+        # between the map and the legend / scale bar / credits.
+        apply_coordinate_grid_decorator(
+            layout,
+            main_map=map_item,
+            target_divisions_x=6,
+            target_divisions_y=5,
+            grid_style="Solid",
+            frame_style="Zebra",
+            show_annotations=True,
+            annotations_inside=True,
+        )
 
     # --- title / subtitle ------------------------------------------------
     if add_title:

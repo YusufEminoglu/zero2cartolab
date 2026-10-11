@@ -22,6 +22,7 @@ except ImportError:
     QgsLayout = QgsLayoutItemMap = QgsLayoutItemMapGrid = QgsLineSymbol = QColor = QFont = None
 
 from ..core.layout_math import nice_interval
+from .layout_utils import main_map_item
 
 GRID_NAME = "PlanXCoordGrid"
 
@@ -37,21 +38,21 @@ def apply_coordinate_grid_decorator(
     frame_style: str = "Zebra",        # "Zebra", "LineBorder", "NoFrame"
     show_annotations: bool = True,
     frame_width_mm: float = 1.5,
+    annotations_inside: bool = False,
 ) -> bool:
     """
     Apply a publication-standard coordinate grid to the layout's primary map frame.
 
     Derives clean, rounded intervals from the map's current extent and scale,
-    preventing over-crowding or dense divisions.
+    preventing over-crowding or dense divisions. ``annotations_inside`` draws
+    the coordinate labels inside the map frame, for sheets whose map frame has
+    no free margin around it for outside labels.
     """
     if layout is None or QgsLayoutItemMap is None or QgsLayoutItemMapGrid is None:
         return False
 
     if main_map is None:
-        for item in layout.items():
-            if isinstance(item, QgsLayoutItemMap):
-                main_map = item
-                break
+        main_map = main_map_item(layout)
 
     if main_map is None:
         return False
@@ -154,6 +155,11 @@ def apply_coordinate_grid_decorator(
             f_grid.setFamily("Segoe UI")
             grid.setAnnotationFont(f_grid)
         grid.setAnnotationFrameDistance(1.5)
+        if annotations_inside:
+            _pos_enum = getattr(QgsLayoutItemMapGrid, "AnnotationPosition", QgsLayoutItemMapGrid)
+            _inside = getattr(_pos_enum, "InsideMapFrame", getattr(QgsLayoutItemMapGrid, "InsideMapFrame", 0))
+            for side in (_Left, _Bottom, _Right, _Top):
+                grid.setAnnotationPosition(_inside, side)
 
     main_map.updateBoundingRect()
     layout.refresh()

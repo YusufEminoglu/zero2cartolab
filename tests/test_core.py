@@ -328,7 +328,12 @@ check("scale apply", sc.transform_point(10, 10) == (20, 30))
 offsets = am.compute_isometric_layer_offsets(5, 50, 30, 35.264)
 check("iso offsets len", len(offsets) == 5)
 check("iso offsets dy ascending", all(offsets[i][1] < offsets[i+1][1] for i in range(4)))
-check("iso offsets dx zero", all(dx == 0.0 for dx, _ in offsets))
+check("iso offsets dx follow the tilt angle",
+      all(abs(dx - i * 50 * math.sin(math.radians(30))) < 1e-9 for i, (dx, _) in enumerate(offsets)))
+check("iso offsets dx zero at 0 deg tilt",
+      all(dx == 0.0 for dx, _ in am.compute_isometric_layer_offsets(4, 50, 0, 35.264)))
+check("iso offsets steeper tilt shifts further",
+      am.compute_isometric_layer_offsets(2, 50, 60, 35.264)[1][0] > offsets[1][0])
 
 # ===================================================================
 # 4. CARTOGRAM ENGINE

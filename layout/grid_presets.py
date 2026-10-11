@@ -141,8 +141,15 @@ def apply_grid_preset(
     interval_y: Optional[float] = None,
     annotations: bool = True,
     replace: bool = True,
+    annotations_inside: bool = False,
+    annotation_sides: Optional[str] = None,
 ) -> List[Any]:
-    """Apply a named, idempotent grid composition to the primary map item."""
+    """Apply a named, idempotent grid composition to the primary map item.
+
+    ``annotations_inside`` draws coordinate labels inside the map frame (for
+    sheets whose frame has no free margin); ``annotation_sides`` overrides the
+    preset's labelled sides ("all", "left_bottom", "right_top", "left_top").
+    """
     if QgsLayoutItemMapGrid is None:
         return []
     preset = GRID_PRESETS.get(preset_id)
@@ -150,6 +157,11 @@ def apply_grid_preset(
         raise ValueError(f"Unknown grid preset: {preset_id}")
     target = map_item or find_map_item(layout)
     if target is None:
+        return []
+    extent = target.extent()
+    if extent is None or extent.isEmpty():
+        # No data/extent yet (e.g. a project without layers): a grid has no
+        # meaningful interval and QGIS 3.28 fails drawing one.
         return []
     project = layout.project() if hasattr(layout, "project") else QgsProject.instance()
     map_crs = target.crs()
@@ -180,6 +192,7 @@ def apply_grid_preset(
     show = _enum(QgsLayoutItemMapGrid, "DisplayMode", "ShowAll", 0)
     hide = _enum(QgsLayoutItemMapGrid, "DisplayMode", "HideAll", 2)
     map_units = _enum(QgsLayoutItemMapGrid, "GridUnit", "MapUnit", 0)
+    inside = _enum(QgsLayoutItemMapGrid, "AnnotationPosition", "InsideMapFrame", 0)
 
     created = []
     for index, component in enumerate(preset["components"], start=1):
@@ -216,14 +229,17 @@ def apply_grid_preset(
         enabled_annotations = annotations and component.get("sides", "all") != "none"
         grid.setAnnotationEnabled(enabled_annotations)
         if enabled_annotations:
-            side_mode = component.get("sides", "all")
+            side_mode = annotation_sides or component.get("sides", "all")
             visible = {
                 "all": {"left", "right", "bottom", "top"},
                 "left_bottom": {"left", "bottom"},
                 "right_top": {"right", "top"},
+                "left_top": {"left", "top"},
             }.get(side_mode, {"left", "bottom"})
             for side_name, side_value in side_values.items():
                 grid.setAnnotationDisplay(show if side_name in visible else hide, side_value)
+                if annotations_inside:
+                    grid.setAnnotationPosition(inside, side_value)
             geographic = bool(component.get("geographic"))
             grid.setAnnotationPrecision(3 if geographic and ix < 0.05 else 2 if geographic else 0)
             grid.setAnnotationFontColor(QColor(component.get("text_color", "#334155")))

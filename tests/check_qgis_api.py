@@ -20,7 +20,7 @@ import sys
 from typing import Dict, List, Set, Tuple
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SKIP_DIRS = {".git", "__pycache__", "node_modules", "e2e", "scratch", "docs", "media", "tests"}
+SKIP_DIRS = {".git", ".claude", "__pycache__", "node_modules", "e2e", "scratch", "docs", "media", "tests"}
 
 
 def _shipped_files() -> List[str]:

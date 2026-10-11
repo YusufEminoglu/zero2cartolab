@@ -95,8 +95,11 @@ def create_utm_field_sheet_layout(
                                  layers=resolved_layers, extent=resolved_extent, crs=resolved_crs,
                                  frame_color="#0f172a", frame_width_mm=0.35)
     if map_item is not None:
-        preset = "utm_field" if resolved_crs.isValid() and not resolved_crs.isGeographic() else "graticule"
-        apply_grid_preset(layout, preset, map_item)
+        projected = resolved_crs is not None and resolved_crs.isValid() and not resolved_crs.isGeographic()
+        # Label inside the frame: the sidebar, header and footer leave no
+        # margin around the map for outside coordinate labels.
+        apply_grid_preset(layout, "utm_field" if projected else "graticule", map_item,
+                          annotations_inside=True, annotation_sides="left_bottom")
         _add_north_arrow(layout, map_x + map_w - 15, map_y + 4, size=11)
 
     side_x = map_x + map_w + gap
@@ -303,8 +306,10 @@ def create_emergency_brief_layout(
                                  map_w, content_h, layers=resolved_layers, extent=resolved_extent,
                                  crs=resolved_crs, frame_color="#7f1d1d", frame_width_mm=0.45)
     if map_item:
-        preset = "survey_crosshair" if not resolved_crs.isGeographic() else "graticule"
-        apply_grid_preset(layout, preset, map_item)
+        projected = resolved_crs is not None and resolved_crs.isValid() and not resolved_crs.isGeographic()
+        # Inside labels on the free edges (the scale-bar card sits bottom-left).
+        apply_grid_preset(layout, "survey_crosshair" if projected else "graticule", map_item,
+                          annotations_inside=True, annotation_sides="left_top")
         _add_north_arrow(layout, margin + map_w - 16, content_y + 5, size=11)
         _create_card_shape(layout, margin + 4, content_y + content_h - 20, 80, 18,
                            bg_color="#ffffff", border_color="#fecaca", border_width_mm=0.2)

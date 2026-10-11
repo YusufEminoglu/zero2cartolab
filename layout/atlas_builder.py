@@ -43,6 +43,7 @@ except ImportError:
     QgsFillSymbol = QgsExpression = QFont = QColor = None
     _MM = 0
 
+from .layout_utils import main_map_item
 from .locator_map import add_locator_inset_map
 
 
@@ -97,6 +98,11 @@ def setup_layout_atlas(
         if expression.hasParserError():
             return False
 
+    # An atlas over an empty coverage layer produces no pages: report it.
+    with suppress(Exception):
+        if coverage_layer.featureCount() == 0:
+            return False
+
     # Generated atlas furniture is replaced on repeated runs instead of stacked.
     for item in list(layout.items()):
         with suppress(Exception):
@@ -127,6 +133,14 @@ def setup_layout_atlas(
     else:
         atlas.setSortFeatures(False)
 
+    # The filter may still match nothing; an atlas without pages is a failure.
+    feature_count = -1
+    with suppress(Exception):
+        feature_count = int(atlas.updateFeatures())
+    if feature_count == 0:
+        atlas.setEnabled(False)
+        return False
+
     # 2. Page Dimensions & Geometry Budget
     page = layout.pageCollection().page(0) if layout.pageCollection() else None
     page_w = page.pageSize().width() if page else 297.0
@@ -136,11 +150,7 @@ def setup_layout_atlas(
     top_offset = page_margin_mm + (banner_h + 4.0 if add_header_banner else 14.0)
 
     # 3. Find and link primary map frame
-    main_map: Optional[QgsLayoutItemMap] = None
-    for item in layout.items():
-        if isinstance(item, QgsLayoutItemMap) and item.id() != "cartolab_locator_inset":
-            main_map = item
-            break
+    main_map: Optional[QgsLayoutItemMap] = main_map_item(layout)
 
     if main_map is not None:
         main_map.setAtlasDriven(True)
@@ -252,6 +262,42 @@ def setup_layout_atlas(
     else:
         # Standard Title & Page Counter labels if not already present
         has_atlas_title = any(isinstance(it, QgsLayoutItemLabel) and "atlas" in it.text().lower() for it in layout.items())
+        has_counter = any(isinstance(it, QgsLayoutItemLabel) and "@atlas_featurenumber" in it.text() for it in layout.items())
+        sheet_title = layout.itemById("cartolab_title")
+        if isinstance(sheet_title, QgsLayoutItemLabel):
+            # A map sheet already owns the title row: make that title
+            # atlas-aware and fit the counter into the row's right end
+            # instead of stacking new labels on top of it.
+            if not has_atlas_title:
+                sheet_title.setText(f"{sheet_title.text()} · {atlas_title_expr}")
+            if not has_counter:
+                title_pos = sheet_title.positionWithUnits()
+                title_size = sheet_title.sizeWithUnits()
+                # Repeated runs start from the title's pre-atlas width.
+                full_w = sheet_title.customProperty("cartolab/pre_atlas_width")
+                if full_w:
+                    title_size = QgsLayoutSize(float(full_w), title_size.height(), title_size.units())
+                else:
+                    sheet_title.setCustomProperty("cartolab/pre_atlas_width", float(title_size.width()))
+                counter_w = min(63.0, title_size.width() * 0.4)
+                sheet_title.attemptResize(QgsLayoutSize(
+                    title_size.width() - counter_w - 2.0, title_size.height(), title_size.units()))
+                lbl_counter = QgsLayoutItemLabel(layout)
+                lbl_counter.setId("cartolab_atlas_counter")
+                lbl_counter.setText(page_counter_format)
+                if QFont is not None:
+                    lbl_counter.setFont(QFont("Inter, Segoe UI", 10, QFont.Weight.DemiBold))
+                if QColor is not None:
+                    lbl_counter.setFontColor(QColor("#64748b"))
+                with suppress(Exception):
+                    from qgis.PyQt.QtCore import Qt
+                    lbl_counter.setHAlign(Qt.AlignmentFlag.AlignRight)
+                lbl_counter.attemptMove(QgsLayoutPoint(
+                    title_pos.x() + title_size.width() - counter_w, title_pos.y(), title_pos.units()))
+                lbl_counter.attemptResize(QgsLayoutSize(counter_w, title_size.height(), title_size.units()))
+                layout.addLayoutItem(lbl_counter)
+            has_atlas_title = has_counter = True
+
         if not has_atlas_title:
             lbl_title = QgsLayoutItemLabel(layout)
             lbl_title.setId("cartolab_atlas_title")
@@ -264,7 +310,6 @@ def setup_layout_atlas(
             lbl_title.attemptResize(QgsLayoutSize(page_w - 90.0, 12.0, _MM))
             layout.addLayoutItem(lbl_title)
 
-        has_counter = any(isinstance(it, QgsLayoutItemLabel) and "@atlas_featurenumber" in it.text() for it in layout.items())
         if not has_counter:
             lbl_counter = QgsLayoutItemLabel(layout)
             lbl_counter.setId("cartolab_atlas_counter")

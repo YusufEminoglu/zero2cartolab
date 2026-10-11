@@ -126,6 +126,13 @@ def apply_typography_hierarchy(layout: QgsLayout, preset: str = "swiss_modern") 
                 font.setWeight(QFont.Weight.Normal)
             if body_col and not is_light_text:
                 item.setFontColor(body_col)
+        elif "subtitle" in item_id_lower:
+            # Checked before "title", which "subtitle" also contains.
+            font.setFamily(body_fam)
+            if hasattr(QFont, "Weight"):
+                font.setWeight(QFont.Weight.Normal)
+            if sub_col and not is_light_text:
+                item.setFontColor(sub_col)
         elif font.pointSize() >= 14 or "title" in item_id_lower:
             font.setFamily(title_fam)
             if hasattr(QFont, "Weight"):

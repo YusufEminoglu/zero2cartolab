@@ -1295,6 +1295,255 @@ ok(
 )
 
 # ===========================================================================
+# LAYOUT REGRESSIONS (audit fixes)
+# ===========================================================================
+print("\n--- Layout regressions ---")
+from qgis.core import (
+    QgsLayerTree, QgsLayoutItemGroup, QgsLayoutItemMapGrid, QgsLayoutItemPage,
+    QgsLayoutItemRegistry, QgsLayoutPoint, QgsUnitTypes as _QgsUnitTypes,
+)
+from qgis.PyQt.QtCore import Qt as _Qt
+from qgis.PyQt.QtWidgets import QApplication as _QApplication
+from zero2cartolab.layout.layout_utils import (
+    copy_layout_to_clipboard, find_map_item, last_export_error, main_map_item,
+)
+_RMM = _QgsUnitTypes.LayoutUnit.LayoutMillimeters
+
+
+def _furniture_overlaps(layout, ids):
+    """Pairs of the given item ids whose scene rects overlap by > 0.5 mm²."""
+    rects = {}
+    for item_id in ids:
+        item = layout.itemById(item_id)
+        if item is not None:
+            rects[item_id] = item.sceneBoundingRect()
+    bad = []
+    keys = sorted(rects)
+    for i, a in enumerate(keys):
+        for b in keys[i + 1:]:
+            if a.startswith("cartolab_north_arrow") and b.startswith("cartolab_north_arrow"):
+                continue  # the arrow and its "N" are one motif
+            inter = rects[a].intersected(rects[b])
+            if inter.width() * inter.height() > 0.5:
+                bad.append((a, b))
+    return bad
+
+
+# 1. legend styler only relabels the legend, never the project layers
+from zero2cartolab.layout.legend_styler import style_layout_legend
+styler_layer = polys.clone()
+styler_layer.setName("ss_choice_median")
+QgsProject.instance().addMapLayer(styler_layer)
+styler_layout = QgsPrintLayout(QgsProject.instance())
+styler_layout.initializeDefaults()
+styler_legend = style_layout_legend(styler_layout)
+_styler_nodes = [n for n in styler_legend.model().rootGroup().findLayers() if n.layer() is styler_layer]
+ok("legend styler keeps the project layer name", styler_layer.name() == "ss_choice_median", styler_layer.name())
+ok("legend styler leaves project tree labels alone",
+   QgsProject.instance().layerTreeRoot().findLayer(styler_layer.id()).customProperty("legend/title-label") in (None, ""))
+ok("legend styler shows the cleaned label in the legend",
+   bool(_styler_nodes) and styler_legend.model().data(
+       styler_legend.model().node2index(_styler_nodes[0]), _Qt.ItemDataRole.DisplayRole) == "Choice Median",
+   str([styler_legend.model().data(styler_legend.model().node2index(n), _Qt.ItemDataRole.DisplayRole)
+        for n in _styler_nodes]))
+QgsProject.instance().removeMapLayer(styler_layer.id())
+
+# 2. main-map lookup never picks the locator inset
+inset_sheet = create_map_sheet(iface=None, layers=[polys], title="Main map lookup")
+add_locator_inset_map(inset_sheet)
+_main = inset_sheet.itemById("cartolab_map")
+_inset = inset_sheet.itemById("cartolab_locator_inset")
+ok("main_map_item prefers cartolab_map over the locator inset",
+   _inset is not None and main_map_item(inset_sheet) is _main and find_map_item(inset_sheet) is _main)
+ok("scale bar links to the main map", add_scalebar_to_layout(inset_sheet).linkedMap() is _main)
+apply_coordinate_grid_decorator(inset_sheet)
+ok("coordinate grid goes on the main map",
+   any(g.name() == "PlanXCoordGrid" for g in _main.grids().asList())
+   and not any(g.name() == "PlanXCoordGrid" for g in _inset.grids().asList()))
+plain_layout = QgsPrintLayout(QgsProject.instance())
+plain_layout.initializeDefaults()
+_small = QgsLayoutItemMap(plain_layout)
+_small.attemptResize(QgsLayoutSize(30, 20, _RMM))
+plain_layout.addLayoutItem(_small)
+_big = QgsLayoutItemMap(plain_layout)
+_big.attemptResize(QgsLayoutSize(200, 150, _RMM))
+plain_layout.addLayoutItem(_big)
+ok("main_map_item falls back to the largest map", main_map_item(plain_layout) is _big)
+from zero2cartolab.layout.designer_integration import export_layout_and_report, snap_to_standard_scale
+ok("snap scale picks the nearest standard scale", snap_to_standard_scale(23000) == 25000)
+
+# 14. scale combo text follows the map scale
+from zero2cartolab.layout.legend_decorator import add_scale_combo_to_layout
+from qgis.core import QgsLayoutItemLabel as _Lbl
+add_scale_combo_to_layout(inset_sheet)
+_scale_labels = [it for it in inset_sheet.items() if isinstance(it, _Lbl) and "map_scale" in it.text()]
+_main.setScale(12345)
+ok("scale combo label is bound to the main map scale",
+   len(_scale_labels) == 1 and "item_variables('cartolab_map')" in _scale_labels[0].text()
+   and _scale_labels[0].currentText().replace(",", "").replace(" ", "").replace(" ", "").endswith("12345"),
+   _scale_labels[0].currentText() if _scale_labels else "no label")
+
+# 3 + 4. advanced templates: no-layer projects and on-page grid annotations
+from zero2cartolab.layout.advanced_templates import (
+    create_emergency_brief_layout, create_utm_field_sheet_layout,
+)
+_empty_project = QgsProject()
+for _builder in (create_utm_field_sheet_layout, create_emergency_brief_layout):
+    try:
+        _built = _builder(layers=[], project=_empty_project)
+        ok(f"{_builder.__name__} works without layers / CRS", isinstance(_built, QgsPrintLayout))
+    except Exception as exc:
+        ok(f"{_builder.__name__} works without layers / CRS", False, repr(exc))
+    _utm_layout = _builder(layers=[utm_polys], title="UTM annotations")
+    _utm_issues = [i for i in preflight_layout(_utm_layout) if i["severity"] == "error"]
+    ok(f"{_builder.__name__} grid annotations stay on the page", not _utm_issues, str(_utm_issues))
+    _utm_map = main_map_item(_utm_layout)
+    _inside = getattr(getattr(QgsLayoutItemMapGrid, "AnnotationPosition", QgsLayoutItemMapGrid),
+                      "InsideMapFrame", 0)
+    _left = getattr(getattr(QgsLayoutItemMapGrid, "BorderSide", QgsLayoutItemMapGrid), "Left", 0)
+    ok(f"{_builder.__name__} annotates inside the map frame",
+       all(g.annotationPosition(_left) == _inside for g in _utm_map.grids().asList()
+           if g.annotationEnabled()))
+
+# 5. clipboard copy
+ok("copy_layout_to_clipboard renders the page", copy_layout_to_clipboard(inset_sheet, dpi=40))
+_cb = _QApplication.clipboard()
+ok("clipboard holds the rendered page", _cb is not None and not _cb.image().isNull())
+
+# 6. multi-page export leaves no temp files; failures are reported
+_export_dir = tempfile.mkdtemp(prefix="cartolab_e2e_export_")
+two_pages = QgsPrintLayout(QgsProject.instance())
+two_pages.initializeDefaults()
+_extra_page = QgsLayoutItemPage(two_pages)
+_extra_page.setPageSize("A4")
+two_pages.pageCollection().addPage(_extra_page)
+for _ext in (".png", ".svg"):
+    ok(f"multi-page {_ext} export succeeds", export_layout(two_pages, os.path.join(_export_dir, f"map{_ext}"), dpi=30))
+ok("multi-page export writes final page names only",
+   sorted(os.listdir(_export_dir)) == ["map.png", "map.svg", "map_2.png", "map_2.svg"],
+   str(sorted(os.listdir(_export_dir))))
+_blocker = os.path.join(_export_dir, "blocker")
+with open(_blocker, "w") as _fh:
+    _fh.write("x")
+_bad_path = os.path.join(_blocker, "out.png")
+ok("failed export returns False with a reason",
+   export_layout(two_pages, _bad_path, dpi=30) is False and bool(last_export_error()))
+_ok, _msg = export_layout_and_report(two_pages, _bad_path, 30)
+ok("designer Export & Open gets an error message", _ok is False and bool(_msg), _msg)
+
+# 7. create_map_sheet(add_grid=True) really adds a grid, inside the frame
+grid_on_sheet = create_map_sheet(iface=None, layers=[polys], title="Grid on", credits="c", add_grid=True)
+_grids = grid_on_sheet.itemById("cartolab_map").grids().asList()
+ok("map sheet add_grid adds an enabled grid", any(g.enabled() for g in _grids), str(len(_grids)))
+_grid_errors = [i for i in preflight_layout(grid_on_sheet) if i["severity"] == "error"]
+ok("map sheet grid passes preflight", not _grid_errors, str(_grid_errors))
+
+# 8. bivariate legend lands at the requested position and stays put
+from zero2cartolab.layout.legend_decorator import add_bivariate_legend, replace_bivariate_legend
+
+
+def _legend_bounds(group):
+    # Union of the members' frames: QGIS 3.28 misreports a group's own rect
+    # when it holds rotated labels, so measure what is drawn.
+    bounds = None
+    for member in group.items():
+        rect = member.mapRectToScene(member.rect())
+        bounds = rect if bounds is None else bounds.united(rect)
+    return bounds
+
+
+for _shape in ("diamond", "square"):
+    bivar_layout = QgsPrintLayout(QgsProject.instance())
+    bivar_layout.initializeDefaults()
+    _grp = add_bivariate_legend(bivar_layout, legend_type=_shape, position=(20.0, 30.0))
+    _r = _legend_bounds(_grp)
+    ok(f"bivariate {_shape} legend top-left = requested position",
+       abs(_r.left() - 20.0) < 0.05 and abs(_r.top() - 30.0) < 0.05, f"{_r.left():.2f},{_r.top():.2f}")
+    _n_items = len(bivar_layout.items())
+    for _ in range(3):
+        _grp = replace_bivariate_legend(bivar_layout, [_grp], legend_type=_shape)
+    _r = _legend_bounds(_grp)
+    ok(f"bivariate {_shape} legend does not drift on update",
+       abs(_r.left() - 20.0) < 0.05 and abs(_r.top() - 30.0) < 0.05
+       and len(bivar_layout.items()) == _n_items, f"{_r.left():.2f},{_r.top():.2f} items {len(bivar_layout.items())}/{_n_items}")
+
+# 9. isometric stack: tilt angle, transparent planes, data fits
+iso_tilt = create_isometric_stack_layout([polys, points], angle_deg=30.0)
+iso_flat = create_isometric_stack_layout([polys, points], angle_deg=0.0)
+
+
+def _iso_maps(layout):
+    return sorted((it for it in layout.items() if isinstance(it, QgsLayoutItemMap)), key=lambda m: m.id())
+
+
+_tm, _fm = _iso_maps(iso_tilt), _iso_maps(iso_flat)
+ok("isometric tilt angle shifts planes sideways",
+   _tm[1].pos().x() - _tm[0].pos().x() > 1.0 and abs(_fm[1].pos().x() - _fm[0].pos().x()) < 1e-6,
+   f"{_tm[1].pos().x() - _tm[0].pos().x():.2f} / {_fm[1].pos().x() - _fm[0].pos().x():.2f}")
+ok("isometric planes are transparent", not any(m.hasBackground() for m in _tm))
+_iso_labels = [it for it in iso_tilt.items() if isinstance(it, QgsLayoutItemLabel)]
+ok("isometric captions draw above every plane",
+   bool(_iso_labels) and min(lbl.zValue() for lbl in _iso_labels) > max(m.zValue() for m in _tm))
+_data_extent = QgsRectangle(polys.extent())
+_data_extent.combineExtentWith(points.extent())
+ok("isometric planes show all the data (no fixed-scale clipping)",
+   all(m.extent().contains(_data_extent) for m in _tm), str([m.scale() for m in _tm]))
+_iso_errors = [i for i in preflight_layout(iso_tilt) if i["code"] == "outside_page"]
+ok("isometric stack fits the page", not _iso_errors, str(_iso_errors))
+
+# 10. atlas on a map sheet: no stacked title/counter; empty coverage fails
+atlas_map_sheet = create_map_sheet(iface=None, layers=[polys], title="Atlas overlap", subtitle="sub")
+ok("atlas setup on map sheet succeeds", setup_layout_atlas(atlas_map_sheet, polys, name_field="uid"))
+_title_w = atlas_map_sheet.itemById("cartolab_title").rect().width()
+ok("atlas setup re-run keeps the title row stable",
+   setup_layout_atlas(atlas_map_sheet, polys, name_field="uid")
+   and abs(atlas_map_sheet.itemById("cartolab_title").rect().width() - _title_w) < 1e-6)
+ok("atlas furniture does not overlap the sheet title",
+   atlas_map_sheet.itemById("cartolab_atlas_title") is None
+   and not _furniture_overlaps(atlas_map_sheet, ["cartolab_title", "cartolab_subtitle", "cartolab_atlas_counter"]),
+   str(_furniture_overlaps(atlas_map_sheet, ["cartolab_title", "cartolab_subtitle", "cartolab_atlas_counter"])))
+_empty_cov = QgsVectorLayer(f"Polygon?crs={CRS}", "empty_cov", "memory")
+ok("atlas with no coverage features reports failure",
+   not setup_layout_atlas(create_map_sheet(iface=None, layers=[polys], title="Empty atlas"), _empty_cov))
+ok("atlas whose filter matches nothing reports failure",
+   not setup_layout_atlas(create_map_sheet(iface=None, layers=[polys], title="Filtered atlas"),
+                          polys, filter_expression='"uid" < 0'))
+
+# 11. QPT inspector item type ids match the registry
+from zero2cartolab.layout.qpt_inspector import _TYPE_NAMES
+_registry_ids = {
+    "map": QgsLayoutItemRegistry.LayoutMap, "label": QgsLayoutItemRegistry.LayoutLabel,
+    "legend": QgsLayoutItemRegistry.LayoutLegend, "shape": QgsLayoutItemRegistry.LayoutShape,
+    "polygon": QgsLayoutItemRegistry.LayoutPolygon, "polyline": QgsLayoutItemRegistry.LayoutPolyline,
+    "scale_bar": QgsLayoutItemRegistry.LayoutScaleBar, "picture": QgsLayoutItemRegistry.LayoutPicture,
+    "page": QgsLayoutItemRegistry.LayoutPage,
+}
+ok("qpt inspector type ids match QgsLayoutItemRegistry",
+   all(_TYPE_NAMES.get(int(getattr(v, "value", v))) == k for k, v in _registry_ids.items()),
+   str({k: int(getattr(v, "value", v)) for k, v in _registry_ids.items()}))
+
+# 12. typography: subtitle is styled as a subtitle, not a title
+typo_sheet = create_map_sheet(iface=None, layers=[polys], title="Typography", subtitle="Sub line", preset="")
+apply_typography_hierarchy(typo_sheet, preset="swiss_modern")
+_sub = typo_sheet.itemById("cartolab_subtitle")
+ok("typography styles cartolab_subtitle as subtitle",
+   _sub.fontColor().name().lower() == "#64748b" and not _sub.font().bold(),
+   f"{_sub.fontColor().name()} bold={_sub.font().bold()}")
+
+# 13. auto-balance leaves no furniture overlaps
+from zero2cartolab.layout.layout_optimizer import optimize_layout_visual_balance
+_furniture_ids = ["cartolab_title", "cartolab_subtitle", "cartolab_credits", "cartolab_legend",
+                  "cartolab_scalebar", "cartolab_map", "cartolab_north_arrow", "cartolab_north_arrow_label"]
+for _arch in ("editorial_bottom", "sidebar_right", "sidebar_left"):
+    _bal = create_map_sheet(iface=None, layers=[polys], title="Balance", subtitle="Subtitle line",
+                            credits="Source: CartoLab e2e")
+    ok(f"auto-balance {_arch} runs", optimize_layout_visual_balance(_bal, archetype=_arch))
+    _overlaps = _furniture_overlaps(_bal, _furniture_ids)
+    _bal_errors = [i for i in preflight_layout(_bal) if i["severity"] == "error"]
+    ok(f"auto-balance {_arch} leaves no overlaps", not _overlaps and not _bal_errors,
+       str(_overlaps) + str(_bal_errors))
+
+# ===========================================================================
 # REAL DATASET E2E (geostats_Sample_Dataset.gpkg)
 # ===========================================================================
 real_gpkg = os.environ.get("ZERO2CARTOLAB_REAL_GPKG", "")

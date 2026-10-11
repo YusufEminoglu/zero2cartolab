@@ -8,7 +8,7 @@ spatial relationships.
 """
 from __future__ import annotations
 
-from typing import List
+from typing import List, Optional
 
 try:
     from qgis.PyQt.QtGui import QFont, QPolygonF
@@ -31,7 +31,7 @@ except ImportError:
     QgsPrintLayout = QgsLayoutItemMap = QgsLayoutItemLabel = QgsLayoutItemPolyline = QgsLineSymbol = None
     QgsLayoutPoint = QgsLayoutSize = QgsProject = QgsRectangle = QgsUnitTypes = QgsMapLayer = None
 
-from .layout_utils import unique_layout_name
+from .layout_utils import unique_layout_name, zoom_map_to_extent
 
 
 def create_isometric_stack_layout(
@@ -42,7 +42,7 @@ def create_isometric_stack_layout(
     base_spacing_mm: float = 18.0,
     angle_deg: float = 30.0,
     elevation_deg: float = 35.264,
-    map_scale: float = 50000.0,
+    map_scale: Optional[float] = None,
 ) -> QgsPrintLayout:
     """
     Create an isometric-stacked map layout.
@@ -63,8 +63,9 @@ def create_isometric_stack_layout(
         Vertical offset between stacked maps.
     angle_deg, elevation_deg : float
         Isometric projection angles.
-    map_scale : float
-        Map scale denominator for each map item.
+    map_scale : float, optional
+        Fixed scale denominator; by default each plane is zoomed to fit
+        the combined layer extent.
 
     Returns
     -------
@@ -87,8 +88,15 @@ def create_isometric_stack_layout(
     offsets = compute_isometric_layer_offsets(
         len(layers), base_spacing_mm, angle_deg, elevation_deg)
 
-    map_width = page_width_mm * 0.55
-    map_height = page_height_mm * 0.55
+    # Size the planes so the whole stack (sideways drift from the tilt angle,
+    # rise from the elevation, plus the layer captions) fits on the page.
+    margin, caption_h = 10.0, 8.0
+    min_dx = min(dx for dx, _ in offsets)
+    max_dx = max(dx for dx, _ in offsets)
+    max_dy = max(dy for _, dy in offsets)
+    span_x, span_y = max_dx - min_dx, max_dy + caption_h
+    map_width = max(20.0, min(page_width_mm * 0.55, page_width_mm - 2 * margin - span_x))
+    map_height = max(15.0, min(page_height_mm * 0.55, page_height_mm - 2 * margin - span_y))
 
     # determine a common extent from all layers
     extent = None
@@ -97,30 +105,34 @@ def create_isometric_stack_layout(
             extent = QgsRectangle(layer.extent())
         else:
             extent.combineExtentWith(layer.extent())
-    if extent is None:
+    if extent is None or extent.isEmpty():
         extent = QgsRectangle(0, 0, 1000, 1000)
     extent.scale(1.15)
 
-    center_x = (page_width_mm - map_width) / 2.0
-    center_y = (page_height_mm - map_height) / 2.0
+    # Top-left of the bottom (i = 0) plane, centring the stack's bounding box.
+    center_x = (page_width_mm - (map_width + span_x)) / 2.0 - min_dx
+    center_y = (page_height_mm - (map_height + span_y)) / 2.0 + span_y
 
+    _mm = QgsUnitTypes.LayoutUnit.LayoutMillimeters
+    labels = []
     for i, (layer, (dx, dy)) in enumerate(zip(layers, offsets)):
         map_item = QgsLayoutItemMap(layout)
-        map_item.attemptResize(
-            QgsLayoutSize(map_width, map_height, QgsUnitTypes.LayoutUnit.LayoutMillimeters)
-        )
-        map_item.setExtent(extent)
-        map_item.setScale(map_scale)
+        map_item.setId(f"cartolab_iso_map_{i + 1}")
+        map_item.attemptResize(QgsLayoutSize(map_width, map_height, _mm))
+        map_item.attemptMove(QgsLayoutPoint(center_x + dx, center_y - dy, _mm))
+        # Fit the data instead of forcing a fixed scale that clips it.
+        zoom_map_to_extent(map_item, extent)
+        if map_scale:
+            map_item.setScale(map_scale)
+        # Transparent planes: lower layers and their captions stay visible.
+        map_item.setBackgroundEnabled(False)
 
-        # set which layers are visible: only the current one (and earlier, for context)
+        # set which layers are visible: only the current one
         map_item.setLayers([layer])
         map_item.setKeepLayerSet(True)
+        layout.addLayoutItem(map_item)
 
-        map_item.attemptMove(
-            QgsLayoutPoint(center_x + dx, center_y - dy, QgsUnitTypes.LayoutUnit.LayoutMillimeters)
-        )
-
-        # add label text above each map
+        # caption above each plane; added after every map so it draws on top
         label = QgsLayoutItemLabel(layout)
         label.setText(layer.name())
         font = QFont()
@@ -129,12 +141,11 @@ def create_isometric_stack_layout(
         font.setBold(True)
         label.setFont(font)
         label.adjustSizeToText()
-        label.attemptMove(
-            QgsLayoutPoint(center_x + dx, center_y - dy - 8, QgsUnitTypes.LayoutUnit.LayoutMillimeters)
-        )
-        layout.addLayoutItem(label)
+        label.attemptMove(QgsLayoutPoint(center_x + dx, center_y - dy - caption_h, _mm))
+        labels.append(label)
 
-        layout.addLayoutItem(map_item)
+    for label in labels:
+        layout.addLayoutItem(label)
 
     # Draw connector lines between adjacent map layers
     for i in range(len(layers) - 1):
@@ -164,6 +175,11 @@ def create_isometric_stack_layout(
             })
             line_item.setSymbol(symbol)
             layout.addLayoutItem(line_item)
+
+    # Captions above every plane and connector (QGIS does not always append new items on top).
+    for label in labels:
+        layout.moveItemToTop(label, True)
+    layout.updateZValues()
 
     project.layoutManager().addLayout(layout)
     return layout

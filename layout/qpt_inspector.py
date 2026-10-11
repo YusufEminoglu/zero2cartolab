@@ -12,8 +12,12 @@ from typing import Any, Dict
 _FUNCTION_RE = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*)\s*\(")
 _ATTR_RE = re.compile(r"([A-Za-z_:][\w:.-]*)\s*=\s*\"([^\"]*)\"")
 _EXTERNAL_FUNCTIONS = {"mgrs_gzd", "mgrs_100km"}
-_TYPE_NAMES = {65638: "page", 65639: "map", 65640: "picture", 65641: "label",
-               65642: "legend", 65643: "shape", 65644: "scale_bar"}
+# QgsLayoutItemRegistry item type ids (stable since QGIS 3.0; checked on 3.34/4.2).
+_TYPE_NAMES = {65637: "group", 65638: "page", 65639: "map", 65640: "picture",
+               65641: "label", 65642: "legend", 65643: "shape", 65644: "polygon",
+               65645: "polyline", 65646: "scale_bar", 65647: "frame", 65648: "html",
+               65649: "attribute_table", 65650: "text_table", 65651: "map_3d",
+               65652: "manual_table", 65653: "marker", 65654: "elevation_profile"}
 
 
 def _attributes(fragment: str) -> Dict[str, str]:

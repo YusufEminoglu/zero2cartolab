@@ -29,6 +29,8 @@ try:
 except ImportError:
     QgsLayout = QgsLayoutItem = QgsLayoutItemLabel = QgsLayoutItemLegend = QgsLayoutItemMap = QgsLayoutItemPicture = QgsLayoutItemPolygon = QgsLayoutItemScaleBar = QgsLayoutPoint = QgsLayoutSize = QgsUnitTypes = QgsRectangle = None
 
+from .layout_utils import main_map_item
+
 
 def _move_item_cluster(items, x: float, y: float, unit) -> None:
     """Move related layout items together while preserving their offsets."""
@@ -45,6 +47,20 @@ def _move_item_cluster(items, x: float, y: float, unit) -> None:
     min_y = min(pos_y for _, _, pos_y in positioned)
     for item, pos_x, pos_y in positioned:
         item.attemptMove(QgsLayoutPoint(x + pos_x - min_x, y + pos_y - min_y, unit))
+
+
+def _cluster_size(items):
+    """Width/height (layout units) of the joint bounding box of ``items``."""
+    rect = None
+    for item in items:
+        try:
+            r = item.sceneBoundingRect()
+        except (AttributeError, RuntimeError):
+            continue
+        rect = r if rect is None else rect.united(r)
+    if rect is None:
+        return 0.0, 0.0
+    return float(rect.width()), float(rect.height())
 
 
 def optimize_layout_visual_balance(
@@ -72,33 +88,39 @@ def optimize_layout_visual_balance(
     page_w = page.pageSize().width()
     page_h = page.pageSize().height()
 
-    main_map: Optional[QgsLayoutItemMap] = None
+    main_map: Optional[QgsLayoutItemMap] = main_map_item(layout)
     title_item: Optional[QgsLayoutItemLabel] = None
+    subtitle_item: Optional[QgsLayoutItemLabel] = None
+    credits_item: Optional[QgsLayoutItemLabel] = None
     legend_item: Optional[QgsLayoutItemLegend] = None
     scalebar_item: Optional[QgsLayoutItemScaleBar] = None
     north_items = []
 
-    preferred_map = layout.itemById("cartolab_map")
-    if isinstance(preferred_map, QgsLayoutItemMap):
-        main_map = preferred_map
-    preferred_title = layout.itemById("cartolab_title")
-    if isinstance(preferred_title, QgsLayoutItemLabel):
-        title_item = preferred_title
+    def _label_by_id(*ids):
+        for wanted in ids:
+            found = layout.itemById(wanted)
+            if isinstance(found, QgsLayoutItemLabel):
+                return found
+        return None
+
+    title_item = _label_by_id("cartolab_title")
+    subtitle_item = _label_by_id("cartolab_subtitle")
+    credits_item = _label_by_id("cartolab_credits", "cartolab_footer")
+    known = {title_item, subtitle_item, credits_item}
 
     for item in layout.items():
         item_id = item.id() if hasattr(item, "id") else ""
         if item_id in ("cartolab_locator_inset",):
             continue
-        if isinstance(item, QgsLayoutItemMap) and main_map is None:
-            main_map = item
-        elif isinstance(item, QgsLayoutItemLabel) and title_item is None and item.rect().width() > 50:
+        if item_id.startswith("cartolab_north_arrow"):
+            north_items.append(item)
+        elif (isinstance(item, QgsLayoutItemLabel) and title_item is None and item not in known
+              and item.rect().width() > 50):
             title_item = item
         elif isinstance(item, QgsLayoutItemLegend) and legend_item is None:
             legend_item = item
         elif isinstance(item, QgsLayoutItemScaleBar) and scalebar_item is None:
             scalebar_item = item
-        if item_id.startswith("cartolab_north_arrow"):
-            north_items.append(item)
         elif isinstance(item, QgsLayoutItemPicture) and not north_items:
             north_items.append(item)
 
@@ -107,6 +129,11 @@ def optimize_layout_visual_balance(
 
     _Mm = getattr(getattr(QgsUnitTypes, "LayoutUnit", QgsUnitTypes), "LayoutMillimeters", getattr(QgsUnitTypes, "LayoutMillimeters", 0))
     original_extent = QgsRectangle(main_map.extent())
+    if legend_item is not None:
+        # A legend that resizes to its contents would grow out of its slot.
+        legend_item.setResizeToContents(False)
+    north_w, north_h = _cluster_size(north_items)
+    credits_h = 6.0
 
     if archetype in ("sidebar_right", "sidebar_left"):
         sidebar_w = max(55.0, page_w * 0.28)
@@ -126,27 +153,39 @@ def optimize_layout_visual_balance(
         main_map.attemptResize(QgsLayoutSize(map_w, map_h, _Mm))
         main_map.zoomToExtent(original_extent)
 
-        # Sidebar Title
+        # Sidebar, top down: title, subtitle, legend ...
         curr_y = margin_mm
         if title_item is not None:
             title_item.attemptMove(QgsLayoutPoint(sidebar_x, curr_y, _Mm))
             title_item.attemptResize(QgsLayoutSize(sidebar_w, title_height_mm, _Mm))
-            curr_y += title_height_mm + gap
+            curr_y += title_height_mm + 2.0
+        if subtitle_item is not None:
+            subtitle_item.attemptMove(QgsLayoutPoint(sidebar_x, curr_y, _Mm))
+            subtitle_item.attemptResize(QgsLayoutSize(sidebar_w, 9.0, _Mm))
+            curr_y += 9.0
+        curr_y += gap
 
-        sb_y = page_h - margin_mm - 14.0
-
-        # Sidebar Legend
-        if legend_item is not None:
-            legend_item.attemptMove(QgsLayoutPoint(sidebar_x, curr_y, _Mm))
-            legend_item.attemptResize(QgsLayoutSize(sidebar_w, max(25.0, sb_y - curr_y - gap), _Mm))
-
-        # Bottom of Sidebar: Scale bar & North Arrow
+        # ... and bottom up: credits, scale bar, north arrow.
+        bottom = page_h - margin_mm
+        if credits_item is not None:
+            credits_item.attemptMove(QgsLayoutPoint(sidebar_x, bottom - credits_h, _Mm))
+            credits_item.attemptResize(QgsLayoutSize(sidebar_w, credits_h, _Mm))
+            bottom -= credits_h + 2.0
+        sb_y = bottom - 12.0
+        furniture_top = sb_y
         if scalebar_item is not None:
             scalebar_item.attemptMove(QgsLayoutPoint(sidebar_x, sb_y, _Mm))
             if north_items:
-                _move_item_cluster(north_items, sidebar_x + sidebar_w - 18.0, sb_y - 18.0, _Mm)
+                _move_item_cluster(north_items, sidebar_x + sidebar_w - north_w, sb_y - north_h - 2.0, _Mm)
+                furniture_top = sb_y - north_h - 2.0
         elif north_items:
-            _move_item_cluster(north_items, sidebar_x, sb_y - 18.0, _Mm)
+            _move_item_cluster(north_items, sidebar_x, bottom - north_h, _Mm)
+            furniture_top = bottom - north_h
+
+        # Sidebar Legend fills the space in between
+        if legend_item is not None:
+            legend_item.attemptMove(QgsLayoutPoint(sidebar_x, curr_y, _Mm))
+            legend_item.attemptResize(QgsLayoutSize(sidebar_w, max(10.0, furniture_top - curr_y - gap), _Mm))
 
     else:
         # Default: Editorial Bottom Bar
@@ -154,11 +193,18 @@ def optimize_layout_visual_balance(
         top_offset = margin_mm
         if title_item is not None:
             title_w = page_w - (2 * margin_mm)
-            title_item.attemptResize(QgsLayoutSize(title_w, title_height_mm, _Mm))
+            title_h = title_height_mm * (0.6 if subtitle_item is not None else 1.0)
+            title_item.attemptResize(QgsLayoutSize(title_w, title_h, _Mm))
             title_item.attemptMove(QgsLayoutPoint(margin_mm, margin_mm, _Mm))
-            top_offset = margin_mm + title_height_mm + 4.0
+            top_offset = margin_mm + title_h + 4.0
+        if subtitle_item is not None:
+            sub_y = top_offset - 4.0 if title_item is not None else margin_mm
+            sub_h = title_height_mm * 0.4 if title_item is not None else 6.0
+            subtitle_item.attemptMove(QgsLayoutPoint(margin_mm, sub_y, _Mm))
+            subtitle_item.attemptResize(QgsLayoutSize(page_w - 2 * margin_mm, sub_h, _Mm))
+            top_offset = sub_y + sub_h + 4.0
 
-        # 2. Bottom Bar (Legend, Scale bar, North Arrow)
+        # 2. Bottom Bar (Legend, Credits, North Arrow, Scale bar)
         bottom_y = page_h - margin_mm - bottom_bar_height_mm
         map_h = bottom_y - top_offset - 4.0
         map_w = page_w - (2 * margin_mm)
@@ -173,25 +219,34 @@ def optimize_layout_visual_balance(
         main_map.zoomToExtent(original_extent)
 
         # 4. Position Bottom Elements (Clean Aligned Row)
+        bar_bottom = page_h - margin_mm
         curr_x = margin_mm
-
-        # Legend on left
-        if legend_item is not None:
-            legend_item.attemptMove(QgsLayoutPoint(curr_x, bottom_y + 2.0, _Mm))
-            legend_item.attemptResize(QgsLayoutSize(max(35.0, map_w * 0.42), bottom_bar_height_mm - 4.0, _Mm))
-            curr_x += legend_item.rect().width() + 8.0
+        right_x = page_w - margin_mm
 
         # Scale bar on bottom right
         if scalebar_item is not None:
             sb_w = scalebar_item.rect().width()
-            sb_x = page_w - margin_mm - sb_w
+            sb_x = right_x - sb_w
             scalebar_item.attemptMove(QgsLayoutPoint(sb_x, bottom_y + 8.0, _Mm))
+            right_x = sb_x - 4.0
+        # North Arrow beside the scale bar
+        if north_items:
+            north_x = right_x - north_w
+            _move_item_cluster(north_items, north_x, bottom_y + 3.0, _Mm)
+            right_x = north_x - 4.0
 
-            # North Arrow above or beside scale bar
-            if north_items:
-                _move_item_cluster(north_items, sb_x - 20.0, bottom_y + 3.0, _Mm)
-        elif north_items:
-            _move_item_cluster(north_items, page_w - margin_mm - 18.0, bottom_y + 3.0, _Mm)
+        # Legend on left
+        if legend_item is not None:
+            legend_w = max(35.0, min(map_w * 0.42, right_x - curr_x - 4.0))
+            legend_item.attemptMove(QgsLayoutPoint(curr_x, bottom_y + 2.0, _Mm))
+            legend_item.attemptResize(QgsLayoutSize(legend_w, bar_bottom - bottom_y - 2.0, _Mm))
+            curr_x += legend_w + 4.0
+
+        # Credits fill the free middle of the bar, on its baseline
+        if credits_item is not None:
+            credits_w = max(20.0, right_x - curr_x)
+            credits_item.attemptMove(QgsLayoutPoint(curr_x, bar_bottom - credits_h, _Mm))
+            credits_item.attemptResize(QgsLayoutSize(credits_w, credits_h, _Mm))
 
     layout.refresh()
     return True

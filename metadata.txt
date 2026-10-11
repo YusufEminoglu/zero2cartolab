@@ -1,6 +1,6 @@
 [general]
 name=02CartoLab
-version=1.4.0
+version=1.5.0
 hasProcessingProvider=yes
 
 category=Vector
@@ -22,6 +22,7 @@ qgisMinimumVersion=3.28
 qgisMaximumVersion=4.99
 
 changelog=
+    02CartoLab 1.5.0 - Audit release. QGIS 3.28 works again (map sheets, templates, 2.5D shading, bivariate legend export). Fixed: ridge maps read the raster transposed; Fisher-Jenks could class the maximum as lowest; bivariate custom corner colours were swapped; NULL values were dropped or counted as zero; re-running on its own output kept old values; long legends overflowed the sidebar; Style Legend renamed project layers; scale bars and grids attached to the locator inset; Copy to Clipboard always failed; multi-page exports lost pages; Quick Style ran a different break method than chosen; reloading duplicated the dashboard and Designer menus. Colour-blindness simulation is now Machado (2009). Tested on QGIS 3.28, 3.34, 3.44 and 4.2.
     02CartoLab 1.4.0 - Added an Origin-Destination Flow Map (curved, arrowed, direction-separated desire lines from any OD table), a Dorling Circle Cartogram, and monochrome print-safe hatch patterns in Quick Style. Fixed styled Processing outputs losing their symbology when saved to a GeoPackage or Shapefile, and the Bivariate Choropleth output never being styled.
     02CartoLab 1.1.0 - Expanded Print Layout Studio to 10 publication templates and 7 reusable grid compositions; added Grid and QPT Studio, dependency-aware template inspection, dependency-free UTM migration, print preflight, atomic exports, stable layout IDs, atlas and scale corrections, and QGIS 3/4 visual regression coverage.
     02CartoLab 1.0.1 - Fixed Isometric Layer Stacker selection when projects contain duplicate layer names by resolving stable QGIS layer IDs in user-selected order. Replaced the main plugin icon with a new text-free, transparent, full-bleed cartographic studio mark.
