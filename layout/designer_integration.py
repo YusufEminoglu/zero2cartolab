@@ -47,6 +47,7 @@ except ImportError:
 
 
 _INTEGRATED_DESIGNERS = {}
+_DESIGNER_MENUS = {}  # designer id -> (menubar, "&02CartoLab" QMenu) for teardown
 _SIGNAL_HANDLERS = {}
 
 
@@ -124,6 +125,12 @@ def teardown_designer_integration(iface, remove_docks: bool = True) -> None:
             dock.close()
             dock.deleteLater()
         _INTEGRATED_DESIGNERS.pop(designer_id, None)
+    for designer_id, (menubar, menu) in list(_DESIGNER_MENUS.items()):
+        with suppress(Exception):
+            menubar.removeAction(menu.menuAction())
+        with suppress(Exception):
+            menu.deleteLater()
+        _DESIGNER_MENUS.pop(designer_id, None)
 
 
 def attach_cartolab_to_designer(iface, designer) -> bool:
@@ -172,8 +179,10 @@ def attach_cartolab_to_designer(iface, designer) -> bool:
         menubar = main_win.menuBar()
         if menubar:
             menu = QMenu("&02CartoLab", menubar)
+            menu.setObjectName("CartoLabDesignerMenu")
             menu.addAction(act_toggle)
             menubar.addMenu(menu)
+            _DESIGNER_MENUS[designer_id] = (menubar, menu)
 
         # Add toggle action directly to the Print Layout Designer's primary toolbar
         toolbars = main_win.findChildren(QToolBar)

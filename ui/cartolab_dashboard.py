@@ -339,6 +339,15 @@ class CartoLabDashboard(_QDialogBase):
                 proj.layersAdded.connect(self._on_layers_changed)
                 proj.layersRemoved.connect(self._on_layers_changed)
 
+    def disconnect_project_signals(self) -> None:
+        """Detach from QgsProject signals (called on plugin unload / dialog replacement)."""
+        proj = QgsProject.instance() if QgsProject is not None else None
+        if not proj:
+            return
+        for sig in (proj.layersAdded, proj.layersRemoved):
+            with suppress(TypeError, RuntimeError):
+                sig.disconnect(self._on_layers_changed)
+
     def _on_layers_changed(self, *args) -> None:
         self._refresh_all_layer_combos()
         self._refresh()
@@ -1253,8 +1262,11 @@ class CartoLabDashboard(_QDialogBase):
 
         # Sub-tab 3: System Overview & Readiness
         self.overview = QTextBrowser()
-        self.readiness = self.overview  # alias
-        self.drawer_body.addTab(self.overview, "Readiness & Coverage")
+        self.drawer_body.addTab(self.overview, "Project Overview")
+
+        # Sub-tab 4: Readiness (own widget so it no longer overwrites the overview)
+        self.readiness = QTextBrowser()
+        self.drawer_body.addTab(self.readiness, "Readiness & Coverage")
 
         drawer_layout.addWidget(self.drawer_body)
         root_layout.addWidget(drawer_frame)
@@ -1365,7 +1377,8 @@ class CartoLabDashboard(_QDialogBase):
             ok_g = (mg == grp) if grp else True
             ok_f = (card.algo_id in self.favorites) if fav_only else True
             card.setVisible(ok_q and ok_g and ok_f)
-        visible = sum(1 for c in self.card_widgets if c.isVisible())
+        # isHidden() reflects the filter even before the dialog is shown.
+        visible = sum(1 for c in self.card_widgets if not c.isHidden())
         self.card_count.setText(f"Visible: {visible}/{len(self.card_widgets)}")
 
     def _toggle_favorite(self, algo_id: str, checked: bool) -> None:
@@ -1852,8 +1865,9 @@ class CartoLabDashboard(_QDialogBase):
     # ── Quick Style panel ─────────────────────────────────────────────
 
     def _vector_layers(self):
+        # Spatial vector layers only: geometry-less tables cannot be styled.
         return [lyr for lyr in QgsProject.instance().mapLayers().values()
-                if lyr.type() == QgsMapLayer.LayerType.VectorLayer]
+                if lyr.type() == QgsMapLayer.LayerType.VectorLayer and lyr.isSpatial()]
 
     def _build_quick_style_contents(self, outer: QVBoxLayout) -> None:
         gb = self._make_group("Quick Style — one-click thematic styling")
@@ -1892,16 +1906,11 @@ class CartoLabDashboard(_QDialogBase):
 
         g.addWidget(QLabel("Break method:"), 5, 0)
         self.qs_method_combo = QComboBox()
-        self.qs_method_combo.addItems([
-            "Quantile (equal count)",
-            "Equal interval",
-            "Geometric interval",
-            "Natural Breaks (Fisher-Jenks)",
-            "Head/Tail Breaks (power-law)",
-            "Standard Deviation",
-            "Maximum Breaks (largest gaps)",
-            "Pretty Breaks (nice round numbers)",
-        ])
+        # Built from the algorithm's own METHODS list; item data is the enum index
+        # the algorithm expects, so every choice runs the method it names.
+        from ..processing.alg_quick_style import QuickStyleAlgorithm
+        for m_idx, (m_label, _m_key) in enumerate(QuickStyleAlgorithm.METHODS):
+            self.qs_method_combo.addItem(m_label, m_idx)
         g.addWidget(self.qs_method_combo, 5, 1)
 
         g.addWidget(QLabel("Palette type:"), 6, 0)
@@ -1984,7 +1993,7 @@ class CartoLabDashboard(_QDialogBase):
         from ..core import palettes as _pal
         if not hasattr(self, "qs_palette_combo"):
             return
-        current = self.qs_palette_combo.currentText()
+        current = self.qs_palette_combo.currentData()
         cb_only = self.qs_cbsafe_check.isChecked()
         kind_filter = (self.qs_kind_combo.currentText() or "").lower()
 
@@ -2085,17 +2094,49 @@ class CartoLabDashboard(_QDialogBase):
             self._on_apply_quick_style()
 
 
+    FLOOR_FIELD_NAMES = (
+        "building:levels", "building_levels", "levels", "num_levels", "floors",
+        "num_floors", "floor_count", "floorcount", "storeys", "stories",
+        "num_storeys", "kat_sayisi", "katsayisi",
+    )
+
+    def _detect_floor_count_field(self, layer):
+        """Return the name of a floor/levels field on *layer* (case-insensitive), or None."""
+        if layer is None:
+            return None
+        names = [f.name() for f in layer.fields()]
+        lower = {n.lower(): n for n in names}
+        for cand in self.FLOOR_FIELD_NAMES:
+            if cand in lower:
+                return lower[cand]
+        for n in names:
+            if looks_like_floor_count_field(n):
+                return n
+        return None
+
     def _on_25d_auto_estimate_height(self) -> None:
-        """Automatically detect floor count field and set floor mode with 3.2m default floor height."""
-        field_name = self.height25d_combo.currentData() or ""
-        idx = self.mode25d_combo.findData(HEIGHT_MODE_FLOOR_COUNT)
-        if idx >= 0:
-            self.mode25d_combo.setCurrentIndex(idx)
+        """Detect a floor/levels field and switch to floor-count mode (3.2 m per floor)."""
+        field_name = self._detect_floor_count_field(self._selected_25d_layer())
+        if not field_name:
+            if hasattr(self, "iface") and self.iface:
+                self.iface.messageBar().pushWarning(
+                    "CartoLab",
+                    "No floor-count field found (looked for building:levels, levels, floors, "
+                    "storeys, num_floors, ...). Height mode left unchanged.")
+            return
+        idx = self.height25d_combo.findData(field_name)
+        if idx < 0:
+            self.height25d_combo.addItem(field_name, field_name)
+            idx = self.height25d_combo.findData(field_name)
+        self.height25d_combo.setCurrentIndex(idx)
+        mode_idx = self.mode25d_combo.findData(HEIGHT_MODE_FLOOR_COUNT)
+        if mode_idx >= 0:
+            self.mode25d_combo.setCurrentIndex(mode_idx)
         self.floor_height25d_spin.setValue(3.2)
         if hasattr(self, "iface") and self.iface:
             self.iface.messageBar().pushInfo(
                 "CartoLab",
-                f"Floor mode activated: estimating 3.2 map units per floor for field '{field_name}'."
+                f"Floor-count field '{field_name}' detected: height = floors x 3.2 map units."
             )
         self._update_25d_status_preview()
 
@@ -2148,7 +2189,7 @@ class CartoLabDashboard(_QDialogBase):
             "FIELD": field,
             "MODE": self.qs_mode_combo.currentIndex(),
             "CLASSES": self.qs_classes_spin.value(),
-            "METHOD": self.qs_method_combo.currentIndex(),
+            "METHOD": int(self.qs_method_combo.currentData() or 0),
             "PALETTE": pidx,
             "REVERSE": self.qs_reverse_check.isChecked(),
             "OUTLINE": self.qs_outline_check.isChecked(),
@@ -2319,16 +2360,90 @@ class CartoLabDashboard(_QDialogBase):
             summary = str(exc)
         self.style25d_status.setPlainText(summary)
 
+    FALLBACK_SUN_LATITUDE = 38.4  # last resort only (no layer, no canvas extent)
+
+    def _sun_reference_latitude(self):
+        """Latitude (WGS84) of the 2.5D layer / active layer / canvas extent centre.
+
+        Returns (latitude, source_label); falls back to FALLBACK_SUN_LATITUDE.
+        """
+        from qgis.core import QgsCoordinateReferenceSystem, QgsCoordinateTransform
+        wgs84 = QgsCoordinateReferenceSystem("EPSG:4326")
+        candidates = []
+        layer = self._selected_25d_layer()
+        if layer is not None:
+            candidates.append((layer.extent(), layer.crs(), f"layer '{layer.name()}'"))
+        with suppress(Exception):
+            active = self.iface.activeLayer() if self.iface else None
+            if active is not None and active is not layer and active.isSpatial():
+                candidates.append((active.extent(), active.crs(), f"layer '{active.name()}'"))
+        with suppress(Exception):
+            canvas = self.iface.mapCanvas()
+            candidates.append((canvas.extent(), canvas.mapSettings().destinationCrs(), "map canvas"))
+        def _centre_lat(extent, crs):
+            if extent is None or extent.isEmpty() or not crs.isValid():
+                return None
+            try:
+                centre = extent.center()
+                if crs != wgs84:
+                    centre = QgsCoordinateTransform(crs, wgs84, QgsProject.instance()).transform(centre)
+                lat = float(centre.y())
+            except Exception:  # QgsCsException: not transformable, try the next candidate
+                return None
+            return lat if -90.0 <= lat <= 90.0 else None
+
+        for extent, crs, label in candidates:
+            lat = _centre_lat(extent, crs)
+            if lat is not None:
+                return lat, label
+        return self.FALLBACK_SUN_LATITUDE, "default latitude"
+
+    def _reference_building_height(self) -> float:
+        """Typical extruded height in map units using the current height settings."""
+        floor_mode = self.mode25d_combo.currentData() == HEIGHT_MODE_FLOOR_COUNT
+        per_unit = self.floor_height25d_spin.value() if floor_mode else 1.0
+        values = []
+        layer = self._selected_25d_layer()
+        field = self.height25d_combo.currentData()
+        if layer is not None and field and layer.fields().indexOf(field) >= 0:
+            with suppress(Exception):
+                for i, feat in enumerate(layer.getFeatures()):
+                    if i >= 5000:
+                        break
+                    with suppress(TypeError, ValueError):
+                        v = float(feat[field])
+                        if v > 0:
+                            values.append(v)
+        if values:
+            values.sort()
+            base = values[len(values) // 2]  # median
+        else:
+            base = 1.0 if floor_mode else self.floor_height25d_spin.value()
+        height = base * per_unit * self.scale25d_spin.value()
+        max_h = self.max25d_spin.value()
+        if max_h > 0:
+            height = min(height, max_h)
+        return max(height, 0.0)
+
     def _on_apply_sun_lighting(self) -> None:
         try:
             from ..core.sun_lighting import solar_to_25d_lighting
             preset = self.solar_time_combo.currentData() or "afternoon_studio"
-            res = solar_to_25d_lighting(latitude_deg=38.4, season="equinox", time_preset=preset)
-            self.angle25d_spin.setValue(res["solar_altitude_deg"])
-            self.shadow_spread25d_spin.setValue(res["shadow_length_mult"])
+            latitude, lat_source = self._sun_reference_latitude()
+            res = solar_to_25d_lighting(latitude_deg=latitude, season="equinox", time_preset=preset)
+            # The 2.5D renderer offsets roofs/shadows by (cos a, sin a): a maths angle,
+            # counter-clockwise from east. shadow_angle_deg is a compass bearing
+            # (clockwise from north) pointing away from the sun.
+            projection_angle = (90.0 - float(res["shadow_angle_deg"])) % 360.0
+            self.angle25d_spin.setValue(round(projection_angle, 1))
+            # shadow_length_mult is cot(altitude): shadow length per unit of building height.
+            spread = float(res["shadow_length_mult"]) * self._reference_building_height()
+            self.shadow_spread25d_spin.setValue(round(spread, 2))
             self._update_25d_status_preview()
             if hasattr(self, "iface") and self.iface:
-                self.iface.messageBar().pushSuccess("CartoLab", f"Applied {res['description']}.")
+                self.iface.messageBar().pushSuccess(
+                    "CartoLab",
+                    f"Applied {res['description']} at latitude {latitude:.2f} ({lat_source}).")
         except Exception as exc:
             QMessageBox.critical(self, "Solar Calculation Error", str(exc))
 
@@ -3494,12 +3609,26 @@ class CartoLabDashboard(_QDialogBase):
             self._build_cards()
             self._refresh()
 
+    def _focus_search(self) -> None:
+        """Switch to the workspace page holding the algorithm search, then focus it."""
+        page = self.search
+        while page is not None and page.parentWidget() is not None \
+                and self.stack.indexOf(page) < 0:
+            page = page.parentWidget()
+        idx = self.stack.indexOf(page) if page is not None else -1
+        if idx >= 0:
+            if hasattr(self, "nav_sidebar") and idx < self.nav_sidebar.count():
+                self.nav_sidebar.setCurrentRow(idx)
+            self.stack.setCurrentIndex(idx)
+        self.search.setFocus()
+        self.search.selectAll()
+
     def keyPressEvent(self, event) -> None:
         if event.modifiers() == Qt.KeyboardModifier.ControlModifier:
             if event.key() == Qt.Key.Key_R:
                 self._refresh()
                 return
             if event.key() == Qt.Key.Key_F:
-                self.search.setFocus()
+                self._focus_search()
                 return
         super().keyPressEvent(event)

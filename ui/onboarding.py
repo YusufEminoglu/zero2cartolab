@@ -127,9 +127,11 @@ def create_sample_map(iface, project: QgsProject = None):
 class WelcomeDialog(QDialog):
     """Shown once on first run; also reachable from the dashboard."""
 
-    def __init__(self, iface, parent=None):
+    def __init__(self, iface, parent=None, open_dashboard=None):
         super().__init__(parent)
         self.iface = iface
+        # Plugin-owned opener, so the dashboard is tracked (and cleaned up on unload).
+        self._open_dashboard = open_dashboard
         self.setWindowTitle("Welcome to 02CartoLab")
         self.setMinimumWidth(460)
         self._build_ui()
@@ -194,6 +196,9 @@ class WelcomeDialog(QDialog):
 
     def _on_dashboard(self) -> None:
         self.close()
+        if self._open_dashboard is not None:
+            self._open_dashboard()
+            return
         with suppress(Exception):  # pragma: no cover - defensive
             from .cartolab_dashboard import CartoLabDashboard
             dlg = CartoLabDashboard(self.iface, self.iface.mainWindow())

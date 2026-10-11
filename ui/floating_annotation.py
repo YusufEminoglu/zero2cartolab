@@ -98,43 +98,73 @@ class FloatingAnnotationTool(QgsMapTool):
         self.cursor = Qt.CursorShape.CrossCursor
 
     def activate(self):
+        # super() keeps the associated QAction (setAction) checked state in sync
+        super().activate()
         self.canvas.setCursor(Qt.CursorShape.CrossCursor)
 
     def deactivate(self):
         self.canvas.setCursor(Qt.CursorShape.ArrowCursor)
+        super().deactivate()
 
     def canvasReleaseEvent(self, event):
         point = self.toMapCoordinates(event.pos())
         self._inspect_at(point)
 
+    def _visible_vector_layers(self):
+        """Spatial vector layers the canvas renders, topmost first, hidden ones skipped."""
+        root = QgsProject.instance().layerTreeRoot()
+        scale = self.canvas.scale()
+        out = []
+        for lyr in self.canvas.layers():  # render order: first = topmost
+            if lyr is None or lyr.type() != QgsMapLayer.LayerType.VectorLayer or not lyr.isSpatial():
+                continue
+            node = root.findLayer(lyr.id()) if root is not None else None
+            if node is not None and not node.isVisible():
+                continue
+            if lyr.hasScaleBasedVisibility() and not lyr.isInScaleRange(scale):
+                continue
+            out.append(lyr)
+        return out
+
+    def _to_layer_crs(self, layer, rect, point):
+        """Canvas-CRS rect/point in *layer* CRS; (None, None) if not transformable."""
+        try:
+            return self.toLayerCoordinates(layer, rect), self.toLayerCoordinates(layer, point)
+        except Exception:  # QgsCsException: click outside the layer CRS bounds
+            return None, None
+
     def _inspect_at(self, point: QgsPointXY) -> None:
-        # find the topmost visible vector layer
-        layers = [
-            lyr for lyr in QgsProject.instance().mapLayers().values()
-            if lyr.type() == QgsMapLayer.LayerType.VectorLayer and lyr.isSpatial()
-        ]
+        layers = self._visible_vector_layers()
         if not layers:
             self.iface.messageBar().pushWarning(
-                "CartoLab", "No vector layers loaded."
+                "CartoLab", "No visible vector layers on the map."
             )
             return
 
-        # try each layer from top to bottom
-        for layer in reversed(layers):
-            # small search radius in map units
-            radius = self.canvas.mapUnitsPerPixel() * 8
-            search_rect = QgsRectangle(
-                point.x() - radius, point.y() - radius,
-                point.x() + radius, point.y() + radius
-            )
-            req = QgsFeatureRequest().setFilterRect(search_rect)
+        # small search radius in canvas (map) units, transformed per layer CRS
+        radius = self.canvas.mapUnitsPerPixel() * 8
+        search_rect = QgsRectangle(
+            point.x() - radius, point.y() - radius,
+            point.x() + radius, point.y() + radius
+        )
+        for layer in layers:
+            layer_rect, layer_pt = self._to_layer_crs(layer, search_rect, point)
+            if layer_rect is None or layer_rect.isEmpty():
+                continue
+            rect_geom = QgsGeometry.fromRect(layer_rect)
+            pt_geom = QgsGeometry.fromPointXY(layer_pt)
+            best = None
+            req = QgsFeatureRequest().setFilterRect(layer_rect)
             for feat in layer.getFeatures(req):
                 geom = feat.geometry()
-                if geom.isEmpty() or geom.isNull():
+                if geom.isNull() or geom.isEmpty() or not geom.intersects(rect_geom):
                     continue
-                if geom.distance(QgsGeometry.fromPointXY(point)) < radius:
-                    self._show_feature_card(layer, feat)
-                    return
+                dist = geom.distance(pt_geom)
+                if best is None or dist < best[0]:
+                    best = (dist, feat)
+            if best is not None:
+                self._show_feature_card(layer, best[1])
+                return
 
         self.iface.messageBar().pushInfo(
             "CartoLab", "No feature found at click location."

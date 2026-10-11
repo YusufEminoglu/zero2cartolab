@@ -59,7 +59,9 @@ class O2CartoLabPlugin:
 
         self.action_annotate = QAction("Inspect Features (Radar Chart)", self.iface.mainWindow())
         self.action_annotate.setCheckable(True)
-        self.action_annotate.toggled.connect(self._toggle_annotation_tool)
+        # triggered (user clicks only), not toggled: the map tool itself also flips the
+        # checked state via setAction() when another tool replaces it.
+        self.action_annotate.triggered.connect(self._toggle_annotation_tool)
         self.iface.addPluginToMenu("&02CartoLab", self.action_annotate)
 
         self.action_welcome = QAction("Welcome & Sample Datasets", self.iface.mainWindow())
@@ -82,17 +84,16 @@ class O2CartoLabPlugin:
 
     def open_welcome(self) -> None:
         from .ui.onboarding import WelcomeDialog
-        self.welcome = WelcomeDialog(self.iface, self.iface.mainWindow())
+        self._dispose_dialog(self.welcome)
+        self.welcome = WelcomeDialog(self.iface, self.iface.mainWindow(),
+                                     open_dashboard=self.open_dashboard)
         self.welcome.show()
         self.welcome.raise_()
         self.welcome.activateWindow()
 
     def open_dashboard(self) -> None:
         if self.dialog is None or not self.dialog.isVisible():
-            if self.dialog is not None:
-                with suppress(Exception):
-                    self.dialog.close()
-                    self.dialog.deleteLater()
+            self._dispose_dialog(self.dialog)
             from .ui.cartolab_dashboard import CartoLabDashboard
             self.dialog = CartoLabDashboard(self.iface, self.iface.mainWindow())
         self.dialog.show()
@@ -108,22 +109,61 @@ class O2CartoLabPlugin:
         if checked:
             from .ui.floating_annotation import FloatingAnnotationTool
             canvas = self.iface.mapCanvas()
-            self.annotation_tool = FloatingAnnotationTool(self.iface, canvas)
-            canvas.setMapTool(self.annotation_tool)
-        else:
-            self.iface.mapCanvas().unsetMapTool(
-                self.annotation_tool if self.annotation_tool else None
-            )
+            if self.annotation_tool is None:
+                self.annotation_tool = FloatingAnnotationTool(self.iface, canvas)
+                # Ties the action's checked state to the tool: QGIS unchecks it
+                # when another map tool takes over the canvas.
+                self.annotation_tool.setAction(self.action_annotate)
+            if canvas.mapTool() is not self.annotation_tool:
+                canvas.setMapTool(self.annotation_tool)
+        elif self.annotation_tool is not None:
+            canvas = self.iface.mapCanvas()
+            if canvas.mapTool() is self.annotation_tool:
+                canvas.unsetMapTool(self.annotation_tool)
+
+    @staticmethod
+    def _dispose_dialog(dlg) -> None:
+        """Disconnect, close and schedule deletion of a plugin dialog."""
+        if dlg is None:
+            return
+        with suppress(Exception):
+            if hasattr(dlg, "disconnect_project_signals"):
+                dlg.disconnect_project_signals()
+        with suppress(Exception):
+            dlg.close()
+        with suppress(Exception):
+            dlg.deleteLater()
 
     def unload(self) -> None:
         with suppress(Exception):
             from .layout.designer_integration import teardown_designer_integration
             teardown_designer_integration(self.iface)
 
+        # Close and delete plugin dialogs (incl. any stray dashboards) and detach
+        # their QgsProject signal connections so a reload does not duplicate them.
+        dialogs = [self.dialog, self.welcome]
+        with suppress(Exception):
+            from .ui.cartolab_dashboard import CartoLabDashboard
+            from .ui.onboarding import WelcomeDialog
+            dialogs += self.iface.mainWindow().findChildren(CartoLabDashboard)
+            dialogs += self.iface.mainWindow().findChildren(WelcomeDialog)
+        seen = set()
+        for dlg in dialogs:
+            if dlg is not None and id(dlg) not in seen:
+                seen.add(id(dlg))
+                self._dispose_dialog(dlg)
+        self.dialog = None
+        self.welcome = None
+
         # unset map tool if active
         if self.annotation_tool:
             with suppress(Exception):
+                self.annotation_tool.setAction(None)
+            with suppress(Exception):
                 self.iface.mapCanvas().unsetMapTool(self.annotation_tool)
+            with suppress(Exception):
+                self.annotation_tool.deleteLater()
+            self.annotation_tool = None
         if self.iface:
             if self.action_dashboard:
                 self.iface.removePluginMenu("&02CartoLab", self.action_dashboard)
