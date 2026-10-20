@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
 <meta charset="utf-8">
-<title>02CartoLab Practical Guide — 02CartoLab Pratik Kılavuz</title>
+<title>02CartoLab — Pratik Kılavuz</title>
 <style>
 @page{margin:2cm;size:A4}
 *{box-sizing:border-box}
@@ -56,7 +56,7 @@ figcaption{font-size:8pt;color:#666;margin-top:.25em}
 </style>
 </head>
 <body>
-<h1>02CartoLab — 02CartoLab Pratik Kılavuz</h1>
+<h1>Pratik Kılavuz</h1>
 <p><strong>Version:</strong> 1.5.1 |
 <strong>Companion:</strong> <a href="../CARTOLAB_REFERENCE_MANUAL.html">
 Referans Kılavuzu</a> |
@@ -70,7 +70,7 @@ Referans Kılavuzu</a> |
 <p>Her modül aynı biçimdedir: aracın yanıtladığı <strong>planlama sorusu</strong>, ne yaptığı, tıklamalar ya da Processing parametreleri, gerçek çıktı, nasıl yorumlanacağı ve ne zaman bozulur.</p>
 <div class="data">
   <strong>Veri kaynağı</strong>
-  <ul><li>Thematic source: mahalle_population_2024.geojson (İzmir mahalle polygons, population 2024)</li><li>2.5D source: kadifekale_osm_binalar.gpkg (OSM buildings)</li><li>Raster source: kadifekale_dem_copernicus30m.tif (Copernicus DEM 30 m)</li><li>Flow source: tire_mahalle_upi_sosyoekonomik.gpkg (assembly areas + critical assets)</li><li>DEM reprojected from EPSG:4326 to EPSG:32635 (the ridge engine needs map units)</li><li>OD table: 900 real origin→critical-asset pairs (distance-decay gravity on real capacities)</li></ul>
+  <ul><li>Tematik kaynak: mahalle_population_2024.geojson (İzmir mahalle poligonları, 2024 nüfus verisi)</li><li>2.5D kaynak: kadifekale_osm_binalar.gpkg (OSM binaları)</li><li>Raster kaynak: kadifekale_dem_copernicus30m.tif (Copernicus DEM 30 m)</li><li>Akış kaynağı: tire_mahalle_upi_sosyoekonomik.gpkg (toplanma alanları + kritik altyapı)</li><li>OD tablosu: 900 gerçek kalkış→kritik varlık çifti (gerçek kapasiteler üzerinde mesafe-azalan çekim modeli)</li><li>DEM, ridge motorunun map units üzerinde çalışması için EPSG:4326&#x27;dan EPSG:32635&#x27;e reprojeksiyonlandı</li></ul>
 </div>
 <div class="mod" id="gui-dashboard">
 <span class="grouplabel">Getting started</span>
@@ -542,7 +542,7 @@ LINE_WIDTH       = 0.35</pre>
 <thead><tr><th>Modül</th><th>Çalışma alanı</th><th>Processing ID</th></tr></thead>
 <tbody><tr><td><a href="#gui-dashboard">Dashboard — tek stüdyo, üç çalışma alanı</a></td><td>Getting started</td><td class="mono">—</td></tr><tr><td><a href="#quick-style">Quick Style — tek tıkla tematik stil</a></td><td>Symbology Studio</td><td class="mono">zero2cartolab:quick_style</td></tr><tr><td><a href="#quick-style-monochrome">Monochrome baskı — fotokopiye dayanıklı semboloji</a></td><td>Symbology Studio</td><td class="mono">zero2cartolab:quick_style</td></tr><tr><td><a href="#building-25d">2.5D bina stilizasyonu — dayanıklı ekstrüzyon</a></td><td>Symbology Studio</td><td class="mono">zero2cartolab:building_25d_style</td></tr><tr><td><a href="#palette-accessibility">Palette &amp; Accessibility — CVD simülasyonu ve WCAG puanı</a></td><td>Symbology Studio</td><td class="mono">—</td></tr><tr><td><a href="#normalize-field">Normalizasyon ve oranlar — sayıyı değil oranı haritala</a></td><td>Data Preparation</td><td class="mono">zero2cartolab:normalize_field</td></tr><tr><td><a href="#classification">Uyarlanabilir sınıflama — GIC, Jenks, Head/Tail</a></td><td>Classification Engine</td><td class="mono">zero2cartolab:geometric_interval_classification</td></tr><tr><td><a href="#bivariate">İki değişkenli koroplet — iki değişken, tek dürüst harita</a></td><td>Thematic Mapping</td><td class="mono">zero2cartolab:bivariate_choropleth</td></tr><tr><td><a href="#bivariate-matrix">İki değişkenli lejant matrisi — resmi değil anahtarı dışa aktar</a></td><td>Thematic Mapping</td><td class="mono">zero2cartolab:bivariate_matrix_export</td></tr><tr><td><a href="#value-by-alpha">Value-by-Alpha — belirsizi gizleme, soluklaştır</a></td><td>Thematic Mapping</td><td class="mono">zero2cartolab:value_by_alpha</td></tr><tr><td><a href="#ridge-map">Ridge map — her rasteri kabartıya dönüştür</a></td><td>Thematic Mapping</td><td class="mono">zero2cartolab:ridge_map</td></tr><tr><td><a href="#dot-density">Nokta yoğunluğu haritası — bir nokta, N kişi</a></td><td>Thematic Mapping</td><td class="mono">zero2cartolab:dot_density</td></tr><tr><td><a href="#proportional-symbols">Oransal semboller — Flannery düzeltmeli daireler</a></td><td>Thematic Mapping</td><td class="mono">zero2cartolab:proportional_symbols</td></tr><tr><td><a href="#flow-map">Kalkış–Varış akış haritası — eğri istek çizgileri</a></td><td>Thematic Mapping</td><td class="mono">zero2cartolab:flow_map</td></tr><tr><td><a href="#cartogram">Sürekli alan kartogramı — değere göre yeniden biçimlendir</a></td><td>Cartogram Engine</td><td class="mono">zero2cartolab:compute_cartogram</td></tr><tr><td><a href="#dorling">Dorling kartogramı — yerini koruyan daireler</a></td><td>Cartogram Engine</td><td class="mono">zero2cartolab:dorling_cartogram</td></tr><tr><td><a href="#hexbin">Hexbin toplulaştırma — aşırı çakışma olmadan yoğunluk</a></td><td>Aggregation</td><td class="mono">zero2cartolab:hexbin_aggregate</td></tr><tr><td><a href="#label-points">Görsel merkez etiket noktaları — şeklin içinde kalan etiketler</a></td><td>Labeling</td><td class="mono">zero2cartolab:label_points</td></tr><tr><td><a href="#graticule">Graticule — etiketli referans ızgarası</a></td><td>Map Reference</td><td class="mono">zero2cartolab:graticule_grid</td></tr><tr><td><a href="#layout-templates">Şablon galerisi — on yayın arketipi</a></td><td>Layout Studio</td><td class="mono">—</td></tr><tr><td><a href="#map-sheet">Auto Map Sheet — tek tıkla bitmiş düzen</a></td><td>Layout Studio</td><td class="mono">—</td></tr></tbody></table>
 <div class="footer">
-02CartoLab Practical Guide · 02CartoLab Pratik Kılavuz · version 1.5.1<br>
+02CartoLab Practical Guide · Pratik Kılavuz · version 1.5.1<br>
 Every screenshot produced by the plugin in a real QGIS runtime on real urban data.<br>
 © 2026 Yusuf Eminoğlu · GEOPHILO · GPL-3.0 ·
 <a href="https://plugins.qgis.org/plugins/zero2cartolab/">Plugin Hub</a> ·

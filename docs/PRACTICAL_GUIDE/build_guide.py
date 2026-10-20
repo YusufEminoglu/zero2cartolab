@@ -654,11 +654,11 @@ def build_static(g: Guide, lang: str) -> str:
 <html lang="{lang}">
 <head>
 <meta charset="utf-8">
-<title>02CartoLab Practical Guide — {esc(title)}</title>
+<title>02CartoLab — {esc(title)}</title>
 <style>{STATIC_CSS}</style>
 </head>
 <body>
-<h1>02CartoLab — {esc(title)}</h1>
+<h1>{esc(title)}</h1>
 <p><strong>Version:</strong> {esc(meta.get('version',''))} |
 <strong>Companion:</strong> <a href="../CARTOLAB_REFERENCE_MANUAL.html">
 {"Referans Kılavuzu" if is_tr else "Reference Manual"}</a> |
@@ -676,6 +676,15 @@ def build_static(g: Guide, lang: str) -> str:
 
     # How to read + data provenance
     notes = g.data_notes()
+    if is_tr:
+        notes = [
+            "Tematik kaynak: mahalle_population_2024.geojson (İzmir mahalle poligonları, 2024 nüfus verisi)",
+            "2.5D kaynak: kadifekale_osm_binalar.gpkg (OSM binaları)",
+            "Raster kaynak: kadifekale_dem_copernicus30m.tif (Copernicus DEM 30 m)",
+            "Akış kaynağı: tire_mahalle_upi_sosyoekonomik.gpkg (toplanma alanları + kritik altyapı)",
+            "OD tablosu: 900 gerçek kalkış→kritik varlık çifti (gerçek kapasiteler üzerinde mesafe-azalan çekim modeli)",
+            "DEM, ridge motorunun map units üzerinde çalışması için EPSG:4326'dan EPSG:32635'e reprojeksiyonlandı",
+        ]
     notes_html = "".join(f"<li>{esc(n)}</li>" for n in notes)
     if is_tr:
         read_text = ("Her modül aynı biçimdedir: aracın yanıtladığı <strong>planlama sorusu</strong>, "
