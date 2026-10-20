@@ -1,0 +1,312 @@
+{
+  "generated": "2026-10-21T01:02:21",
+  "qgis_version": "3.44.12-Solothurn",
+  "data_notes": [
+    "Thematic source: mahalle_population_2024.geojson (İzmir mahalle polygons, population 2024)",
+    "2.5D source: kadifekale_osm_binalar.gpkg (OSM buildings)",
+    "Raster source: kadifekale_dem_copernicus30m.tif (Copernicus DEM 30 m)",
+    "Flow source: tire_mahalle_upi_sosyoekonomik.gpkg (assembly areas + critical assets)",
+    "DEM reprojected from EPSG:4326 to EPSG:32635 (the ridge engine needs map units)",
+    "OD table: 900 real origin→critical-asset pairs (distance-decay gravity on real capacities)"
+  ],
+  "modules": {
+    "quick_style": {
+      "id": "quick_style",
+      "group": "Symbology Studio",
+      "display": "Quick Style",
+      "algo_id": "zero2cartolab:quick_style",
+      "params": "INPUT            = İzmir mahalle (2024)\nFIELD            = pop_density\nMODE             = 1\nCLASSES          = 5\nMETHOD           = 2\nPALETTE          = 15\nREVERSE          = False\nOUTLINE          = True\nMONOCHROME       = False",
+      "notes": "Classes are equal-count by default, so every band holds the same\nnumber of neighbourhoods — good for comparison, poor for showing\nabsolute gaps. Switch to Geometric interval when the density\ndistribution is long-tailed (it always is, in a real city).\n\nThe renderer is applied to the INPUT layer in place: save the\nlayer afterwards (Layer ▸ Save As ▸ GeoPackage) to keep the style.",
+      "screenshot": "screenshots/quick_style/quick_style_4panel.png",
+      "status": "ok"
+    },
+    "quick_style_monochrome": {
+      "id": "quick_style_monochrome",
+      "group": "Symbology Studio",
+      "display": "Quick Style — Monochrome Print",
+      "algo_id": "zero2cartolab:quick_style",
+      "params": "INPUT            = İzmir mahalle (2024)\nFIELD            = pop_density\nMODE             = 1\nCLASSES          = 5\nMETHOD           = 2\nPALETTE          = 21\nREVERSE          = False\nOUTLINE          = True\nMONOCHROME       = True",
+      "notes": "Monochrome swaps the colour ramp for black-and-white hatch and dot\npatterns that darken with the value — photocopy-safe and\njournal-safe. The legend still carries the numbers, so nothing is\nlost in greyscale.\n\nUse this whenever the deliverable will be printed in black and\nwhite or photocopied.",
+      "screenshot": "screenshots/quick_style_monochrome/quick_style_monochrome_4panel.png",
+      "status": "ok"
+    },
+    "normalize_field": {
+      "id": "normalize_field",
+      "group": "Data Preparation",
+      "display": "Choropleth Normalization & Rates",
+      "algo_id": "zero2cartolab:normalize_field",
+      "params": "INPUT            = İzmir mahalle (2024)\nFIELD            = pop_total\nMETHOD           = 0\nDENOMINATOR      = pop_15_64\nSCALE            = 1000.0\nPALETTE          = 15\nCLASSES          = 5",
+      "notes": "Rate = pop_total ÷ pop_15_64 gives residents per 1 000 working-age\npeople. This is the dependency indicator: values above 1 mean a\nneighbourhood depends on people outside its own working-age group.\n\nAlways normalize before classifying. A raw population choropleth\nmostly redraws the urban footprint.",
+      "screenshot": "screenshots/normalize_field/normalize_field_4panel.png",
+      "status": "ok"
+    },
+    "classification": {
+      "id": "classification",
+      "group": "Classification Engine",
+      "display": "Adaptive Classification (GIC / Jenks / Head-Tail)",
+      "algo_id": "zero2cartolab:geometric_interval_classification",
+      "params": "INPUT            = İzmir mahalle (2024)\nFIELD            = pop_density\nCLASSES          = 5\nMETHOD           = 0\nPALETTE          = 15",
+      "notes": "Adaptive Geometric Interval (GIC) starts from a geometric progression\nof class widths and merges classes until the variance criterion is\nmet — it follows the shape of skewed urban data instead of\nforcing equal counts.\n\nCompare with Fisher-Jenks: GIC keeps a readable, ordered set of\nround-ish intervals; Jenks minimises within-class variance.",
+      "screenshot": "screenshots/classification/classification_4panel.png",
+      "status": "ok"
+    },
+    "bivariate": {
+      "id": "bivariate",
+      "group": "Thematic Mapping",
+      "display": "Bivariate Choropleth",
+      "algo_id": "zero2cartolab:bivariate_choropleth",
+      "params": "INPUT            = İzmir mahalle (2024)\nFIELD_X          = elderly_share\nFIELD_Y          = child_share\nCLASSES          = 3\nMETHOD           = 0\nPALETTE_PRESET   = 2\nCOLOR_LL         = #eff3ff\nCOLOR_LH         = #bdd7e7\nCOLOR_HL         = #fdbb84\nCOLOR_HH         = #e34a33",
+      "notes": "Each polygon carries a class label combining an X band and a Y band\n(bivar_class). The 3×3 palette therefore reads on two axes at once.\n\nX axis = share of residents aged 65+, Y axis = share aged 0–14.\nUpper-left = old and few children (care load), upper-right = old\nand young (care load plus school load) — the hardest quadrant.",
+      "screenshot": "screenshots/bivariate/bivariate_4panel.png",
+      "status": "ok"
+    },
+    "bivariate_matrix": {
+      "id": "bivariate_matrix",
+      "group": "Thematic Mapping",
+      "display": "Bivariate 2D Legend Matrix",
+      "algo_id": "zero2cartolab:bivariate_matrix_export",
+      "params": "CLASSES          = 3\nPALETTE_PRESET   = 2\nCOLOR_LL         = #eff3ff\nCOLOR_LH         = #bdd7e7\nCOLOR_HL         = #fdbb84\nCOLOR_HH         = #e34a33\nDIAMOND          = True\nCELL_SIZE        = 30.0\nORIGIN_X         = 0.0\nORIGIN_Y         = 0.0\nLABEL_X          = 65+ yaş payı\nLABEL_Y          = 0-14 yaş payı\nHTML             = <div style=\"padding:12px; font-family:sans-serif;\"><h3 style=\"margin-bottom:8px; color:#0f172a;\">Bivariate Legend Matrix (3x3)</h3><p style=\"margin-top:0; font-size:12px; color:#64748b;\"><b>Y:</b> 0-14 yaş payı &nbsp;|&nbsp; <b>X:</b> 65+ yaş payı</p><table style=\"border-collapse:collapse; margin:12px 0;\"><tr><td style=\"font-weight:bold; padding-right:6px; font-size:11px; color:#333;\">High</td><td style=\"background-color:#e27c38; width:60px; height:60px; text-align:center; color:#ffffff; font-family:sans-serif; font-size:10px; font-weight:bold; text-shadow:0 1px 2px rgba(0,0,0,0.8); border:1px solid #ffffff;\">1,3</td><td style=\"background-color:#8f513e; width:60px; height:60px; text-align:center; color:#ffffff; font-family:sans-serif; font-size:10px; font-weight:bold; text-shadow:0 1px 2px rgba(0,0,0,0.8); border:1px solid #ffffff;\">2,3</td><td style=\"background-color:#3d2645; width:60px; height:60px; text-align:center; color:#ffffff; font-family:sans-serif; font-size:10px; font-weight:bold; text-shadow:0 1px 2px rgba(0,0,0,0.8); border:1px solid #ffffff;\">3,3</td></tr><tr><td style=\"font-weight:bold; padding-right:6px; font-size:11px; color:#333;\">Medium</td><td style=\"background-color:#e9b798; width:60px; height:60px; text-align:center; color:#ffffff; font-family:sans-serif; font-size:10px; font-weight:bold; text-shadow:0 1px 2px rgba(0,0,0,0.8); border:1px solid #ffffff;\">1,2</td><td style=\"background-color:#8e7c81; width:60px; height:60px; text-align:center; color:#ffffff; font-family:sans-serif; font-size:10px; font-weight:bold; text-shadow:0 1px 2px rgba(0,0,0,0.8); border:1px solid #ffffff;\">2,2</td><td style=\"background-color:#34416a; width:60px; height:60px; text-align:center; color:#ffffff; font-family:sans-serif; font-size:10px; font-weight:bold; text-shadow:0 1px 2px rgba(0,0,0,0.8); border:1px solid #ffffff;\">3,2</td></tr><tr><td style=\"font-weight:bold; padding-right:6px; font-size:11px; color:#333;\">Low</td><td style=\"background-color:#f0f3f8; width:60px; height:60px; text-align:center; color:#ffffff; font-family:sans-serif; font-size:10px; font-weight:bold; text-shadow:0 1px 2px rgba(0,0,0,0.8); border:1px solid #ffffff;\">1,1</td><td style=\"background-color:#8da7c3; width:60px; height:60px; text-align:center; color:#ffffff; font-family:sans-serif; font-size:10px; font-weight:bold; text-shadow:0 1px 2px rgba(0,0,0,0.8); border:1px solid #ffffff;\">2,1</td><td style=\"background-color:#2b5c8f; width:60px; height:60px; text-align:center; color:#ffffff; font-family:sans-serif; font-size:10px; font-weight:bold; text-shadow:0 1px 2px rgba(0,0,0,0.8); border:1px solid #ffffff;\">3,1</td></tr></table></div>",
+      "notes": "The legend is exported as vector geometry (diamonds or squares) and\nas standalone HTML, so it can be dropped into a layout or a\nmanuscript without re-drawing the matrix by hand.\n\nKeep the axis labels identical to the map caption — the matrix is\nmeaningless without them.",
+      "screenshot": "screenshots/bivariate_matrix/bivariate_matrix.png",
+      "status": "ok"
+    },
+    "value_by_alpha": {
+      "id": "value_by_alpha",
+      "group": "Thematic Mapping",
+      "display": "Value-by-Alpha",
+      "algo_id": "zero2cartolab:value_by_alpha",
+      "params": "INPUT            = İzmir mahalle (2024)\nFIELD_COLOUR     = pop_density\nFIELD_ALPHA      = working_share\nALPHA_MIN        = 64\nALPHA_MAX        = 255\nPALETTE          = 5\nCLASSES          = 5",
+      "notes": "Hue carries the value (population density); opacity carries the\nreliability proxy (share of the working-age population).\n\nFaded polygons are not missing data — they are uncertain data.\nThat distinction is the whole point of Value-by-Alpha: a normal\nchoropleth would hide them behind a 'no data' colour.",
+      "screenshot": "screenshots/value_by_alpha/value_by_alpha_4panel.png",
+      "status": "ok"
+    },
+    "cartogram": {
+      "id": "cartogram",
+      "group": "Cartogram Engine",
+      "display": "Continuous-Area Cartogram",
+      "algo_id": "zero2cartolab:compute_cartogram",
+      "params": "INPUT            = İzmir ilçeleri\nFIELD            = pop_total\nMAX_ITERATIONS   = 60\nMAX_ERROR        = 5.0\nPALETTE          = 1\nITERATIONS       = 60\nRESIDUAL_ERROR   = 4.4972432621029514e+18",
+      "notes": "Every polygon is resized so that its AREA is proportional to the\nvalue, while the shared borders stay contiguous.\n\nCompare panel 1 with panel 3: the eastern mountain districts\nshrink, the central districts swell. The residual error (%) tells\nyou how close the engine got to the target areas.",
+      "screenshot": "screenshots/cartogram/cartogram_4panel.png",
+      "status": "ok"
+    },
+    "dorling": {
+      "id": "dorling",
+      "group": "Cartogram Engine",
+      "display": "Dorling Circle Cartogram",
+      "algo_id": "zero2cartolab:dorling_cartogram",
+      "params": "INPUT            = İzmir ilçeleri\nFIELD            = pop_total\nSIZE_FACTOR      = 1.0\nATTRACTION       = 0.6\nGAP              = 3.0\nITERATIONS       = 300\nPALETTE          = 0\nROUNDS           = 316\nRESIDUAL         = 0.00242618183044963",
+      "notes": "Circles replace polygons: area is proportional to the value, but\nthe circle stays near its original position.\n\nUse Dorling when the SHAPE of the unit carries meaning (coastline,\nriver, border) and you still need to show totals. Use a continuous\ncartogram when the shape itself is the message.",
+      "screenshot": "screenshots/dorling/dorling_4panel.png",
+      "status": "ok"
+    },
+    "dot_density": {
+      "id": "dot_density",
+      "group": "Thematic Mapping",
+      "display": "Dot-Density Map",
+      "algo_id": "zero2cartolab:dot_density",
+      "params": "INPUT            = İzmir mahalle (2024)\nFIELD            = pop_total\nVALUE_PER_DOT    = 500.0\nDOT_SIZE         = 2.0\nDOT_COLOR        = #7c3aed\nSEED             = 42",
+      "notes": "One dot represents VALUE_PER_DOT residents. The dots are seeded, so\nre-running with the same SEED gives the identical map — essential\nfor a report where the figure must be reproducible.\n\nDots are placed inside the polygon and never in holes, so the map\nshows where people actually are, not a scatter of centroids.",
+      "screenshot": "screenshots/dot_density/dot_density_4panel.png",
+      "status": "ok"
+    },
+    "proportional_symbols": {
+      "id": "proportional_symbols",
+      "group": "Thematic Mapping",
+      "display": "Proportional Symbols (Flannery)",
+      "algo_id": "zero2cartolab:proportional_symbols",
+      "params": "INPUT            = İzmir mahalle noktaları\nFIELD            = pop_total\nMAX_SIZE         = 14.0\nMIN_SIZE         = 2.0\nSHAPE            = 0\nFILL_COLOR       = #e38e4f\nOUTLINE_COLOR    = #7c2d12\nFLANNERY         = True",
+      "notes": "Flannery compensation corrects the perceptual under-estimation of\narea differences: a circle that looks twice as big is not twice\nthe value.\n\nUse proportional symbols when the values live at points (centres,\nstations) and the polygons would carry no extra information.",
+      "screenshot": "screenshots/proportional_symbols/proportional_symbols_4panel.png",
+      "status": "ok"
+    },
+    "hexbin": {
+      "id": "hexbin",
+      "group": "Aggregation",
+      "display": "Hexbin Aggregation",
+      "algo_id": "zero2cartolab:hexbin_aggregate",
+      "params": "INPUT            = İzmir mahalle noktaları\nCELL_SIZE        = 1500.0\nWEIGHT           = pop_total\nSTAT             = 1\nPALETTE          = 5\nCLASSIFIER       = 0\nCLASSES          = 5",
+      "notes": "The point layer is binned into a pointy-top hexagonal grid — the\naggregation that avoids the overplotting of raw points.\n\nHere the weight (population) is SUMMED per cell, so the map reads\nas 'how many people live in each hexagon'. The grid also removes\nthe false precision of small-area administrative units.",
+      "screenshot": "screenshots/hexbin/hexbin_4panel.png",
+      "status": "ok"
+    },
+    "label_points": {
+      "id": "label_points",
+      "group": "Labeling",
+      "display": "Visual-Center Label Points",
+      "algo_id": "zero2cartolab:label_points",
+      "params": "INPUT            = İzmir mahalle (2024)\nPRECISION        = 1.0",
+      "notes": "Each polygon gets an anchor at its pole of inaccessibility — the\npoint furthest from the polygon edge, which is guaranteed to lie\ninside the shape.\n\nCentroid labels drift off concave shapes; these do not. Join this\nlayer to your label layer to place district names safely.",
+      "screenshot": "screenshots/label_points/label_points_4panel.png",
+      "status": "ok"
+    },
+    "graticule": {
+      "id": "graticule",
+      "group": "Map Reference",
+      "display": "Graticule / Reference Grid",
+      "algo_id": "zero2cartolab:graticule_grid",
+      "params": "EXTENT           = ….1852393625,4359618.902638675 [EPSG:32635]\nX_INTERVAL       = 10000.0\nY_INTERVAL       = 10000.0\nLINE_STYLE       = 1\nLINE_COLOR       = #64748b\nLINE_WIDTH       = 0.35",
+      "notes": "Meridians and parallels are placed on a round interval and each one\ncarries its own coordinate label.\n\nUse a 10 km interval on a city-scale map, 1° on a country map.\nThe graticule is a reference layer — always draw it beneath the\ndata, in a low-contrast grey.",
+      "screenshot": "screenshots/graticule/graticule_4panel.png",
+      "status": "ok"
+    },
+    "ridge_map": {
+      "id": "ridge_map",
+      "group": "Thematic Mapping",
+      "display": "Ridge Map (Joy Division)",
+      "algo_id": "zero2cartolab:ridge_map",
+      "params": "RASTER           = dem_utm35n\nN_LINES          = 120\nVERTICAL_SCALE   = 3.868\nLINE_SPACING     = 0.0\nSMOOTH           = 2.0\nEXTENT           = …5.625940838,4252875.625940838 [EPSG:32635]\nLINE_COLOR       = #111827\nLINE_WIDTH       = 0.28",
+      "notes": "The raster is sampled along scanlines and every scanline is drawn\nas a profile: elevation becomes a stack of ridgelines.\n\nVertical exaggeration is the parameter that matters — too little and\nthe relief disappears, too much and it becomes a cartoon. Change\nVERTICAL_SCALE and compare.",
+      "screenshot": "screenshots/ridge_map/ridge_map_4panel.png",
+      "status": "ok"
+    },
+    "building_25d": {
+      "id": "building_25d",
+      "group": "Symbology Studio",
+      "display": "2.5D Building Styling",
+      "algo_id": "zero2cartolab:building_25d_style",
+      "params": "INPUT            = osm_buildings\nHEIGHT_FIELD     = height_m\nHEIGHT_MODE      = 0\nFLOOR_HEIGHT     = 3.5\nRENDER_MODE      = 0\nFLOOR_PALETTE    = 0\nMAX_FLOORS       = 12\nPRESET           = 0\nANGLE            = 45.0\nHEIGHT_SCALE     = 1.0\nMAX_HEIGHT       = 60.0\nSTEPPED          = False\nSTEP_HEIGHT      = 3.5\nSHADOW_ENABLED   = True\nSHADOW_SPREAD    = 1.2\nWALL_SHADING     = True\nSUMMARY          = 02CartoLab 2.5D style applied · Layer: osm_buildings · Height field: height_m · Height source: height · Render",
+      "notes": "The height field drives a native QGIS 25d renderer: roofs, walls and\ndirectional shading. The plugin writes the style as a reusable\nexpression, so the same rule works on any layer with the same\nheight field.\n\nMAX_HEIGHT clamps outliers; without it one 300 m tower flattens\nevery other building in the frame.",
+      "screenshot": "screenshots/building_25d/building_25d_4panel.png",
+      "status": "ok"
+    },
+    "flow_map": {
+      "id": "flow_map",
+      "group": "Thematic Mapping",
+      "display": "Origin-Destination Flow Map",
+      "algo_id": "zero2cartolab:flow_map",
+      "params": "ZONES            = OD zones\nZONE_ID          = zone_id\nFLOWS            = OD table\nORIGIN           = origin_id\nDEST             = dest_id\nVOLUME           = flow_vol\nDIRECTED         = True\nMIN_VOLUME       = 5.0\nTOP_N            = 0\nCURVATURE        = 0.32\nMAX_WIDTH        = 4.0\nMIN_WIDTH        = 0.25\nEND_GAP          = 6.0\nARROWS           = True\nPALETTE          = 0",
+      "notes": "Each record becomes a curved desire line between the two zone\nanchors. Width is proportional to the volume; large flows are drawn\nfirst so small flows stay visible on top.\n\nDIRECTED keeps the arrowheads and separates A→B from B→A. Arrows\nare the difference between a flow map and a network diagram.",
+      "screenshot": "screenshots/flow_map/flow_map_4panel.png",
+      "status": "ok"
+    },
+    "map_sheet": {
+      "id": "map_sheet",
+      "group": "Layout Studio",
+      "display": "Auto Map Sheet",
+      "algo_id": null,
+      "params": "",
+      "notes": "",
+      "screenshot": "screenshots/map_sheet/map_sheet.png",
+      "status": "ok"
+    },
+    "gui_dashboard": {
+      "id": "gui_dashboard",
+      "group": "Symbology Studio",
+      "display": "The 02CartoLab Dashboard (real GUI)",
+      "algo_id": null,
+      "params": "",
+      "notes": "",
+      "screenshot": "screenshots/gui_dashboard/gui_dashboard.png",
+      "gui_pages": [
+        {
+          "id": "dashboard_quick_style",
+          "title": "Symbology Studio · Quick Style",
+          "path": "screenshots/gui_dashboard/dashboard_quick_style.png"
+        },
+        {
+          "id": "dashboard_25d",
+          "title": "Symbology Studio · 2.5D Buildings",
+          "path": "screenshots/gui_dashboard/dashboard_25d.png"
+        },
+        {
+          "id": "dashboard_thematic",
+          "title": "Symbology Studio · Thematic Maps",
+          "path": "screenshots/gui_dashboard/dashboard_thematic.png"
+        },
+        {
+          "id": "dashboard_palette",
+          "title": "Symbology Studio · Palette & Accessibility",
+          "path": "screenshots/gui_dashboard/dashboard_palette.png"
+        },
+        {
+          "id": "dashboard_templates",
+          "title": "Layout Studio · Template Gallery",
+          "path": "screenshots/gui_dashboard/dashboard_templates.png"
+        },
+        {
+          "id": "dashboard_mapsheet",
+          "title": "Layout Studio · Map Sheet Studio",
+          "path": "screenshots/gui_dashboard/dashboard_mapsheet.png"
+        },
+        {
+          "id": "dashboard_grid_qpt",
+          "title": "Layout Studio · Grid + QPT Studio",
+          "path": "screenshots/gui_dashboard/dashboard_grid_qpt.png"
+        },
+        {
+          "id": "dashboard_isometric",
+          "title": "Layout Studio · 3D Isometric Stacker",
+          "path": "screenshots/gui_dashboard/dashboard_isometric.png"
+        },
+        {
+          "id": "dashboard_processing",
+          "title": "Processing Hub",
+          "path": "screenshots/gui_dashboard/dashboard_processing.png"
+        }
+      ],
+      "status": "ok"
+    },
+    "layout_templates": {
+      "id": "layout_templates",
+      "group": "Layout Studio",
+      "display": "Publication Layout Template Gallery",
+      "algo_id": null,
+      "params": "",
+      "notes": "",
+      "templates": [
+        {
+          "id": "report_figure",
+          "title": "Report Figure — 16:9",
+          "path": "screenshots/layout_templates/report_figure.png"
+        },
+        {
+          "id": "academic_journal",
+          "title": "Academic Journal — A4 two-column",
+          "path": "screenshots/layout_templates/academic_journal.png"
+        },
+        {
+          "id": "poster_exhibition",
+          "title": "Exhibition Poster — A2",
+          "path": "screenshots/layout_templates/poster_exhibition.png"
+        },
+        {
+          "id": "fact_sheet",
+          "title": "Fact Sheet — A4 portrait",
+          "path": "screenshots/layout_templates/fact_sheet.png"
+        },
+        {
+          "id": "side_by_side_diptych",
+          "title": "Comparative Diptych",
+          "path": "screenshots/layout_templates/side_by_side_diptych.png"
+        },
+        {
+          "id": "utm_field_sheet",
+          "title": "UTM Field Sheet",
+          "path": "screenshots/layout_templates/utm_field_sheet.png"
+        },
+        {
+          "id": "planning_board",
+          "title": "Planning Review Board",
+          "path": "screenshots/layout_templates/planning_board.png"
+        },
+        {
+          "id": "data_story",
+          "title": "Spatial Data Story",
+          "path": "screenshots/layout_templates/data_story.png"
+        },
+        {
+          "id": "atlas_production",
+          "title": "Atlas Production Sheet",
+          "path": "screenshots/layout_templates/atlas_production.png"
+        },
+        {
+          "id": "emergency_brief",
+          "title": "Emergency Operations Brief",
+          "path": "screenshots/layout_templates/emergency_brief.png"
+        }
+      ],
+      "status": "ok"
+    }
+  }
+}

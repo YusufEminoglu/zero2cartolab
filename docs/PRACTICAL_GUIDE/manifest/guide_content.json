@@ -1,0 +1,871 @@
+{
+  "_meta": {
+    "title_en": "02CartoLab Practical Guide",
+    "title_tr": "02CartoLab Pratik Kılavuz",
+    "subtitle_en": "A step-by-step, screenshot-driven workshop for every 02CartoLab capability — built on real İzmir urban data, rendered by the plugin itself.",
+    "subtitle_tr": "02CartoLab'ın her yeteneği için adım adım, ekran görüntülü atölye — gerçek İzmir kent verisi üzerinde, eklentinin kendi motoruyla üretilmiş.",
+    "version": "1.5.1"
+  },
+  "quick_style": {
+    "group": "Symbology Studio",
+    "algo": "zero2cartolab:quick_style",
+    "en": {
+      "title": "Quick Style — one-click thematic styling",
+      "question": "How dense is İzmir, and can I publish that map without opening the symbology panel?",
+      "what": "Quick Style turns any vector layer into a publication-ready choropleth or categorical map in a single action. Numeric fields are classified automatically, text fields become categories, and the colour palette comes from the plugin's own library (ColorBrewer plus the colour-blind-safe scientific ramps).",
+      "steps": [
+        "Open the 02CartoLab Studio from Plugins ▸ 02CartoLab ▸ 02CartoLab Studio and switch to the Symbology Studio workspace.",
+        "In the Quick Style panel choose Layer: the İzmir district layer and Field: pop_density.",
+        "Set Style as: Graduated (numeric), Classes: 5 and Break method: Geometric interval — the right choice for the long-tailed density distribution of a real city.",
+        "Pick Palette: Viridis (sequential, colour-blind safe) and leave the white outline ticked.",
+        "Press Apply Quick Style. The layer in the canvas is restyled immediately.",
+        "Export the result with Export QML Style to reuse the exact symbology in another project."
+      ],
+      "interpret": "The classes are equal-area in colour space but not in count. Compare the two ends of the ramp: with a geometric interval the darkest band covers the sprawling outer districts, the brightest band the compact central ones. Always read the legend, never the colour alone.",
+      "trouble": [
+        "The field list is empty — the layer has no numeric field, or the layer is not yet in the project.",
+        "The map looks flat — the field is a rate that is almost constant; check the attribute table for NULLs before classifying.",
+        "The style disappears on save — Quick Style styles the layer in place; save the layer as GeoPackage to keep the symbology."
+      ]
+    },
+    "tr": {
+      "title": "Quick Style — tek tıkla tematik stil",
+      "question": "İzmir ne kadar yoğun ve bunu bugün yayınlanabilir bir haritaya çevirebilir miyim?",
+      "what": "Quick Style herhangi bir vektör katmanını tek işlemle yayınlanabilir bir koroplet veya kategorik haritaya dönüştürür. Sayısal alanlar otomatik sınıflanır, metin alanları kategorilere ayrılır ve renk paleti eklentinin kendi kütüphanesinden gelir (ColorBrewer + renk körlüğü güvenli bilimsel rampalar).",
+      "steps": [
+        "Plugins ▸ 02CartoLab ▸ 02CartoLab Studio ile stüdyoyu aç ve Symbology Studio çalışma alanına geç.",
+        "Quick Style panelinde Layer olarak İzmir ilçe katmanını, Field olarak pop_density alanını seç.",
+        "Style as: Graduated (numeric), Classes: 5, Break method: Geometric interval — gerçek bir şehrin uzun kuyruklu yoğunluk dağılımı için doğru seçim.",
+        "Palette: Viridis (sıralı, renk körlüğü güvenli) ve beyaz kenar çizgisi işaretli kalsın.",
+        "Apply Quick Style düğmesine bas; canvas'taki katman anında yeniden stilize edilir.",
+        "Export QML Style ile aynı sembolojiyi başka projelerde yeniden kullan."
+      ],
+      "interpret": "Sınıflar renk uzayında eşit alanlıdır ama sayıda eşit değildir. Rampanın iki ucunu karşılaştır: geometrik aralıkta en koyu bant dış yayılımı ilçeleri, en parlak bant merkezi kompakt ilçeleri kapsar. Renge değil, mutlaka lejanta bak.",
+      "trouble": [
+        "Alan listesi boş — katmanda sayısal alan yok veya katman projeye eklenmemiş.",
+        "Harita düz görünüyor — alan neredeyse sabit bir oran; sınıflamadan önce öznitelik tablosunda NULL değerlerini kontrol et.",
+        "Kaydetmede stil kayboluyor — Quick Style katmanı yerinde stilliyor; sembolojiyi korumak için katmanı GeoPackage olarak kaydet."
+      ]
+    }
+  },
+  "quick_style_monochrome": {
+    "group": "Symbology Studio",
+    "algo": "zero2cartolab:quick_style",
+    "en": {
+      "title": "Monochrome print — photocopy-safe symbology",
+      "question": "My journal prints in greyscale and photocopies the figure. Will the map still be readable?",
+      "what": "With Monochrome print enabled, Quick Style replaces the colour ramp with black-and-white hatch and dot patterns that darken with the value. The legend keeps the numbers, so no information is lost when the figure is printed, photocopied or faxed.",
+      "steps": [
+        "Repeat the Quick Style workflow with the same layer, field and break method.",
+        "Tick Monochrome print instead of choosing a colour palette.",
+        "Apply the style and inspect the legend: each class now carries a distinct pattern, not just a shade of grey.",
+        "Export the QML style so every figure in the manuscript uses the same pattern language."
+      ],
+      "interpret": "Pattern density is the value channel. Light diagonal hatching = low, solid black = high. Check the darkest pattern against the smallest class: if two adjacent classes use patterns that read the same at final print size, reduce the number of classes.",
+      "trouble": [
+        "Patterns look identical in the legend — reduce Classes from 5 to 4 or 3.",
+        "The layer renders black everywhere — the fill colour of the base symbol is black; switch the symbol fill to white before applying monochrome."
+      ]
+    },
+    "tr": {
+      "title": "Monochrome baskı — fotokopiye dayanıklı semboloji",
+      "question": "Dergim gri ton basıyor ve şekli fotokopi ediyor. Harita okunur kalır mı?",
+      "what": "Monochrome print açıkken Quick Style renk rampasını, değerle birlikte koyulaşan siyah-beyaz tarama ve nokta desenleriyle değiştirir. Lejant sayıları korur; böylece şekil basıldığında, fotokopi edildiğinde ya da fakslandığında bilgi kaybı olmaz.",
+      "steps": [
+        "Aynı katman, alan ve sınıf yöntemiyle Quick Style iş akışını tekrarlayın.",
+        "Renk paleti seçmek yerine Monochrome print işaretini işaretleyin.",
+        "Stili uygulayın ve lejantı inceleyin: her sınıf artık gri tonu değil, ayırt edici bir desen taşır.",
+        "QML stilini dışa aktarın; böylece makaledeki bütün şekiller aynı desen dilini kullanır."
+      ],
+      "interpret": "Desen yoğunluğu değer kanalıdır. Açık diyagonal tarama = düşük, dolu siyah = yüksek. En koyu deseni en küçük sınıfa karşı kontrol edin: son baskı boyunda iki komşu sınıf aynı okunuyorsa sınıf sayısını azaltın.",
+      "trouble": [
+        "Lejantta desenler aynı görünüyor — Classes değerini 5'ten 4 veya 3'e düşürün.",
+        "Katman tamamen siyah — sembol dolgusu siyah; monochrome uygulamadan önce dolguyu beyaz yapın."
+      ]
+    }
+  },
+  "building_25d": {
+    "group": "Symbology Studio",
+    "algo": "zero2cartolab:building_25d_style",
+    "en": {
+      "title": "2.5D building styling — extrusion that survives",
+      "question": "Can I show Kadifekale's building massing as a real 3D-style extrusion instead of a pasted QML hack?",
+      "what": "The 2.5D engine applies a native QGIS 25d renderer driven by a height or floor-count field. It writes the rule as a reusable expression, so the style can be re-applied to any layer with the same field, and it can be exported as a legend-friendly QML where each floor band is its own QGIS legend rule.",
+      "steps": [
+        "In the Symbology Studio open the 2.5D Buildings panel.",
+        "Choose the layer and set Height field: height_m. If your data stores floors instead, set Height source: Floor count field and Floor height: 3.5 m.",
+        "Pick a material preset — Warm Civic, Cool Slate, Urban Core Gold and eight more.",
+        "Set Angle (45° is a good default), Height scale, and MAX_HEIGHT to clamp outliers.",
+        "Enable Shadow and Wall shading so the massing reads as volume rather than flat colour.",
+        "Apply the native 2.5D renderer, or switch Render mode to Per-floor colour bands to get one legend rule per storey.",
+        "Export the QML style for reuse."
+      ],
+      "interpret": "Compare the flat input with the result: the extrusion turns Kadifekale's street wall into a legible massing model. MAX_HEIGHT is the single most important control — without it one 300 m tower flattens every other building in the frame. Shadows only read if the building is big enough on screen: zoom in, don't shout.",
+      "trouble": [
+        "Nothing extrudes — the height field is text, or contains NULLs; the expression uses coalesce() so NULL becomes 0.",
+        "The map is all roof colour — Wall shading is off, so no wall faces are drawn.",
+        "Floors are wrong — the floor height does not match your data; 3.5 m is the Turkish residential norm, offices are often 3.6–4.0 m."
+      ]
+    },
+    "tr": {
+      "title": "2.5D bina stilizasyonu — dayanıklı ekstrüzyon",
+      "question": "Kadifekale'nin yapı kütlesini yapıştırılmış QML hile yerine gerçek 3B benzeri bir ekstrüzyonla gösterebilir miyim?",
+      "what": "2.5D motoru, yükseklik ya da kat sayısı alanıyla sürülen yerel QGIS 25d renderer'ı uygular. Kuralı yeniden kullanılabilir bir ifade olarak yazar; böylece aynı alana sahip her katmana stil tekrar uygulanabilir ve her kat bandı kendi lejant kuralı olan lejant-dostu QML olarak dışa aktarılabilir.",
+      "steps": [
+        "Symbology Studio içinde 2.5D Buildings panelini açın.",
+        "Katmanı seçin ve Height field: height_m verin. Veriniz kat sayısı taşıyorsa Height source: Floor count field ve Floor height: 3.5 m yapın.",
+        "Bir malzeme ön ayarı seçin — Warm Civic, Cool Slate, Urban Core Gold ve sekiz tane daha.",
+        "Angle (45° iyi bir varsayılan), Height scale ve aykırı değerleri kırpmek için MAX_HEIGHT ayarlayın.",
+        "Kütlenin düz renk değil hacim gibi okunması için Shadow ve Wall shading'i açın.",
+        "Yerel 2.5D renderer'ı uygulayın ya da Render mode: Per-floor colour bands ile her kat için ayrı lejant kuralı alın.",
+        "QML stilini dışa aktarın."
+      ],
+      "interpret": "Düz giriş ile sonucu karşılaştırın: ekstrüzyon Kadifekale'nin cephe hattını okunur bir kütle modeline dönüştürür. MAX_HEIGHT en kritik kontroldür — onsuz 300 m'lik bir kule çerçevedeki bütün binaları düzleştirir. Gölge ancak bina ekranda yeterince büyükse okunur; yakınlaşın, bağırmayın.",
+      "trouble": [
+        "Hiçbir şey ekstrüzyon göstermiyor — yükseklik alanı metin veya NULL içeriyor; ifade coalesce() kullanır, NULL 0 olur.",
+        "Harita tamamen çatı rengi — Wall shading kapalı, duvar yüzleri çizilmiyor.",
+        "Katlar yanlış — kat yüksekliği verinizle uyuşmuyor; 3.5 m konut normu, ofislerde sıklıkla 3.6–4.0 m."
+      ]
+    }
+  },
+  "palette_accessibility": {
+    "group": "Symbology Studio",
+    "algo": null,
+    "en": {
+      "title": "Palette & Accessibility — CVD simulation and WCAG scoring",
+      "question": "Will my map still be readable for a reader with deuteranopia, and does it pass the journal's contrast rule?",
+      "what": "The Palette & Accessibility inspector lists every ramp in the plugin's library with live swatches, a five-mode colour-vision-deficiency simulation (normal, deuteranopia, protanopia, tritanopia, achromatopsia) and a WCAG 2.1 contrast score for each palette against the page.",
+      "steps": [
+        "Open Symbology Studio ▸ Palette & Accessibility and choose the layer you are styling.",
+        "Filter Palette type: Sequential, Diverging or Qualitative, and tick Colour-blind safe only to see only the verified ramps.",
+        "Select a palette and read the score line: it reports the palette family, the colour-blind safety badge and the WCAG contrast ratio.",
+        "Use the CVD simulation strip to preview the same ramp under each deficiency mode.",
+        "For a two-variable map, check that the two axes remain distinguishable in every mode, not just in normal vision."
+      ],
+      "interpret": "A palette is colour-blind safe when the ramp keeps a lightness gradient as well as a hue gradient. A hue-only ramp collapses into indistinguishable bands under deuteranopia — the simulation strip makes that collapse visible before publication, not after review.",
+      "trouble": [
+        "The contrast ratio looks low — a pale ramp on white paper fails WCAG for small text; darken the ramp or add a frame.",
+        "No palette appears — the filter is too restrictive; clear 'Colour-blind safe only' first."
+      ]
+    },
+    "tr": {
+      "title": "Palette & Accessibility — CVD simülasyonu ve WCAG puanı",
+      "question": "Deuteranopi görmeli bir okuyucu haritayı hâlâ okuyabilir mi ve dergimin kontrast kuralını geçiyor mu?",
+      "what": "Palette & Accessibility denetleyicisi, eklenti kütüphanesindeki her rampayı canlı örneklerle, beş modlu renk görme bozukluğu simülasyonu (normal, deuteranopia, protanopia, tritanopia, achromatopsia) ve sayfa arka planına karşı WCAG 2.1 kontrast puanıyla listeler.",
+      "steps": [
+        "Symbology Studio ▸ Palette & Accessibility'i açın ve stilize ettiğiniz katmanı seçin.",
+        "Palette type ile Sequential, Diverging veya Qualitative süzgeçlerini kullanın; yalnızca doğrulanmış rampaları görmek için Colour-blind safe only kutusunu işaretleyin.",
+        "Bir palet seçin ve puan satırını okuyun: palet ailesi, renk körlüğü güvenlilik rozeti ve WCAG kontrast oranı raporlanır.",
+        "CVD simülasyon şeridini kullanarak aynı rampayı her görme bozukluğu modunda önizleyin.",
+        "İki değişkenli haritada, eksenlerin her modda da ayırt edilebilir kaldığını doğrulayın."
+      ],
+      "interpret": "Bir palet, hue gradyanının yanında lightness gradyanı da taşıdığında renk körlüğü güvenlidir. Yalnızca hue'a dayalı rampalar deuteranopide birbirine karışan bantlara çöker; simülasyon şeridi bu çöküşü hakemden sonra değil, yayın öncesi görünür kılar.",
+      "trouble": [
+        "Kontrast oranı düşük görünüyor — beyaz kâğıt üzerinde sol bir ramp küçük metin için WCAG'yi geçmez; rampayı koyulaştırın veya çerçeve ekleyin.",
+        "Hiç palet çıkmıyor — süzgeç çok kısıtlayıcı; önce 'Colour-blind safe only' işaretini kaldırın."
+      ]
+    }
+  },
+  "normalize_field": {
+    "group": "Data Preparation",
+    "algo": "zero2cartolab:normalize_field",
+    "en": {
+      "title": "Normalization & rates — map the rate, not the count",
+      "question": "Raw population just redraws the city footprint. How do I map dependency instead?",
+      "what": "A choropleth of raw totals mostly shows where the city is built. This algorithm turns any field into a comparable rate: ratio per denominator, z-score, robust z-score (median/MAD), min-max, percentile rank, log, location quotient, winsorized min-max, decile rank, Tukey hinge rank, logistic, power and quantile-uniform scaling. The result is written as a new field and styled automatically.",
+      "steps": [
+        "Open Processing Toolbox ▸ 02CartoLab ▸ Choropleth Normalization & Rates.",
+        "Set Input to the district layer, Field to pop_total and Method to Rate (numerator / denominator).",
+        "Choose Denominator: pop_15_64 — the working-age population — and Scale: 1000 for residents per 1 000 working-age people.",
+        "Pick a sequential palette and 5 classes, then Run.",
+        "Open the output attribute table: the new field holds the rate, and the layer already carries the matching graduated renderer."
+      ],
+      "interpret": "A value above 1 means the neighbourhood depends on people outside its own working-age group. Values below 1 mean it has a demographic surplus. The rate is the map; the count is only context.",
+      "trouble": [
+        "The result is empty — the denominator field contains NULLs or zeros.",
+        "The scale looks odd — logarithmic and quantile methods are for heavy-tailed data; try Rate or Z-score for a linear variable.",
+        "NULL values are counted as zero — normalize first, then filter NULLs in the attribute table."
+      ]
+    },
+    "tr": {
+      "title": "Normalizasyon ve oranlar — sayıyı değil oranı haritala",
+      "question": "Ham nüfus sadece kent ayak izini çiziyor. Bağımlılığı nasıl haritalarım?",
+      "what": "Ham toplamlarla yapılan koroplet esas olarak 'şehir nerede kurulu' resmini çizer. Bu algoritma her alanı karşılaştırılabilir bir orana dönüştürür: pay/ paydaya oran, z-skor, sağlam z-skor (medyan/MAD), min-max, yüzdelik sıra, logaritma, konum katsayısı, kırpılmış min-max, ondalık sıra, Tukey menteşe sırası, lojistik, güç ve kuantil-uniform ölçekleme. Sonuç yeni bir alana yazılır ve otomatik stillenir.",
+      "steps": [
+        "Processing Toolbox ▸ 02CartoLab ▸ Choropleth Normalization & Rates'i açın.",
+        "Input olarak ilçe katmanını, Field olarak pop_total, Method olarak Rate (numerator / denominator) verin.",
+        "Denominator: pop_15_64 (çalışma çağı nüfus) ve Scale: 1000 seçin — 1 000 çalışma çağı kişi başına nüfus.",
+        "Sıralı bir palet ve 5 sınıf seçip Run'a basın.",
+        "Çıktının öznitelik tablosunu açın: yeni alan oranı tutar, katman zaten uygun gradyan renderer'ı taşır."
+      ],
+      "interpret": "1'in üzerindeki değer, mahallenin kendi çalışma çağı grubunun dışındaki insanlara bağımlı olduğu anlamına gelir. 1'in altı demografik fazlalık demektir. Harita oranı gösterir; sayı yalnızca bağlamdır.",
+      "trouble": [
+        "Sonuç boş — payday alanında NULL veya sıfır var.",
+        "Ölçek tuhaf görünüyor — logaritmik ve kuantil yöntemler ağır kuyruklu veri içindir; doğrusal değişkende Rate veya Z-score deneyin.",
+        "NULL değerler sıfır sayılıyor — önce normalizasyon yapın, sonra öznitelik tablosunda NULL'ları filtreleyin."
+      ]
+    }
+  },
+  "classification": {
+    "group": "Classification Engine",
+    "algo": "zero2cartolab:geometric_interval_classification",
+    "en": {
+      "title": "Adaptive classification — GIC, Jenks, Head/Tail",
+      "question": "How many classes does a skewed urban indicator actually need, and which break method fits it?",
+      "what": "The classification engine implements seven break methods: Adaptive Geometric Interval (GIC), Head/Tail Breaks, Fisher-Jenks, standard deviation, Tukey box plot, maximum breaks and pretty round breaks. The output layer carries the class field and the matching renderer, so it drops straight into a layout.",
+      "steps": [
+        "Open Processing Toolbox ▸ 02CartoLab ▸ Advanced Classification.",
+        "Set Input to the district layer, Field to pop_density and Classes to 5.",
+        "Choose Method: Adaptive Geometric Interval (GIC) — it follows the shape of a long-tailed distribution instead of forcing equal counts.",
+        "Pick a palette and Run.",
+        "Compare the result with Fisher-Jenks: run the algorithm again with METHOD = Fisher-Jenks and compare the class limits."
+      ],
+      "interpret": "GIC produces ordered, readable intervals that follow the data's own spread; Jenks minimises within-class variance at the cost of irregular limits. If the two maps look the same, the distribution is not skewed enough for the choice to matter — and that is a useful result too.",
+      "trouble": [
+        "Too many classes for the data — the values are near-constant; reduce Classes.",
+        "A class is empty — the breaks collapse; try a different method or reduce the class count.",
+        "Values are treated as text — the field must be numeric."
+      ]
+    },
+    "tr": {
+      "title": "Uyarlanabilir sınıflama — GIC, Jenks, Head/Tail",
+      "question": "Çarpık bir kent göstergesi gerçekte kaç sınıf ister ve hangi sınıflandırma yöntemi ona uyar?",
+      "what": "Sınıflama motoru yedi kırılım yöntemi uygular: Uyarlanabilir Geometrik Aralık (GIC), Baş/Kuyruk Kırılımları, Fisher-Jenks, standart sapma, Tukey kutu grafiği, maksimum kırılımlar ve düzgün yuvarlak kırılımlar. Çıktı katmanı sınıf alanını ve uygun renderer'ı taşır; doğrudan düzene yerleşir.",
+      "steps": [
+        "Processing Toolbox ▸ 02CartoLab ▸ Advanced Classification'ı açın.",
+        "Input olarak ilçe katmanını, Field olarak pop_density, Classes olarak 5 verin.",
+        "Method: Adaptive Geometric Interval (GIC) seçin — eşit sayı dayatmaz, verinin kendi dağılım biçimini izler.",
+        "Palet seçip Run'a basın.",
+        "Sonucu Fisher-Jenks ile karşılaştırın: algoritmayı tekrar Fisher-Jenks ile çalıştırıp sınıf sınırlarını kıyaslayın."
+      ],
+      "interpret": "GIC sıralı, okunur aralıklar üretir ve verinin kendi yayılımını izler; Jenks sınıf içi varyansı minimize eder ama düzensiz sınırlar üretir. İki harita aynı görünüyorsa dağılım yeterince çarpık değildir — bu da değerli bir sonuçtur.",
+      "trouble": [
+        "Veri için çok fazla sınıf — değerler neredeyse sabit; Classes değerini azaltın.",
+        "Bir sınıf boş — kırılımlar çöküyor; farklı yöntem deneyin ya da sınıf sayısını düşürün.",
+        "Değerler metin olarak işleniyor — alan sayısal olmalı."
+      ]
+    }
+  },
+  "bivariate": {
+    "group": "Thematic Mapping",
+    "algo": "zero2cartolab:bivariate_choropleth",
+    "en": {
+      "title": "Bivariate choropleth — two variables, one honest map",
+      "question": "Which İzmir neighbourhoods are both old and full of children — the ones that need care and schools at once?",
+      "what": "A bivariate choropleth classifies two numeric variables into an N×N matrix and colours every polygon by the combination of its two class bands. The output carries a bivar_class field and a categorized renderer, and the plugin can export the matching legend matrix as vector geometry.",
+      "steps": [
+        "Open Processing Toolbox ▸ 02CartoLab ▸ Bivariate Choropleth Map.",
+        "Set Input to the district layer. FIELD_X: elderly_share (share aged 65+), FIELD_Y: child_share (share aged 0–14).",
+        "Set CLASSES: 3 for a 3×3 matrix, METHOD: Quantile (Equal Count).",
+        "Choose PALETTE_PRESET: Blue - Orange (Density & Economy) — or pick Custom Corner Colours to control all four corners.",
+        "Run. The output is styled automatically with a categorized renderer on bivar_class.",
+        "Run Export Bivariate 2D Legend Matrix with the same settings to obtain the diamond or square legend."
+      ],
+      "interpret": "Read the matrix as two axes at once. The upper-right cell — high on both axes — is the hardest quadrant: an old population needing care and a young population needing schools in the same neighbourhoods. The legend is not decoration; without the axis labels the colours are meaningless.",
+      "trouble": [
+        "Only one colour appears — one of the fields has almost no variance; check the attribute table.",
+        "The corners look swapped — verify the palette preset is not the Custom one with the corner colours mixed up (LOW-LOW, LOW-HIGH, HIGH-LOW, HIGH-HIGH).",
+        "The map is unreadable — reduce CLASSES to 2 or pick a higher-contrast preset."
+      ]
+    },
+    "tr": {
+      "title": "İki değişkenli koroplet — iki değişken, tek dürüst harita",
+      "question": "Hangi İzmir mahalleleri hem yaşlı hem çocuk yoğun — yani aynı anda bakım ve okul gerektirenler?",
+      "what": "İki değişkenli koroplet iki sayısal değişkeni N×N matrise sınıflar ve her poligonu iki sınıf bandının birleşimine göre renklendirir. Çıktı bivar_class alanını ve kategorize renderer'ı taşır; eklenti eşleşen lejant matrisini vektör geometri olarak da dışa aktarabilir.",
+      "steps": [
+        "Processing Toolbox ▸ 02CartoLab ▸ Bivariate Choropleth Map'i açın.",
+        "Input olarak ilçe katmanını verin. FIELD_X: elderly_share (65+ payı), FIELD_Y: child_share (0-14 payı).",
+        "3×3 matris için CLASSES: 3, METHOD: Quantile (Equal Count) yapın.",
+        "PALETTE_PRESET: Blue - Orange (Density & Economy) seçin — ya da dört köşeyi denetlemek için Custom Corner Colours kullanın.",
+        "Run'a basın. Çıktı bivar_class üzerinde kategorize renderer ile otomatik stillenir.",
+        "Aynı ayarlarla Export Bivariate 2D Legend Matrix'i çalıştırıp eşkenar dörtgen ya da kare lejantı elde edin."
+      ],
+      "interpret": "Matrisi aynı anda iki eksen olarak okuyun. Sağ üst hücre — her iki eksende de yüksek — en zor hücredir: aynı mahallelerde yaşlı nüfusa bakım ve genç nüfusa okul gerekir. Lejant süs değildir; eksen etiketleri olmadan renkler anlamsızdır.",
+      "trouble": [
+        "Tek renk çıkıyor — alanlardan birinin varyansı neredeyse yok; öznitelik tablosunu kontrol edin.",
+        "Köşeler yerinde değil — Custom seçiliyken köşe renklerinin karıştığından emin olun (DÜŞÜK-DÜŞÜK, DÜŞÜK-YÜKSEK, YÜKSEK-DÜŞÜK, YÜKSEK-YÜKSEK).",
+        "Harita okunmuyor — CLASSES değerini 2'ye düşürün ya da daha yüksek kontrastlı bir ön ayar seçin."
+      ]
+    }
+  },
+  "bivariate_matrix": {
+    "group": "Thematic Mapping",
+    "algo": "zero2cartolab:bivariate_matrix_export",
+    "en": {
+      "title": "Bivariate legend matrix — export the key, not the picture",
+      "question": "How do I get a publication-ready bivariate legend into my manuscript without redrawing it?",
+      "what": "This algorithm writes the N×N colour matrix as a standalone vector polygon layer plus an HTML preview. Use DIAMOND for the classic bivariate diamond key, or squares. The geometry can be dropped straight into a print layout as a legend item.",
+      "steps": [
+        "Open Processing Toolbox ▸ 02CartoLab ▸ Export Bivariate 2D Legend Matrix.",
+        "Set CLASSES: 3 and choose the same PALETTE_PRESET as the map.",
+        "Tick DIAMOND for a diamond key; leave CELL_SIZE at 30 mm for a print layout, or lower it for a slide.",
+        "Set LABEL_X and LABEL_Y to the exact variable names used in the map caption.",
+        "Run and choose the output location. The layer carries the matrix; OUTPUT_HTML gives a browser-ready preview."
+      ],
+      "interpret": "The matrix is the legend of a bivariate map. If the labels in the matrix do not match the caption, the reader cannot decode the map. Generate the matrix from the same preset and class count as the map, every single time.",
+      "trouble": [
+        "The legend does not match the map — the class count or preset differs between the two runs.",
+        "The diamonds are too small on the page — raise CELL_SIZE or scale the item in the layout."
+      ]
+    },
+    "tr": {
+      "title": "İki değişkenli lejant matrisi — resmi değil anahtarı dışa aktar",
+      "question": "Yayınlanabilir bir iki değişkenli lejantı elle çizmeden makaleme nasıl alırım?",
+      "what": "Bu algoritma N×N renk matrisini bağımsız bir vektör poligon katmanı ve HTML önizleme olarak yazar. Klasik iki değişkenli eşkenar dörtgen anahtar için DIAMOND'u işaretleyin ya da kare kullanın. Geometri doğrudan baskı düzenine lejant öğesi olarak yerleştirilebilir.",
+      "steps": [
+        "Processing Toolbox ▸ 02CartoLab ▸ Export Bivariate 2D Legend Matrix'i açın.",
+        "CLASSES: 3 yapın ve haritayla aynı PALETTE_PRESET'i seçin.",
+        "Eşkenar dörtgen anahtar için DIAMOND'u işaretleyin; baskı düzeni için CELL_SIZE 30 mm'de bırakın, sunum için küçültün.",
+        "LABEL_X ve LABEL_Y'yi harita altyazısında kullanılan değişken adlarıyla birebir aynı yapın.",
+        "Run'a basıp çıktı konumunu seçin. Katman matrisi taşır; OUTPUT_HTML tarayıcıya hazır önizleme verir."
+      ],
+      "interpret": "Matris, iki değişkenli haritanın lejantıdır. Matristeki etiketler altyazıyla eşleşmiyorsa okuyucu haritayı çözemez. Matrisi her seferinde haritayla aynı ön ayar ve sınıf sayısıyla üretin.",
+      "trouble": [
+        "Lejant haritayla uyuşmuyor — iki çalıştırma arasında sınıf sayısı veya ön ayar farklı.",
+        "Eşkenar dörtgenler sayfada çok küçük — CELL_SIZE değerini artırın ya da düzende öğeyi ölçekleyin."
+      ]
+    }
+  },
+  "value_by_alpha": {
+    "group": "Thematic Mapping",
+    "algo": "zero2cartolab:value_by_alpha",
+    "en": {
+      "title": "Value-by-Alpha — fade the uncertain, don't hide it",
+      "question": "My estimate is unreliable in some neighbourhoods. How do I show that without pretending the data is missing?",
+      "what": "Value-by-Alpha separates the thematic variable from the reliability variable: hue carries the value, opacity carries the confidence. Low-confidence features fade instead of disappearing into a 'no data' colour — the map states its own uncertainty.",
+      "steps": [
+        "Open Processing Toolbox ▸ 02CartoLab ▸ Value-by-Alpha (VbA) Map.",
+        "Set FIELD_COLOUR to pop_density — the value you want the reader to see.",
+        "Set FIELD_ALPHA to working_share — the share of the working-age population, used here as the reliability proxy.",
+        "Set ALPHA_MIN: 64 and ALPHA_MAX: 255. Both are integers on a 0–255 opacity scale, where 0 is invisible and 255 fully opaque: 64 means the least reliable areas stay 25 % visible, 255 means the most reliable are solid.",
+        "Choose a CVD-safe palette (Cividis) and 5 classes, then Run.",
+        "Compare with the plain choropleth: the faded areas are exactly the places where the estimate should not be trusted."
+      ],
+      "interpret": "A faded polygon is not missing data — it is uncertain data. That distinction is the entire point: a normal choropleth hides uncertainty behind a single grey, which reads as 'nothing here'. Keep the caption explicit about what the alpha variable means, or the reader will not know.",
+      "trouble": [
+        "The map comes out blank — ALPHA_MIN/MAX are integers on a 0–255 scale. Typing 0.25 and 1.0 is silently truncated to 0 and 1, which renders everything invisible. Use 64 and 255.",
+        "Everything is faded — the alpha field is inverted or has a tiny range; check the field statistics.",
+        "The map looks like a plain choropleth — ALPHA_MIN is too close to ALPHA_MAX."
+      ]
+    },
+    "tr": {
+      "title": "Value-by-Alpha — belirsizi gizleme, soluklaştır",
+      "question": "Tahminim bazı mahallelerde güvenilmez. Verinin yokmuş gibi görünmesine yol açmadan bunu nasıl gösteririm?",
+      "what": "Value-by-Alpha tematik değişkeni güvenilirlik değişkeninden ayırır: hue değeri, opaklık güveni taşır. Düşük güvenli özellikler 'veri yok' rengine kaybolmak yerine soluklaşır — harita kendi belirsizliğini söyler.",
+      "steps": [
+        "Processing Toolbox ▸ 02CartoLab ▸ Value-by-Alpha (VbA) Map'i açın.",
+        "FIELD_COLOUR olarak pop_density verin — okuyucunun görmesini istediğiniz değer.",
+        "FIELD_ALPHA olarak working_share verin — çalışma çağı nüfusun payı; burada güvenilirlik vekili olarak kullanılıyor.",
+        "ALPHA_MIN: 64 ve ALPHA_MAX: 255 verin. İkisi de 0–255 opaklık ölçeğinde tam sayıdır: 0 görünmez, 255 tam opak. 64, en düşük güvenli alanların %25 görünür kalması demektir; 255 en güvenlilerin dolu olması.",
+        "CVD güvenli bir palet (Cividis) ve 5 sınıf seçip Run'a basın.",
+        "Sade koropletle karşılaştırın: soluk alanlar tam olarak tahminin güvenilmemesi gereken yerlerdir."
+      ],
+      "interpret": "Soluk bir poligon eksik veri değildir — belirsiz veridir. Bu ayrımın tamamı mesele: normal koroplet belirsizliği tek bir gri arkasında saklar ve bu 'burada hiçbir şey yok' gibi okunur. Altyazıda alfa değişkeninin ne anlama geldiğini açıkça yazın, yoksa okuyucu bilemez.",
+      "trouble": [
+        "Harita boş çıkıyor — ALPHA_MIN/MAX 0–255 ölçeğinde tam sayıdır. 0.25 ve 1.0 yazmak sessizce 0 ve 1'e kırpılır ve her şey görünmez olur. 64 ve 255 kullanın.",
+        "Her şey soluk — alfa alanı ters veya aralığı çok dar; alan istatistiklerini kontrol edin.",
+        "Harita sıradan koroplet gibi görünüyor — ALPHA_MIN ile ALPHA_MAX çok yakın."
+      ]
+    }
+  },
+  "ridge_map": {
+    "group": "Thematic Mapping",
+    "algo": "zero2cartolab:ridge_map",
+    "en": {
+      "title": "Ridge map — turn any raster into relief",
+      "question": "Can I show Kadifekale's terrain — or any continuous surface — as a ridge-line map instead of a flat hillshade?",
+      "what": "The ridge engine samples a raster along parallel scanlines and draws each scanline as a profile, producing the stacked ridgelines of a Joy-Division chart. The source can be a DEM, a heat surface, a density raster or an accessibility index.",
+      "steps": [
+        "Reproject the raster to a projected CRS first — Raster ▸ Reproject Project Layer, or Processing ▸ GDAL ▸ Reproject. The ridge engine multiplies the raw elevation by the vertical exaggeration and adds it to the scanline position, so a DEM in degrees would throw the ridges thousands of degrees away. The plugin refuses a geographic CRS with an explanatory error.",
+        "Open Processing Toolbox ▸ 02CartoLab ▸ Ridge Map.",
+        "Set RASTER to the reprojected DEM and EXTENT to the area you want, in the DEM's own CRS (xmin,xmax,ymin,ymax).",
+        "N_LINES: 120 gives a dense relief. SMOOTH: 2 removes single-cell noise.",
+        "VERTICAL_SCALE is the exaggeration of the raw elevation. Derive it from the data: (map height × 0.3) ÷ maximum elevation makes the tallest ridge rise about a third of the frame. Change it and compare — too little flattens the relief, too much turns it into a cartoon.",
+        "Set LINE_COLOR near-black, LINE_WIDTH: 0.28 and Run. The output is vector, so it can be styled and labelled in a layout."
+      ],
+      "interpret": "The horizontal axis is distance, the vertical axis is the surface value. Dark ridges are high ground. Change VERTICAL_SCALE and watch the terrain change character — too little and it flattens, too much and it becomes a cartoon. The right value is the one that reveals structure without inventing it.",
+      "trouble": [
+        "The plugin refuses the input — the raster is in a geographic CRS (EPSG:4326). Reproject it to UTM; the error message says so explicitly.",
+        "The ridges collapse into a single vertical line — the same cause, or the vertical exaggeration was applied to degree values.",
+        "The ridges are flat lines — VERTICAL_SCALE is too low for the elevation range.",
+        "The ridges are noisy — raise SMOOTH."
+      ]
+    },
+    "tr": {
+      "title": "Ridge map — her rasteri kabartıya dönüştür",
+      "question": "Kadifekale'nin arazisini — ya da herhangi bir sürekli yüzeyi — düz gölgeleme yerine ridge-line haritası olarak gösterebilir miyim?",
+      "what": "Ridge motoru bir rasterı paralel tarama çizgileri boyunca örnekler ve her tarama çizgisini bir profil olarak çizer; Joy-Division grafiğinin yığılmış sırtlarını üretir. Kaynak DEM, ısı yüzeyi, yoğunluk rasterı ya da erişilebilirlik indeksi olabilir.",
+      "steps": [
+        "Önce rasterı projeksiyonlu bir CRS'ye reprojeksiyonlayın — Raster ▸ Reproject Project Layer ya da Processing ▸ GDAL ▸ Reproject. Ridge motoru ham yüksekliği dikey büyütmeyle çarpıp tarama çizgisinin konumuna ekler; derece cinsinden bir DEM sırtları binlerce derece öteye fırlatır. Eklenti coğrafi CRS'li bir girdiyi açıklayıcı bir hata mesajıyla reddeder.",
+        "Processing Toolbox ▸ 02CartoLab ▸ Ridge Map'i açın.",
+        "RASTER olarak reprojeksiyonlanmış DEM'i, EXTENT olarak istediğiniz alanı DEM'in kendi CRS'inde verin (xmin,xmax,ymin,ymax).",
+        "N_LINES: 120 sık kabartı verir. SMOOTH: 2 tek hücrelik gürültüyü temizler.",
+        "VERTICAL_SCALE, ham yüksekliğin büyütme çarpanıdır. Veriden türetin: (harita yüksekliği × 0.3) ÷ en yüksek kot, en yüksek sırtın çerçevenin yaklaşık üçte biri kadar yükselmesini sağlar. Değiştirip karşılaştırın: az büyütme kabartıyı düzleştirir, çok büyütme karikatüre çevirir.",
+        "LINE_COLOR'ı siyaha yakın, LINE_WIDTH: 0.28 yapıp Run'a basın. Çıktı vektördür; düzende stillenip etiketlenebilir."
+      ],
+      "interpret": "Yatay eksen mesafe, dikey eksen yüzey değeridir. Koyu sırtlar yüksek zemindir. VERTICAL_SCALE'i değiştirip arazinin karakterinin nasıl değiştiğini izleyin: az büyütme düzleştirir, çok büyütme karikatüre çevirir. Doğru değer, yapıyı uydurmadan ortaya çıkaran değerdir.",
+      "trouble": [
+        "Eklenti girdiyi reddediyor — raster coğrafi CRS'de (EPSG:4326). UTM'e reprojeksiyonlayın; hata mesajı bunu açıkça söyler.",
+        "Sırtlar tek bir dikey çizgiye çöküyor — aynı neden ya da dikey büyütme derece değerlerine uygulanmış.",
+        "Sırtlar düz çizgi — VERTICAL_SCALE kot aralığına göre çok düşük.",
+        "Sırtlar gürültülü — SMOOTH'u artırın."
+      ]
+    }
+  },
+  "dot_density": {
+    "group": "Thematic Mapping",
+    "algo": "zero2cartolab:dot_density",
+    "en": {
+      "title": "Dot-density map — one dot, N people",
+      "question": "Where do people actually live inside these neighbourhoods, instead of just how many?",
+      "what": "The dot-density engine seeds dots inside each polygon — one dot per N units of a count field — placing them away from edges and never inside holes. The same seed always produces the same map, so figures are reproducible across a report.",
+      "steps": [
+        "Open Processing Toolbox ▸ 02CartoLab ▸ Dot-Density Map.",
+        "Set INPUT to the district layer and FIELD to pop_total.",
+        "Set VALUE_PER_DOT: 500 — one dot per 500 residents.",
+        "Choose DOT_SIZE: 2.0 mm, DOT_COLOR and a SEED (42 is a good reproducible default).",
+        "Run and compare with the choropleth of the same variable: the dots show where the density is, not just how much."
+      ],
+      "interpret": "The dot pattern carries spatial information the choropleth loses: it shows that a dense district is dense in one compact core rather than spread evenly. Never change the seed between figures of the same dataset — the same data must produce the same picture.",
+      "trouble": [
+        "Too many dots — raise VALUE_PER_DOT (fewer dots, same meaning).",
+        "The dots overflow the polygon — the count exceeds the area; this is a data problem, not a rendering one.",
+        "The map differs between runs — the seed was changed."
+      ]
+    },
+    "tr": {
+      "title": "Nokta yoğunluğu haritası — bir nokta, N kişi",
+      "question": "Bu mahallelerde insanlar gerçekte nerede yaşıyor, sadece kaç kişi değil?",
+      "what": "Nokta yoğunluğu motoru her poligonun içine noktalar eker — sayım alanında her N birim için bir nokta — kenarlardan uzak, deliklerin içine asla yerleştirmeden. Aynı seed her zaman aynı haritayı üretir; rapor içinde şekiller tekrarlanabilir olur.",
+      "steps": [
+        "Processing Toolbox ▸ 02CartoLab ▸ Dot-Density Map'i açın.",
+        "INPUT olarak ilçe katmanını, FIELD olarak pop_total verin.",
+        "VALUE_PER_DOT: 500 yapın — 500 kişi başına bir nokta.",
+        "DOT_SIZE: 2.0 mm, DOT_COLOR ve SEED (42 iyi bir tekrarlanabilir varsayılan) seçin.",
+        "Run'a basın ve aynı değişkenin koropletiyle karşılaştırın: noktalar yoğunluğun nerede olduğunu, sadece miktarını değil gösterir."
+      ],
+      "interpret": "Nokta deseni, koropletin kaybettiği mekân bilgisini taşır: yoğun bir ilçenin tek bir kompakt çekirdekte mi yoğunlaştığını, düzgün dağılıp dağılmadığını gösterir. Aynı veri kümesinin şekilleri arasında seed'i asla değiştirmeyin — aynı veri aynı resmi üretmelidir.",
+      "trouble": [
+        "Çok fazla nokta — VALUE_PER_DOT'u artırın (daha az nokta, aynı anlam).",
+        "Noktalar poligonu taşıyor — sayım alanı alanı aşıyor; bu veri sorunudur, çizim sorunu değil.",
+        "Harita çalıştırmalar arasında değişiyor — seed değiştirilmiş."
+      ]
+    }
+  },
+  "proportional_symbols": {
+    "group": "Thematic Mapping",
+    "algo": "zero2cartolab:proportional_symbols",
+    "en": {
+      "title": "Proportional symbols — Flannery-compensated circles",
+      "question": "Our values live at points, not polygons. How do I size the symbols so the reader's eye is not misled?",
+      "what": "The proportional-symbol engine builds graduated point symbols with Flannery compensation: because people systematically under-estimate area differences, the symbol areas are scaled so that perceived size matches actual value. Symbols come in five shapes and the legend carries the nested values.",
+      "steps": [
+        "Open Processing Toolbox ▸ 02CartoLab ▸ Proportional Symbols (Flannery).",
+        "Set INPUT to a point layer — here the interior points of the district layer, each carrying pop_total.",
+        "Set FIELD: pop_total, MAX_SIZE: 14.0 and MIN_SIZE: 2.0 (millimetres at layout scale).",
+        "Choose SHAPE: Circle for area, Square or Diamond when the figure is printed in black and white.",
+        "Leave FLANNERY ticked, set the fill and outline colours, then Run.",
+        "Place the result in a layout: the legend is generated with the nested sample values."
+      ],
+      "interpret": "The area of the symbol, not its radius, carries the value. Flannery compensation corrects the well-documented human bias that makes a circle that looks twice as big actually read as much more than double. Turn it off and the map quietly lies by about a third.",
+      "trouble": [
+        "The symbols are too big and cover the map — reduce MAX_SIZE.",
+        "Small values are invisible — raise MIN_SIZE, or filter the input to the top N.",
+        "The legend shows no values — the output layer must be added to the layout's legend."
+      ]
+    },
+    "tr": {
+      "title": "Oransal semboller — Flannery düzeltmeli daireler",
+      "question": "Değerlerimiz poligonlarda değil noktalarda. Okuyucunun gözünü yanıltmadan sembolleri nasıl boyutlandırırız?",
+      "what": "Oransal sembol motoru Flannery düzeltmeli gradyan nokta sembolleri üretir: insanlar alan farklarını sistematik olarak küçük gördüğü için sembol alanları, algılanan boyut gerçek değere eşit olacak şekilde ölçeklenir. Beş sembol şekli sunulur ve lejant iç içe değerleri taşır.",
+      "steps": [
+        "Processing Toolbox ▸ 02CartoLab ▸ Proportional Symbols (Flannery)'yi açın.",
+        "INPUT olarak nokta katmanı verin — burada ilçe katmanının iç noktaları, her biri pop_total taşıyor.",
+        "FIELD: pop_total, MAX_SIZE: 14.0 ve MIN_SIZE: 2.0 (düzendeki ölçekte milimetre) yapın.",
+        "Şekil siyah-beyaz basım için önemliyse SHAPE: Circle, Square veya Diamond seçin.",
+        "FLANNERY işaretli kalsın, dolgu ve kenar renklerini ayarlayıp Run'a basın.",
+        "Sonucu düzene yerleştirin: lejant iç içe örnek değerlerle otomatik üretilir."
+      ],
+      "interpret": "Değeri sembolün yarıçapı değil, alanı taşır. Flannery düzeltmesi, iki kat büyük görünen bir dairenin aslında çok daha fazla okunduğu belgelenmiş insan eğilimini düzeltir. Kapatırsanız harita sessizce yaklaşık üçte bir kadar yanlış konuşur.",
+      "trouble": [
+        "Semboller çok büyük ve haritayı kaplıyor — MAX_SIZE'ı küçültün.",
+        "Küçük değerler görünmez — MIN_SIZE'ı artırın ya da girdiyi ilk N ile süzün.",
+        "Lejantta değer yok — çıktı katmanı düzenin lejantına eklenmeli."
+      ]
+    }
+  },
+  "flow_map": {
+    "group": "Thematic Mapping",
+    "algo": "zero2cartolab:flow_map",
+    "en": {
+      "title": "Origin–Destination flow map — curved desire lines",
+      "question": "How do people or goods move between places, and in which direction?",
+      "what": "The flow engine converts an origin–destination table into curved, arrowed desire lines on the map. Width is proportional to volume, large flows are drawn first so small ones stay visible, and A→B and B→A are kept apart so a return trip never hides under the outward one.",
+      "steps": [
+        "Prepare a ZONES layer (polygons or points) with a unique id field, and an OD table with three fields: origin, destination and volume. The data/od_table.csv shipped with this guide is a working example.",
+        "Open Processing Toolbox ▸ 02CartoLab ▸ Origin-Destination Flow Map.",
+        "Set ZONES and ZONE_ID, then FLOWS with the ORIGIN, DEST and VOLUME field names.",
+        "Tick DIRECTED to keep the arrowheads and separate opposite directions; set MIN_VOLUME to drop the noise, and TOP_N to keep only the strongest links.",
+        "Tune CURVATURE (0.3 is a good default), MAX_WIDTH / MIN_WIDTH, and END_GAP so the line starts clear of the anchor.",
+        "Run. The output is graduated by volume and drawn with large flows underneath."
+      ],
+      "interpret": "The line width is the volume, the curvature is purely graphic, and the arrowhead is the direction. Read the map as a network of desire lines, not as a road map: crossing lines mean competing routes, not intersections. If a return flow is invisible, DIRECTED was probably off.",
+      "trouble": [
+        "No lines appear — the origin/destination ids in the table do not match the ZONE_ID values; the algorithm warns about unmatched ids.",
+        "All lines are the same width — VOLUME points to a text field or a constant.",
+        "Lines start inside the anchor — raise END_GAP."
+      ]
+    },
+    "tr": {
+      "title": "Kalkış–Varış akış haritası — eğri istek çizgileri",
+      "question": "İnsanlar veya mallar yerler arasında nasıl, hangi yönde hareket ediyor?",
+      "what": "Akış motoru bir kalkış–varış tablosunu haritada eğri, oklu istek çizgilerine dönüştürür. Genişlik hacimle orantılıdır, büyük akışlar önce çizilir ki küçükler üstte kalsın, A→B ile B→A ayrı tutulur; böylece dönüş yolculuğu gidişin altında kaybolmaz.",
+      "steps": [
+        "Benzersiz id alanı olan bir ZONES katmanı (poligon ya da nokta) ve üç alanlı bir OD tablosu hazırlayın: kalkış, varış, hacim. Bu kılavuzla birlikte gelen data/od_table.csv çalışan bir örnektir.",
+        "Processing Toolbox ▸ 02CartoLab ▸ Origin-Destination Flow Map'i açın.",
+        "ZONES ve ZONE_ID'yi verin, sonra FLOWS ile ORIGIN, DEST ve VOLUME alan adlarını atayın.",
+        "Okları korumak ve ters yönleri ayırmak için DIRECTED'i işaretleyin; gürültüyü atmak için MIN_VOLUME, yalnızca en güçlü bağları tutmak için TOP_N kullanın.",
+        "CURVATURE (0.3 iyi bir varsayılan), MAX_WIDTH / MIN_WIDTH ve çizginin kancadan ayrı başlaması için END_GAP değerlerini ayarlayın.",
+        "Run'a basın. Çıktı hacme göre gradyanlaştırılır ve büyük akışlar altta çizilir."
+      ],
+      "interpret": "Çizgi genişliği hacimdir, eğrilik tamamen grafiktir, ok başı yöndür. Haritayı yol haritası değil istek çizgileri ağı olarak okuyun: kesişen çizgiler rakip rotaları ifade eder, kavşak değil. Dönüş akışı görünmüyorsa DIRECTED büyük olasılıkla kapalıdır.",
+      "trouble": [
+        "Hiç çizgi çıkmıyor — tablodaki kalkış/varış id'leri ZONE_ID değerleriyle eşleşmiyor; algoritma eşleşmeyen id'leri uyarır.",
+        "Tüm çizgiler aynı genişlikte — VOLUME metin bir alana ya da sabite işaret ediyor.",
+        "Çizgiler kancanın içinde başlıyor — END_GAP değerini artırın."
+      ]
+    }
+  },
+  "cartogram": {
+    "group": "Cartogram Engine",
+    "algo": "zero2cartolab:compute_cartogram",
+    "en": {
+      "title": "Continuous-area cartogram — reshape by value",
+      "question": "Where does İzmir's population really live, if the map is drawn so that area means people?",
+      "what": "The cartogram engine continuously distorts every polygon so that its area is proportional to the chosen value, while shared borders stay contiguous and neighbourhoods stay neighbours. The result is a topology-preserving map in which geography is truthful but area carries the message.",
+      "steps": [
+        "Open Processing Toolbox ▸ 02CartoLab ▸ Continuous-Area Cartogram (Diffusion).",
+        "Set INPUT to a projected polygon layer — the engine measures areas in map units, so a geographic CRS is rejected. Use the district layer in EPSG:32635.",
+        "Set FIELD: pop_total.",
+        "MAX_ITERATIONS: 60 and MAX_ERROR: 5 (average area error in percent) control how long the diffusion runs.",
+        "Choose PALETTE: Viridis and Run.",
+        "Read the two outputs: ITERATIONS (rounds used) and RESIDUAL_ERROR (how far the areas still are from the target)."
+      ],
+      "interpret": "Compare the input and the result: the mountainous eastern districts shrink towards nothing because few people live there, while the compact central districts swell. The cartogram keeps the adjacency structure, so a district never floats away from its neighbours — that is what makes it readable where a Dorling cartogram is not.",
+      "trouble": [
+        "The engine refuses the input — the CRS is geographic; reproject to a projected CRS first.",
+        "The result is scrambled — the value field has zeros or extreme outliers; clean the field and rerun.",
+        "The shapes did not change enough — raise MAX_ITERATIONS and lower MAX_ERROR."
+      ]
+    },
+    "tr": {
+      "title": "Sürekli alan kartogramı — değere göre yeniden biçimlendir",
+      "question": "Alanın insan anlamına geldiği bir haritada İzmir nüfusu gerçekte nerede yaşıyor?",
+      "what": "Kartogram motoru her poligonu, alanı seçilen değerle orantılı olacak şekilde sürekli olarak bozar; ortak sınırlar bitişik kalır ve komşuluklar korunur. Sonuç, topolojiyi koruyan ve coğrafyanın doğru ama alanın mesajı taşıdığı bir haritadır.",
+      "steps": [
+        "Processing Toolbox ▸ 02CartoLab ▸ Continuous-Area Cartogram (Diffusion)'u açın.",
+        "INPUT olarak projeksiyonlu bir poligon katmanı verin — motor alanları map units ölçer, coğrafi CRS reddedilir. EPSG:32635'teki ilçe katmanını kullanın.",
+        "FIELD: pop_total yapın.",
+        "MAX_ITERATIONS: 60 ve MAX_ERROR: 5 (ortalama alan hatası, yüzde) difüzyonun ne kadar süreceğini belirler.",
+        "PALETTE: Viridis seçip Run'a basın.",
+        "İki çıktıyı okuyun: ITERATIONS (kullanılan tur) ve RESIDUAL_ERROR (alanların hedeften ne kadar uzak olduğu)."
+      ],
+      "interpret": "Giriş ile sonucu karşılaştırın: dağlık doğu ilçeleri nüfuz az olduğu için neredeyse yok olana kadar küçülür, kompakt merkez ilçeler büyür. Kartogram komşuluk yapısını korur; bir ilçe komşularından kopup yüzelmez — Dorling kartogramının okunabilir olmamasının nedeni budur.",
+      "trouble": [
+        "Motor girdiyi reddediyor — CRS coğrafi; önce projeksiyonlu bir CRS'ye dönüştürün.",
+        "Sonuç karışık — değer alanında sıfır ya da aşırı aykırı değerler var; alanı temizleyip yeniden çalıştırın.",
+        "Şekiller yeterince değişmedi — MAX_ITERATIONS'i artırın, MAX_ERROR'u düşürün."
+      ]
+    }
+  },
+  "dorling": {
+    "group": "Cartogram Engine",
+    "algo": "zero2cartolab:dorling_cartogram",
+    "en": {
+      "title": "Dorling cartogram — circles that keep their place",
+      "question": "Can I show totals without destroying the shape of the geography?",
+      "what": "A Dorling cartogram replaces every polygon with a circle whose area is proportional to the value, positioned close to its original location by a force-directed relaxation. Districts with large values and small footprints stay visible instead of being squeezed out.",
+      "steps": [
+        "Open Processing Toolbox ▸ 02CartoLab ▸ Dorling Circle Cartogram.",
+        "Set INPUT to the district layer and FIELD: pop_total.",
+        "SIZE_FACTOR scales the circles; ATTRACTION (0.6) pulls them back to their home position; GAP (3.0) keeps circles from touching.",
+        "ITERATIONS: 300 gives the relaxation time to settle.",
+        "Choose PALETTE: Viridis and Run.",
+        "Read the ROUNDS and RESIDUAL outputs to check how close the layout settled."
+      ],
+      "interpret": "Use Dorling when the shape of the unit carries information — a coastline, a river, a border — and you still need to show totals. Use the continuous cartogram when the shape itself is the message. A Dorling circle says 'this much population, roughly here'; a distorted polygon says 'this much population, and this is what the land looks like under that pressure'.",
+      "trouble": [
+        "Circles overlap — raise GAP.",
+        "Circles drift far from their origin — lower ATTRACTION.",
+        "Circles are invisible — the values are too small relative to SIZE_FACTOR; raise it."
+      ]
+    },
+    "tr": {
+      "title": "Dorling kartogramı — yerini koruyan daireler",
+      "question": "Coğrafyanın şeklini bozmadan toplamları gösterebilir miyim?",
+      "what": "Dorling kartogramı her poligonu, alanı değerle orantılı, kuvvet yönlü gevşeme ile özgün konumuna yakın duran bir daireyle değiştirir. Değeri büyük ama alanı küçük ilçeler, ezilip kaybolmak yerine görünür kalır.",
+      "steps": [
+        "Processing Toolbox ▸ 02CartoLab ▸ Dorling Circle Cartogram'ı açın.",
+        "INPUT olarak ilçe katmanını, FIELD: pop_total verin.",
+        "SIZE_FACTOR daireleri ölçekler; ATTRACTION (0.6) onları özgün konumlarına çeker; GAP (3.0) dairelerin birbirine değmesini engeller.",
+        "ITERATIONS: 300 gevşemenin yerleşmesi için zaman tanır.",
+        "PALETTE: Viridis seçip Run'a basın.",
+        "Yerleşimin ne kadar oturduğunu görmek için ROUNDS ve RESIDUAL çıktılarını okuyun."
+      ],
+      "interpret": "Birimin şekli bilgi taşıyorsa — kıyı şeridi, nehir, sınır — ve yine de toplamları göstermek istiyorsanız Dorling kullanın. Şekil kendisi mesajsa sürekli alan kartogramını kullanın. Bir Dorling dairesi 'şu kadar nüfus, yaklaşık burada' der; bozulmuş bir poligon 'şu kadar nüfus ve baskı altındaki arazi şöyle görünüyor' der.",
+      "trouble": [
+        "Daireler üst üste biniyor — GAP değerini artırın.",
+        "Daireler özgün konumlarından çok uzaklaşıyor — ATTRACTION'ı düşürün.",
+        "Daireler görünmez — değerler SIZE_FACTOR'a göre çok küçük; artırın."
+      ]
+    }
+  },
+  "hexbin": {
+    "group": "Aggregation",
+    "algo": "zero2cartolab:hexbin_aggregate",
+    "en": {
+      "title": "Hexbin aggregation — density without overplotting",
+      "question": "Too many points, too little map. How do I aggregate them honestly?",
+      "what": "The hexbin engine bins a point layer into a pointy-top hexagonal grid and aggregates a weight per cell — count, sum or mean. Hexagons tile the plane with no gaps, which keeps the density surface continuous while removing the overplotting that hides real structure.",
+      "steps": [
+        "Open Processing Toolbox ▸ 02CartoLab ▸ Hexbin Aggregation.",
+        "Set INPUT to a point layer — the interior points of the district layer, each carrying pop_total.",
+        "Set CELL_SIZE: 1500 (hexagon edge in map units — the mesh size of your analysis) and WEIGHT: pop_total.",
+        "Choose STAT: Sum of weight to accumulate population per cell, or Mean of weight for an average.",
+        "Choose CLASSIFIER: Quantile and CLASSES: 5, then a palette, and Run.",
+        "The output carries hex_count, hex_sum and hex_mean so you can re-classify without recomputing."
+      ],
+      "interpret": "A hexagonal mesh removes the false precision of small administrative units: the map shows a smooth surface rather than a patchwork of arbitrary boundaries. Choose the cell size from your question — 1.5 km cells answer neighbourhood questions, 500 m cells answer street-level ones.",
+      "trouble": [
+        "The output is empty — CELL_SIZE is larger than the data extent.",
+        "Only a few cells are filled — the point layer is sparse relative to the cell size.",
+        "The surface looks blocky — switch CLASSIFIER to Natural Breaks (Jenks) for a skewed distribution."
+      ]
+    },
+    "tr": {
+      "title": "Hexbin toplulaştırma — aşırı çakışma olmadan yoğunluk",
+      "question": "Çok fazla nokta, çok az harita. Onları nasıl dürüstçe toplulaştırırım?",
+      "what": "Hexbin motoru bir nokta katmanını nokta üçgenli (pointy-top) altıgen ızgaraya böler ve hücre başına bir ağırlık toplar — sayım, toplam ya da ortalama. Altıgenler boşluk bırakmadan düzlemi döşer; bu, yoğunluk yüzeyini sürekli tutarken gerçek yapıyı gizleyen aşırı çakışmayı kaldırır.",
+      "steps": [
+        "Processing Toolbox ▸ 02CartoLab ▸ Hexbin Aggregation'ı açın.",
+        "INPUT olarak nokta katmanı verin — ilçe katmanının her biri pop_total taşıyan iç noktaları.",
+        "CELL_SIZE: 1500 (altıgen kenar uzunluğu, map units — analiz ağınızın ölçeği) ve WEIGHT: pop_total yapın.",
+        "STAT: Sum of weight ile hücre başına nüfus biriktirin, ortalama istiyorsanız Mean of weight.",
+        "CLASSIFIER: Quantile ve CLASSES: 5 seçip bir palet verin ve Run'a basın.",
+        "Çıktı hex_count, hex_sum ve hex_mean alanlarını taşır; yeniden sınıflamak için yeniden hesap yapmanıza gerek kalmaz."
+      ],
+      "interpret": "Altıgen ağ, küçük idari birimlerin yarattığı sahte kesinliği ortadan kaldırır: harita, keyfi sınırların yamaları yerine pürüzsüz bir yüzey gösterir. Hücre boyutunu sorunuzdan seçin: 1.5 km hücreler mahalle sorularına, 500 m hücreler sokak düzeyi sorulara yanıt verir.",
+      "trouble": [
+        "Çıktı boş — CELL_SIZE veri kapsamından büyük.",
+        "Yalnızca birkaç hücre dolu — nokta katmanı hücre boyutuna göre seyrek.",
+        "Yüzey bloklu görünüyor — çarpık dağılımda CLASSIFIER'ı Natural Breaks (Jenks)'e alın."
+      ]
+    }
+  },
+  "label_points": {
+    "group": "Labeling",
+    "algo": "zero2cartolab:label_points",
+    "en": {
+      "title": "Visual-centre label points — labels that stay inside the shape",
+      "question": "Why do my district names keep falling off the districts?",
+      "what": "Centroid labels drift outside concave shapes. The label-point engine computes the pole of inaccessibility for every polygon — the point furthest from the polygon edge, which is guaranteed to lie inside — and writes it as a new point layer you can join to your label layer.",
+      "steps": [
+        "Open Processing Toolbox ▸ 02CartoLab ▸ Visual-Center Label Points.",
+        "Set INPUT to the polygon layer and PRECISION: 1.0 (the search tolerance in map units; lower is finer).",
+        "Run. The output is a point layer with one anchor per polygon.",
+        "Join the anchor layer to your label layer on the polygon id.",
+        "In the label layer set the anchor mode to the joined point, and add a callout line for the labels that would still overlap."
+      ],
+      "interpret": "The anchor is the visually strongest position inside the shape — the same principle that puts a logo in the optical centre of a triangle. For long, thin or crescent-shaped districts it is the difference between a legible label and one that hangs in the sea.",
+      "trouble": [
+        "Anchors are not exactly inside — increase PRECISION (coarser search) or fix the geometry with Fix geometries.",
+        "Labels still collide — the anchor solves containment, not collision; use the callout line or the plugin's label placement settings.",
+        "The result is empty for some polygons — the geometry is invalid; run Fix geometries first."
+      ]
+    },
+    "tr": {
+      "title": "Görsel merkez etiket noktaları — şeklin içinde kalan etiketler",
+      "question": "Mahalle adlarım neden sürekli mahallelerin dışına düşüyor?",
+      "what": "Ağırlık merkezi etiketleri içbükey şekillerin dışına taşar. Etiket noktası motoru her poligon için erişilemezlik kutbunu (polygon edge'e en uzak nokta) hesaplar — bu noktanın şeklin içinde olduğu garanti edilir — ve onu yeni bir nokta katmanına yazar; etiket katmanınızla birleştirebilirsiniz.",
+      "steps": [
+        "Processing Toolbox ▸ 02CartoLab ▸ Visual-Center Label Points'i açın.",
+        "INPUT olarak poligon katmanını, PRECISION: 1.0 (map units cinsinden arama toleransı; daha küçük daha hassas) verin.",
+        "Run'a basın. Çıktı her poligon için bir çapa noktası olan bir nokta katmanıdır.",
+        "Çapa katmanını etiket katmanınızla poligon id üzerinden birleştirin.",
+        "Etiket katmanında çapa modunu birleştirilen noktaya ayarlayın ve hâlâ çakışan etiketler için çağırma çizgisi ekleyin."
+      ],
+      "interpret": "Çapa, şeklin içindeki görsel olarak en güçlü konumdur — bir üçgenin optik merkezine logo koyma ilkesinin aynısı. Uzun, ince ya da hilal biçimli ilçelerde okunur bir etiket ile denizde asılı kalan bir etiket arasındaki fark budur.",
+      "trouble": [
+        "Çapalar tam içeride değil — PRECISION'u artırın (daha kaba arama) ya da geometriyi Fix geometries ile düzeltin.",
+        "Etiketler hâlâ çakışıyor — çapa içerilemeyi çözer, çakışmayı değil; çağırma çizgisini ya da eklentinin etiket yerleşim ayarlarını kullanın.",
+        "Bazı poligonlarda sonuç boş — geometri geçersiz; önce Fix geometries çalıştırın."
+      ]
+    }
+  },
+  "graticule": {
+    "group": "Map Reference",
+    "algo": "zero2cartolab:graticule_grid",
+    "en": {
+      "title": "Graticule — a labelled reference grid",
+      "question": "My reader needs to locate a point on the map. What reference grid should I add?",
+      "what": "The graticule engine draws meridians and parallels on a round interval and attaches a coordinate label to every line. It is the cheapest way to make a thematic map locatable and citable.",
+      "steps": [
+        "Open Processing Toolbox ▸ 02CartoLab ▸ Graticule / Reference Grid.",
+        "Set EXTENT to the map area in the layer's CRS, for example 500000,650000,4050000,4120000 [EPSG:32635].",
+        "Set X_INTERVAL and Y_INTERVAL: 10000 for a 10 km metric grid, or 1 for a 1° geographic grid.",
+        "Choose LINE_STYLE: Dashed Line for a quiet reference, LINE_COLOR: grey and LINE_WIDTH: 0.35.",
+        "Run and add the result below the data layers.",
+        "For a survey-style neatline, use the Layout Studio's Grid + QPT Studio presets instead."
+      ],
+      "interpret": "A graticule is a reference layer: it always sits beneath the data and never competes with it. In the metric UTM grid the numbers are eastings and northings, which let a reader convert a visual position into a coordinate. In a geographic grid they are degrees, which lets them locate the place by name.",
+      "trouble": [
+        "The grid does not appear — EXTENT and the interval are mismatched; check the extent format and CRS.",
+        "Too many lines — increase the interval.",
+        "The grid dominates the map — reduce the width and use a light grey."
+      ]
+    },
+    "tr": {
+      "title": "Graticule — etiketli referans ızgarası",
+      "question": "Okuyucum haritada bir noktayı bulabilmeli. Hangi referans ızgarayı ekleyeyim?",
+      "what": "Graticule motoru belirli aralıklarla boylam ve enlem çizgilerini çizer ve her çizgiye koordinat etiketi ekler. Tematik haritayı konumlanabilir ve kaynak gösterilebilir kılan en ucuz yöntemdir.",
+      "steps": [
+        "Processing Toolbox ▸ 02CartoLab ▸ Graticule / Reference Grid'i açın.",
+        "EXTENT'i katmanın CRS'inde harita alanı olarak verin, örn. 500000,650000,4050000,4120000 [EPSG:32635].",
+        "X_INTERVAL ve Y_INTERVAL: 10 km'lik metrik ızgara için 10000, 1° coğrafi ızgara için 1 yapın.",
+        "LINE_STYLE: Dashed Line (sakin referans), LINE_COLOR: gri ve LINE_WIDTH: 0.35 seçin.",
+        "Run'a basın ve sonucu veri katmanlarının ALTINA ekleyin.",
+        "Survey tipi neatline için Layout Studio'daki Grid + QPT Studio ön ayarlarını kullanın."
+      ],
+      "interpret": "Graticule bir referans katmanıdır: her zaman verinin altında durur ve veriyle yarışmaz. Metrik UTM ızgarasında sayılar easting ve northing'dir; okuyucu görsel konumu koordinata çevirebilir. Coğrafi ızgarada derecelerdir; okuyucu yeri isimle bulabilir.",
+      "trouble": [
+        "Izgara çıkmıyor — EXTENT ve aralık uyumsuz; extent biçimini ve CRS'yi kontrol edin.",
+        "Çok fazla çizgi — aralığı artırın.",
+        "Izgara haritaya hâkim — genişliği azaltın ve açık gri kullanın."
+      ]
+    }
+  },
+  "layout_templates": {
+    "group": "Layout Studio",
+    "algo": null,
+    "en": {
+      "title": "Template gallery — ten publication archetypes",
+      "question": "Which print archetype should this deliverable use?",
+      "what": "The Layout Studio turns a styled map into a finished page. Ten archetypes are built in: Report Figure (16:9), Academic Journal (A4 two-column), Exhibition Poster (A1/A2), Fact Sheet (A4 portrait), Comparative Diptych, UTM Field Sheet, Planning Review Board, Spatial Data Story, Atlas Production Sheet and Emergency Operations Brief. Each has calibrated margins, a type hierarchy and a grid — not a blank page with a picture on it.",
+      "steps": [
+        "Open the Layout Studio from the dashboard and choose the Template Gallery tab.",
+        "Pick the archetype that matches the deliverable — the gallery shows each one's page size and purpose.",
+        "The template is created in the current project with your layers; refine the title, subtitle and credits.",
+        "Add a grid preset from Grid + QPT Studio if the archetype needs a reference frame.",
+        "Open the layout in the Print Layout Designer to fine-tune the map frame and legend.",
+        "Export from the Layout Manager as PNG, PDF or SVG at 150, 300 or 600 dpi."
+      ],
+      "interpret": "Choose the archetype by the reading distance, not by taste: a Report Figure is read on a laptop, an Academic Journal page is read at 40 cm, an Exhibition Poster is read at 2 m. The templates encode exactly those differences in type size, margin and data density.",
+      "trouble": [
+        "The template ignores my layer — the layer must be loaded and visible in the project before the template is created.",
+        "The legend overflows — reduce the number of classes or the legend font size in the Designer.",
+        "The map frame is empty — set the map extent and CRS on the map item after creating the template."
+      ]
+    },
+    "tr": {
+      "title": "Şablon galerisi — on yayın arketipi",
+      "question": "Bu çıktı hangi baskı arketipini kullanmalı?",
+      "what": "Layout Studio, stillenmiş haritayı bitmiş bir sayfaya dönüştürür. On arketip hazırdır: Report Figure (16:9), Academic Journal (A4 iki sütun), Exhibition Poster (A1/A2), Fact Sheet (A4 dikey), Comparative Diptych, UTM Field Sheet, Planning Review Board, Spatial Data Story, Atlas Production Sheet ve Emergency Operations Brief. Her biri kalibre edilmiş kenar boşlukları, tipografi hiyerarşisi ve ızgarayla gelir — üzerinde resim olan boş bir sayfa olarak değil.",
+      "steps": [
+        "Dashboard'dan Layout Studio'yu açın ve Template Gallery sekmesini seçin.",
+        "Çıktıyla eşleşen arketipi seçin — galeri her birinin sayfa boyutunu ve amacını gösterir.",
+        "Şablon mevcut projenizde katmanlarınızla oluşturulur; başlık, alt başlık ve kaynak metnini düzenleyin.",
+        "Arketip referans çerçeve gerektiriyorsa Grid + QPT Studio'dan bir ızgara ön ayarı ekleyin.",
+        "Harita çerçevesi ve lejantı ince ayar için düzeni Print Layout Designer'da açın.",
+        "Layout Manager'dan PNG, PDF veya SVG olarak 150, 300 ya da 600 dpi'de dışa aktarın."
+      ],
+      "interpret": "Arketipi zevkle değil, okuma mesafesiyle seçin: bir Report Figure dizüstünde okunur, Academic Journal sayfası 40 cm'de okunur, Exhibition Poster 2 m'den okunur. Şablonlar bu farkları tam olarak tipografi boyutunda, kenar boşluğunda ve veri yoğunluğunda kodlar.",
+      "trouble": [
+        "Şablon katmanımı yok sayıyor — katman projeye yüklenmiş ve görünür olmalı.",
+        "Lejant taşıyor — sınıf sayısını azaltın ya da Designer'da lejant punto boyutunu küçültün.",
+        "Harita çerçevesi boş — şablonu oluşturduktan sonra harita öğesinde kapsam ve CRS ayarlayın."
+      ]
+    }
+  },
+  "map_sheet": {
+    "group": "Layout Studio",
+    "algo": null,
+    "en": {
+      "title": "Auto Map Sheet — a finished layout in one click",
+      "question": "I have a styled map and no time. Can I get a complete, credited, scaled print sheet?",
+      "what": "Auto Map Sheet builds a finished publication layout from the current view: a titled map frame, a filtered legend, a fitted scale bar, a north arrow, an optional coordinate grid and a credits line — then registers it in the project so you can refine or export it immediately.",
+      "steps": [
+        "Style your layers first, then set the canvas extent to the area you want to publish.",
+        "Open the Layout Studio ▸ Map Sheet Studio tab.",
+        "Choose the page size (A4 landscape is the default) and a typography preset: swiss_modern, academic_serif, technical_blueprint or editorial_warm.",
+        "Set the title, subtitle and credits, and decide which furniture to include: title, legend, scale bar, north arrow, coordinate grid, frame.",
+        "Build the sheet. It is added to the project's layout manager and opens in the Designer.",
+        "Export as PNG, PDF or SVG from the Layout Manager at 150, 300 or 600 dpi."
+      ],
+      "interpret": "The scale bar is fitted to the map's real geographic width — geodesic on geographic CRS, unit-aware and space-fitted on projected ones. That is why the sheet never shows a scale bar that is technically correct but visually wrong, or a north arrow pointing at nothing on a projected map.",
+      "trouble": [
+        "The map frame shows a different area than the canvas — the sheet uses the canvas extent at the moment of building; zoom the canvas first.",
+        "The legend overflows the page — fewer classes, or a smaller legend font in the Designer.",
+        "No north arrow — it is suppressed automatically where the map rotation makes it meaningless."
+      ]
+    },
+    "tr": {
+      "title": "Auto Map Sheet — tek tıkla bitmiş düzen",
+      "question": "Stilize haritam var ama zamanım yok. Eksiksiz, kaynaklı, ölçekli bir baskı sayfası alabilir miyim?",
+      "what": "Auto Map Sheet, mevcut görünümden bitmiş bir yayın düzeni kurar: başlıklı harita çerçevesi, süzülmüş lejant, yerleştirilmiş ölçek çubuğu, kuzey oku, isteğe bağlı koordinat ızgarası ve kaynak satırı — sonra düzeni projeye kaydeder; böylece hemen ince ayar yapabilir ya da dışa aktarabilirsiniz.",
+      "steps": [
+        "Önce katmanlarınızı stilledirin, sonra canvas kapsamını yayınlayacağınız alana ayarlayın.",
+        "Layout Studio ▸ Map Sheet Studio sekmesini açın.",
+        "Sayfa boyutunu seçin (varsayılan A4 yatay) ve bir tipografi ön ayarı belirleyin: swiss_modern, academic_serif, technical_blueprint ya da editorial_warm.",
+        "Başlık, alt başlık ve kaynak metnini ayarlayın; hangi donanımın olacağına karar verin: başlık, lejant, ölçek çubuğu, kuzey oku, koordinat ızgarası, çerçeve.",
+        "Sayfayı oluşturun. Düzen projenin düzen yöneticisine eklenir ve Designer'da açılır.",
+        "Layout Manager'dan PNG, PDF veya SVG olarak 150, 300 ya da 600 dpi'de dışa aktarın."
+      ],
+      "interpret": "Ölçek çubuğu haritanın gerçek coğrafi genişliğine göre yerleştirilir — coğrafi CRS'de jeodezik, projeksiyonlu CRS'de birime duyarlı ve yerleştirmeli. Sayfanın asla teknik olarak doğru ama görsel olarak yanlış bir ölçek çubuğu göstermemesinin nedeni budur.",
+      "trouble": [
+        "Harita çerçevesi canvas'tan farklı bir alan gösteriyor — sayfa oluşturulma anındaki canvas kapsamını kullanır; önce canvas'ta yakınlaşın.",
+        "Lejant sayfadan taşıyor — daha az sınıf ya da Designer'da daha küçük lejant punto boyutu.",
+        "Kuzey oku yok — harita dönüşü onu anlamsız kıldığında otomatik olarak bastırılır."
+      ]
+    }
+  },
+  "gui_dashboard": {
+    "group": "Getting started",
+    "algo": null,
+    "en": {
+      "title": "The dashboard — one studio, three workspaces",
+      "question": "Where do I even start?",
+      "what": "Everything in 02CartoLab is reachable from one window. The left rail switches between three workspaces: the Symbology Studio (Quick Style, 2.5D Buildings, Thematic Maps, Palette & Accessibility), the Layout Studio (Template Gallery, Map Sheet Studio, Grid + QPT Studio, 3D Isometric Stacker) and the Processing Hub, which lists every algorithm with a Run button. A collapsible drawer at the bottom holds system diagnostics and the run log.",
+      "steps": [
+        "Open the studio from Plugins ▸ 02CartoLab ▸ 02CartoLab Studio.",
+        "The status chip in the header reports the plugin's own health; it reads ALL READY when every subsystem is available.",
+        "Use the left rail to move between the Symbology Studio, the Layout Studio and the Processing Hub.",
+        "Expand Diagnostics & Run Log at the bottom to see what each operation actually did — this is the first place to look when something does not happen.",
+        "The Processing Hub doubles as documentation: every algorithm lists its own parameters and help text."
+      ],
+      "interpret": "The dashboard is not a separate application from the Processing Toolbox — the same engines are exposed in both places. Use the dashboard for interactive, see-the-result work; use the Processing Hub (or the Model Builder) for anything that has to repeat, be scripted or run in a batch.",
+      "trouble": [
+        "The window opens but stays empty — the plugin may still be loading; give it a moment and re-open.",
+        "A layer does not appear in the combos — the layer must be in the project, not merely visible in the canvas.",
+        "Nothing happens on Apply — open Diagnostics & Run Log; the reason is written there."
+      ]
+    },
+    "tr": {
+      "title": "Dashboard — tek stüdyo, üç çalışma alanı",
+      "question": "Nereden başlamalıyım?",
+      "what": "02CartoLab'daki her şey tek bir pencereden erişilir. Sol ray üç çalışma alanı arasında geçiş yapar: Symbology Studio (Quick Style, 2.5D Buildings, Thematic Maps, Palette & Accessibility), Layout Studio (Template Gallery, Map Sheet Studio, Grid + QPT Studio, 3D Isometric Stacker) ve her algoritmayı Run düğmesiyle listeleyen Processing Hub. Alttaki katlanabilir çekmece sistem tanılamalarını ve çalışma günlüğünü tutar.",
+      "steps": [
+        "Plugins ▸ 02CartoLab ▸ 02CartoLab Studio ile stüdyoyu açın.",
+        "Başlıktaki durum rozeti eklentinin kendi sağlığını bildirir; her alt sistem mevcutsa ALL READY yazar.",
+        "Symbology Studio, Layout Studio ve Processing Hub arasında geçiş için sol rayı kullanın.",
+        "Her işlemin gerçekte ne yaptığını görmek için alttaki Diagnostics & Run Log'u açın — bir şey olmadığında bakılacak ilk yer burasıdır.",
+        "Processing Hub aynı zamanda belgedir: her algoritma kendi parametrelerini ve yardım metnini listeler."
+      ],
+      "interpret": "Dashboard, Processing Toolbox'tan ayrı bir uygulama değildir — aynı motorlar her iki yerde açıktır. Etkileşimli, sonucu anında görmek istediğiniz işler için dashboard'u kullanın; tekrarlanacak, betiklenecek ya da toplu çalışacak her şey için Processing Hub'ı (ya da Model Builder'ı) kullanın.",
+      "trouble": [
+        "Pencere açılıyor ama boş kalıyor — eklenti hâlâ yükleniyor olabilir; biraz bekleyip yeniden açın.",
+        "Bir katman combo'larda görünmüyor — katman canvas'ta görünür olmakla yetmez, projede olmalı.",
+        "Apply'e basınca hiçbir şey olmuyor — Diagnostics & Run Log'u açın; neden orada yazılıdır."
+      ]
+    }
+  }
+}

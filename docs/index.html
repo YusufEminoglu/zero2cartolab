@@ -221,7 +221,7 @@
   <div class="nav-inner">
     <div class="nav-logo">
       <span>02CartoLab</span>
-      <span class="logo-badge">v1.5.0</span>
+      <span class="logo-badge">v1.5.1</span>
     </div>
     <ul class="nav-links">
       <li><a href="#about">About</a></li>
@@ -229,6 +229,7 @@
       <li><a href="#modules">Modules</a></li>
       <li><a href="#bivariate">Bivariate</a></li>
       <li><a href="#layouts">Layouts</a></li>
+      <li><a href="PRACTICAL_GUIDE/practical_guide.html">Practical Guide</a></li>
       <li><a href="#install">Install</a></li>
       <li><a href="https://github.com/YusufEminoglu/zero2cartolab" class="nav-cta">GitHub &#x2197;</a> &middot; <a href="https://gitlab.com/geophilo1/zero2cartolab" class="nav-cta">GitLab &#x2197;</a></li>
     </ul>
@@ -281,8 +282,8 @@
 <div style="padding:0 2rem;position:relative;z-index:1;">
   <div style="max-width:1280px;margin:2rem auto;">
     <div class="image-full">
-      <img src="assets/hero.jpg" alt="Illustrative concept: bivariate choropleth, cartogram and ridge map showcase" style="width:100%;max-height:560px;object-fit:cover;" onerror="this.parentElement.parentElement.style.display='none'" />
-      <div class="image-caption">Illustrative concept graphic: bivariate choropleth, cartogram and ridge-map styles</div>
+      <img src="assets/hero.jpg" alt="Real 02CartoLab Report Figure layout rendering the 30 İzmir districts" style="width:100%;max-height:560px;object-fit:cover;" onerror="this.parentElement.parentElement.style.display='none'" />
+      <div class="image-caption">Real 02CartoLab output: the Report Figure (16:9) publication template rendering İzmir's 30 districts by population density</div>
     </div>
   </div>
   <div style="max-width:1280px;margin:1.5rem auto 2rem;">
@@ -351,7 +352,7 @@
         <div style="margin-top:1.75rem;background:var(--card-bg);border:1px solid var(--border);border-radius:var(--radius-md);padding:1.25rem;">
           <div style="font-size:0.78rem;color:var(--text-muted);font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.75rem;">Quick Info</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;font-size:0.85rem;">
-            <div style="color:var(--text-muted);">Version</div><div style="color:var(--text-primary);font-weight:600;">1.5.0</div>
+            <div style="color:var(--text-muted);">Version</div><div style="color:var(--text-primary);font-weight:600;">1.5.1</div>
             <div style="color:var(--text-muted);">Category</div><div style="color:var(--text-primary);">Vector</div>
             <div style="color:var(--text-muted);">License</div><div style="color:var(--purple-light);">GPL-3.0</div>
             <div style="color:var(--text-muted);">QGIS Min</div><div style="color:var(--text-primary);">3.28</div>
@@ -437,8 +438,8 @@
     </div>
 
     <div class="image-full" style="margin-bottom:2.5rem;">
-      <img src="assets/modules.jpg" alt="Illustrative concept: 02CartoLab module showcase grid" style="width:100%;max-height:480px;object-fit:cover;" onerror="this.parentElement.style.display='none'" />
-      <div class="image-caption">8 of the 16 modules visualized: dot-density, proportional symbols, hexbin, ridge map, cartogram, Value-by-Alpha, CVD simulation, automated layout</div>
+      <img src="assets/modules.jpg" alt="Real 02CartoLab outputs: Quick Style, cartogram, dot density, hexbin, Value-by-Alpha, Dorling, ridge map and 2.5D" style="width:100%;max-height:480px;object-fit:cover;" onerror="this.parentElement.style.display='none'" />
+      <div class="image-caption">Eight real module outputs on İzmir data: Quick Style, continuous-area cartogram, dot density, hexbin, Value-by-Alpha, Dorling cartogram, ridge map and 2.5D extrusion</div>
     </div>
 
     <div style="overflow-x:auto;">
@@ -504,8 +505,8 @@
         </div>
       </div>
       <div class="image-full">
-        <img src="assets/bivariate.jpg" alt="Illustrative concept: bivariate choropleth map with 3x3 color matrix legend" onerror="this.parentElement.style.display='none'" />
-        <div class="image-caption">Urban district bivariate map: income (blue-purple axis) &times; population density (orange-red axis) &mdash; with diamond 3&times;3 legend</div>
+        <img src="assets/bivariate.jpg" alt="Real 02CartoLab bivariate choropleth of İzmir neighbourhoods" onerror="this.parentElement.style.display='none'" />
+        <div class="image-caption">Real bivariate choropleth of İzmir's 1 317 neighbourhoods: share aged 65+ (blue axis) &times; share aged 0&ndash;14 (orange axis), 3&times;3 matrix</div>
       </div>
     </div>
   </div>
@@ -531,8 +532,8 @@
         </div>
       </div>
       <div class="image-full">
-        <img src="assets/layout.jpg" alt="Illustrative concept: publication-ready print layout with legend, scale bar, north arrow" onerror="this.parentElement.style.display='none'" />
-        <div class="image-caption">Auto Map Sheet output &mdash; complete academic-style layout with filtered legend, coordinate graticule, scale bar, north arrow, and source credits</div>
+        <img src="assets/layout.jpg" alt="Real 02CartoLab Auto Map Sheet print layout" onerror="this.parentElement.style.display='none'" />
+        <div class="image-caption">Real Auto Map Sheet output &mdash; a complete academic-style layout with filtered legend, coordinate graticule, scale bar, north arrow and source credits</div>
       </div>
     </div>
   </div>
@@ -555,6 +556,65 @@
       <div class="compat-card"><div class="compat-icon">&#128230;</div><div class="compat-title">Zero pip deps</div><div class="compat-desc">Pure QGIS API. No external installs.</div><div><span class="compat-check">&#10004; No Install</span></div></div>
       <div class="compat-card"><div class="compat-icon">&#128203;</div><div class="compat-title">16 Processing Algorithms</div><div class="compat-desc">All algorithms run headlessly in Model Builder and Python scripts.</div><div><span class="compat-check">&#10004; Modeler-Ready</span></div></div>
       <div class="compat-card"><div class="compat-icon">&#128187;</div><div class="compat-title">Win &middot; Linux &middot; macOS</div><div class="compat-desc">Platform-agnostic Python. Tested primarily on Windows (OSGeo4W).</div><div><span class="compat-check">&#10004; Cross-platform</span></div></div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- PRACTICAL GUIDE -->
+<section id="guide">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-eyebrow">Practical Guide</div>
+      <h2 class="section-title">Learn it by doing it,<br/>not by reading about it</h2>
+      <p class="section-subtitle">A screenshot-driven workshop for every 02CartoLab capability &mdash; 21 modules, each one a real planning question
+        answered with the plugin itself, on real İzmir urban data. Every map panel is a QGIS render of a layer the plugin produced;
+        every interface panel is a screenshot of the real dashboard.</p>
+    </div>
+
+    <div class="image-full" style="margin-bottom:2rem;">
+      <img src="PRACTICAL_GUIDE/screenshots/web/bivariate/bivariate_4panel.jpg"
+           alt="02CartoLab Practical Guide — bivariate choropleth module with input, parameters, result and context panels"
+           style="width:100%" onerror="this.parentElement.style.display='none'" />
+      <div class="image-caption">Inside the guide: input data &rarr; the exact parameters &rarr; the result &rarr; the result in context</div>
+    </div>
+
+    <div class="features-grid" style="margin-bottom:2.5rem;">
+      <div class="feature-card">
+        <div class="feature-icon fi-p">&#128214;</div>
+        <h3>21 hands-on modules</h3>
+        <p>Quick Style, monochrome print, 2.5D extrusion, CVD accessibility, normalisation, adaptive classification,
+           bivariate maps, Value-by-Alpha, ridge maps, dot density, proportional symbols, OD flow maps,
+           cartograms, hexbins, label anchors, graticules, the layout gallery and the map sheet studio.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon fi-g">&#128193;</div>
+        <h3>Real data, real renders</h3>
+        <p>Built on 1 317 İzmir neighbourhoods with 2024 population, 16 385 OSM buildings in Kadifekale,
+           a Copernicus DEM and a live origin&ndash;destination table. No invented labels, no fabricated attributions.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon fi-b">&#128196;</div>
+        <h3>Parameters that cannot drift</h3>
+        <p>Every parameter table is extracted from the live Processing registry, so the guide always matches
+           the code you are running. Each module also shows the exact run used for its screenshots.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon fi-r">&#128218;</div>
+        <h3>When it goes wrong</h3>
+        <p>Each module closes with the failure modes that actually occur &mdash; geographic-CRS rasters, integer opacity
+           scales, empty class breaks &mdash; and what to do about them.</p>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;">
+      <a href="PRACTICAL_GUIDE/practical_guide.html" class="btn-primary" style="display:inline-flex;">
+        &#128214; Open the Practical Guide</a>
+      <a href="PRACTICAL_GUIDE/practical_guide_static.html" class="btn-secondary" style="display:inline-flex;">
+        &#128424; Download / print (TR)</a>
+      <a href="PRACTICAL_GUIDE/practical_guide_static_en.html" class="btn-secondary" style="display:inline-flex;">
+        &#128424; Download / print (EN)</a>
     </div>
   </div>
 </section>

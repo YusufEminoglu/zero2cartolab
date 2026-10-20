@@ -57,7 +57,11 @@ class RidgeMapAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
             "producing overlapping wave profiles.\n\n"
             "• Vertical exaggeration & Line spacing: Control wave crest height and frequency.\n"
             "• Line color & width: Configured directly for publication rendering.\n"
-            "Best raster inputs: DEM elevation, population density surfaces, LST, urban heat index."
+            "Best raster inputs: DEM elevation, population density surfaces, LST, urban heat index.\n\n"
+            "The input raster must use a projected CRS: the vertical exaggeration multiplies "
+            "the raw raster value and adds it to the scanline position, so in a geographic "
+            "CRS (degrees) a 100 m elevation would move the ridge thousands of degrees. "
+            "Reproject the raster first (Vector ▸ Raster Tools ▸ Reproject)."
         )
 
     def initAlgorithm(self, config=None):
@@ -105,6 +109,21 @@ class RidgeMapAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
         raster: QgsRasterLayer = self.parameterAsRasterLayer(parameters, self.RASTER, context)
         if raster is None:
             raise QgsProcessingException(self.invalidSourceError(parameters, self.RASTER))
+
+        # The vertical exaggeration multiplies the raw raster value and adds it
+        # to the scanline position. In a geographic CRS the unit is the degree,
+        # so a 100 m elevation would displace the ridge thousands of degrees
+        # and the output would collapse into an unreadable line. Require a
+        # projected CRS, exactly like the cartogram engine does.
+        if raster.crs().isGeographic():
+            raise QgsProcessingException(
+                "The ridge map engine displaces the scanlines by the raw raster value, "
+                "so the raster must use a projected CRS (metres or feet). In a geographic "
+                "CRS (degrees) the displacement would be meaningless and the ridges "
+                "would collapse into a single line. Reproject the raster first "
+                "(Raster ▸ Reproject) and run the algorithm again."
+            )
+
         n_lines = self.parameterAsInt(parameters, self.N_LINES, context)
         v_scale = self.parameterAsDouble(parameters, self.VERTICAL_SCALE, context)
         spacing = self.parameterAsDouble(parameters, self.LINE_SPACING, context)

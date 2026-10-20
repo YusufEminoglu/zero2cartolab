@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>02CartoLab Practical Guide — Step-by-Step Cartography in QGIS</title>
+<meta name="description" content="A screenshot-driven practical guide to every 02CartoLab capability, built on real İzmir urban data and rendered by the plugin itself.">
+<style>
+:root{
+  --ink:#0f172a; --ink2:#334155; --muted:#64748b; --line:#e2e8f0;
+  --accent:#7c3aed; --accent2:#a78bfa; --gold:#f59e0b; --paper:#ffffff;
+  --bg:#f8fafc; --navy:#0d0f1e;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:80px}
+body{margin:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;color:var(--ink);
+  background:var(--bg);line-height:1.65;font-size:16px}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* header */
+header.top{background:linear-gradient(135deg,#0d0f1e 0%,#1c1040 60%,#2d1065 100%);
+  color:#f1f5f9;padding:3.2rem 2rem 2.6rem;position:relative;overflow:hidden}
+header.top::after{content:'';position:absolute;inset:0;
+  background-image:linear-gradient(rgba(124,58,237,.07) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(124,58,237,.07) 1px,transparent 1px);
+  background-size:52px 52px;pointer-events:none}
+header.top .wrap{position:relative;z-index:1;max-width:1400px;margin:0 auto}
+.eyebrow{display:inline-block;font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;
+  font-weight:700;color:var(--accent2);border:1px solid rgba(167,139,250,.35);
+  background:rgba(124,58,237,.12);padding:.3rem .8rem;border-radius:100px;margin-bottom:1.1rem}
+h1{font-size:clamp(2rem,4.4vw,3.2rem);line-height:1.1;margin:0 0 .8rem;font-weight:800;letter-spacing:-.02em}
+header.top p.lead{font-size:1.06rem;color:#cbd5e1;max-width:820px;margin:0 0 1.4rem}
+.badges{display:flex;gap:.55rem;flex-wrap:wrap;margin-bottom:1.4rem}
+.badge{font-size:.75rem;font-weight:600;padding:.28rem .75rem;border-radius:100px;
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);color:#e2e8f0}
+.badge.gold{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.3);color:#fcd34d}
+.cta{display:flex;gap:.75rem;flex-wrap:wrap;margin-top:.4rem}
+.btn{display:inline-flex;align-items:center;gap:.45rem;font-weight:700;font-size:.9rem;
+  padding:.6rem 1.15rem;border-radius:8px;border:1px solid transparent}
+.btn.p{background:linear-gradient(135deg,var(--accent),#4f46e5);color:#fff}
+.btn.s{background:rgba(255,255,255,.08);color:#e2e8f0;border-color:rgba(255,255,255,.16)}
+.btn:hover{text-decoration:none;transform:translateY(-1px)}
+
+/* layout */
+.wrap{max-width:1400px;margin:0 auto;padding:0 2rem}
+.layout{display:grid;grid-template-columns:270px minmax(0,1fr);gap:2.5rem;max-width:1400px;
+  margin:0 auto;padding:2.5rem 2rem 4rem}
+main{min-width:0;overflow-wrap:break-word}
+nav.side{position:sticky;top:1.5rem;align-self:start;max-height:calc(100vh - 3rem);
+  overflow-y:auto;padding-right:.4rem}
+nav.side h5{font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);
+  margin:1.3rem 0 .45rem;font-weight:700}
+nav.side h5:first-child{margin-top:0}
+nav.side a{display:block;padding:.32rem .6rem;border-radius:6px;color:var(--ink2);font-size:.86rem;
+  border-left:2px solid transparent}
+nav.side a:hover{background:#fff;color:var(--accent);text-decoration:none;border-left-color:var(--accent2)}
+nav.side a.active{background:#fff;color:var(--accent);font-weight:600;border-left-color:var(--accent)}
+nav.side a .tag{font-size:.68rem;color:var(--muted);font-weight:500}
+
+/* sections */
+section.mod{background:#fff;border:1px solid var(--line);border-radius:14px;padding:1.9rem 2rem;
+  margin-bottom:1.6rem;box-shadow:0 1px 3px rgba(15,23,42,.04)}
+section.mod h2{margin:.2rem 0 .9rem;font-size:1.5rem;letter-spacing:-.01em;line-height:1.25}
+.grouplabel{display:inline-block;font-size:.68rem;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--accent);background:#f5f3ff;border:1px solid #ddd6fe;
+  padding:.18rem .6rem;border-radius:100px}
+.q{border-left:3px solid var(--gold);background:#fffbeb;padding:.75rem 1rem;border-radius:0 8px 8px 0;
+  margin:0 0 1.1rem;font-style:italic;color:#78350f}
+h3.sec{font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
+  margin:1.6rem 0 .6rem;font-weight:700;border-bottom:1px solid var(--line);padding-bottom:.35rem}
+ol.steps{padding-left:1.3rem;margin:.4rem 0}
+ol.steps li{margin:.42rem 0}
+ol.steps li::marker{font-weight:700;color:var(--accent)}
+.read{border-left:3px solid var(--accent);background:#f5f3ff;padding:.85rem 1.1rem;
+  border-radius:0 8px 8px 0;margin:1rem 0}
+.read strong{color:var(--accent)}
+.trouble{border:1px dashed #fca5a5;background:#fef2f2;border-radius:8px;padding:.8rem 1rem;margin:1rem 0}
+.trouble h4{margin:0 0 .4rem;font-size:.85rem;color:#b91c1c;letter-spacing:.03em}
+.trouble ul{margin:0;padding-left:1.2rem}
+.trouble li{margin:.28rem 0;font-size:.93rem}
+
+/* figures */
+figure.shot{margin:1.2rem 0}
+figure.shot img{width:100%;border:1px solid var(--line);border-radius:10px;background:#fff;
+  box-shadow:0 4px 20px rgba(15,23,42,.07);display:block}
+figure.shot.wide img{object-fit:contain}
+figcaption{font-size:.82rem;color:var(--muted);margin-top:.45rem;display:flex;
+  justify-content:space-between;gap:1rem}
+.fig-hint{color:var(--accent);white-space:nowrap}
+.gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:1rem;margin:1.2rem 0}
+.gallery figure.shot{margin:0}
+.gallery img{max-height:300px;object-fit:contain;object-position:center top;background:#fff;
+  border:1px solid var(--line);border-radius:10px;padding:2px}
+
+/* tables */
+table.params{width:100%;border-collapse:collapse;font-size:.85rem;margin:.6rem 0}
+table.params th{text-align:left;font-size:.68rem;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--muted);border-bottom:1px solid var(--line);padding:.5rem .6rem}
+table.params td{border-bottom:1px solid #f1f5f9;padding:.5rem .6rem;vertical-align:top}
+table.params tr:hover td{background:#fafafa}
+.mono{font-family:'Cascadia Code','Consolas',monospace}
+.sm{font-size:.8rem;color:var(--ink2)}
+.opts{font-size:.74rem;color:var(--muted);margin-top:.2rem}
+pre.run{background:#0f172a;color:#e2e8f0;padding:.85rem 1rem;border-radius:8px;overflow-x:auto;
+  font-size:.78rem;line-height:1.55;margin:.6rem 0}
+
+/* data provenance */
+.data-card{background:#0f172a;color:#e2e8f0;border-radius:14px;padding:1.6rem 1.8rem;margin:1.2rem 0}
+.data-card h3{color:#fff;margin:.2rem 0 .8rem}
+.data-card li{margin:.35rem 0;font-size:.9rem}
+.data-card code{background:rgba(255,255,255,.08);padding:.1rem .35rem;border-radius:4px;font-size:.82rem}
+
+/* cheat sheet */
+.cheat{width:100%;border-collapse:collapse;font-size:.87rem}
+.cheat th{text-align:left;background:#0f172a;color:#fff;padding:.6rem .8rem;font-size:.72rem;
+  letter-spacing:.08em;text-transform:uppercase}
+.cheat td{padding:.55rem .8rem;border-bottom:1px solid var(--line);vertical-align:top}
+.cheat tr:nth-child(even) td{background:#fafafa}
+
+footer{background:#0d0f1e;color:#94a3b8;padding:2.5rem 2rem;text-align:center;font-size:.85rem}
+footer a{color:var(--accent2)}
+@media(max-width:960px){.layout{grid-template-columns:minmax(0,1fr);padding:1.5rem 1rem}nav.side{position:static;max-height:none}
+  header.top{padding:2.2rem 1.2rem}.wrap{padding:0 1.2rem}section.mod{padding:1.3rem 1.1rem}}
+@media print{nav.side,.cta{display:none}.layout{grid-template-columns:minmax(0,1fr);padding:0}
+  section.mod{break-inside:avoid;border:1px solid #ccc;box-shadow:none}}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <div class="eyebrow">02CartoLab · Practical Guide</div>
+  <h1>Publication cartography, step by step</h1>
+  <p class="lead">A step-by-step, screenshot-driven workshop for every 02CartoLab capability — built on real İzmir urban data, rendered by the plugin itself.</p>
+  <div class="badges">
+    <span class="badge">QGIS 3.28 → 4.99</span>
+    <span class="badge gold">Real data · real renders</span>
+    <span class="badge">16 Processing algorithms</span>
+    <span class="badge">10 layout archetypes</span>
+    <span class="badge">Zero pip dependencies</span>
+    <span class="badge">GPL-3.0</span>
+  </div>
+  <div class="cta">
+    <a class="btn p" href="#how-to-read">How to read this guide</a>
+    <a class="btn s" href="https://plugins.qgis.org/plugins/zero2cartolab/" target="_blank" rel="noopener">Install from the Hub</a>
+    <a class="btn s" href="../CARTOLAB_REFERENCE_MANUAL.html">Reference Manual (theory)</a>
+    <a class="btn s" href="https://github.com/YusufEminoglu/zero2cartolab" target="_blank" rel="noopener">Source code</a>
+  </div>
+</div></header>
+
+<div class="layout">
+<nav class="side">
+  <input id="q" type="search" placeholder="Filter modules…"
+    style="width:100%;padding:.5rem .65rem;border:1px solid var(--line);border-radius:8px;
+           font-family:inherit;font-size:.86rem;margin-bottom:.6rem">
+  <h5>Getting started</h5>
+  <a href="#gui-dashboard">The dashboard — one studio, three workspaces</a>
+  <h5>Symbology Studio</h5>
+  <a href="#quick-style">Quick Style — one-click thematic styling</a>
+  <a href="#quick-style-monochrome">Monochrome print — photocopy-safe symbology</a>
+  <a href="#building-25d">2.5D building styling — extrusion that survives</a>
+  <a href="#palette-accessibility">Palette &amp; Accessibility — CVD simulation and WCAG scoring</a>
+  <h5>Data Preparation</h5>
+  <a href="#normalize-field">Normalization &amp; rates — map the rate, not the count</a>
+  <h5>Classification Engine</h5>
+  <a href="#classification">Adaptive classification — GIC, Jenks, Head/Tail</a>
+  <h5>Thematic Mapping</h5>
+  <a href="#bivariate">Bivariate choropleth — two variables, one honest map</a>
+  <a href="#bivariate-matrix">Bivariate legend matrix — export the key, not the picture</a>
+  <a href="#value-by-alpha">Value-by-Alpha — fade the uncertain, don&#x27;t hide it</a>
+  <a href="#ridge-map">Ridge map — turn any raster into relief</a>
+  <a href="#dot-density">Dot-density map — one dot, N people</a>
+  <a href="#proportional-symbols">Proportional symbols — Flannery-compensated circles</a>
+  <a href="#flow-map">Origin–Destination flow map — curved desire lines</a>
+  <h5>Cartogram Engine</h5>
+  <a href="#cartogram">Continuous-area cartogram — reshape by value</a>
+  <a href="#dorling">Dorling cartogram — circles that keep their place</a>
+  <h5>Aggregation</h5>
+  <a href="#hexbin">Hexbin aggregation — density without overplotting</a>
+  <h5>Labeling</h5>
+  <a href="#label-points">Visual-centre label points — labels that stay inside the shape</a>
+  <h5>Map Reference</h5>
+  <a href="#graticule">Graticule — a labelled reference grid</a>
+  <h5>Layout Studio</h5>
+  <a href="#layout-templates">Template gallery — ten publication archetypes</a>
+  <a href="#map-sheet">Auto Map Sheet — a finished layout in one click</a>
+</nav>
+<main>
+
+<section class="mod" id="how-to-read">
+  <div class="grouplabel">Read this first</div>
+  <h2>How to read this guide</h2>
+  <p>Every module follows the same shape: the <strong>planning question</strong> the tool answers, what it does,
+  the exact clicks or Processing parameters, the real output, how to interpret it, and what breaks.</p>
+  <h3 class="sec">Where the screenshots come from</h3>
+  <div class="data-card">
+    <h3>Nothing here is a mock-up</h3>
+    <ul>
+      <li>Every map panel is a <strong>QGIS render of a layer the plugin actually produced</strong> during a
+      headless run of the real algorithm.</li>
+      <li>Every parameter panel is the <strong>literal parameter dictionary</strong> handed to the algorithm.</li>
+      <li>Every interface panel is a <strong>screenshot of the real dashboard widget tree</strong>, running
+      against the real data.</li>
+      <li>Every layout is an <strong>exported print layout</strong>, not a picture of one.</li>
+    </ul>
+    <h3 style="margin-top:1.1rem">The data behind this guide</h3>
+    <ul><li>Thematic source: mahalle_population_2024.geojson (İzmir mahalle polygons, population 2024)</li><li>2.5D source: kadifekale_osm_binalar.gpkg (OSM buildings)</li><li>Raster source: kadifekale_dem_copernicus30m.tif (Copernicus DEM 30 m)</li><li>Flow source: tire_mahalle_upi_sosyoekonomik.gpkg (assembly areas + critical assets)</li><li>DEM reprojected from EPSG:4326 to EPSG:32635 (the ridge engine needs map units)</li><li>OD table: 900 real origin→critical-asset pairs (distance-decay gravity on real capacities)</li></ul>
+  </div>
+  <h3 class="sec">Reproduce it yourself</h3>
+  <p>The capture harness ships with the plugin source. From a QGIS-enabled Python prompt:</p>
+  <pre class="run">C:\OSGeo4W\bin\python-qgis-ltr.bat docs\PRACTICAL_GUIDE\practical_guide_runner.py --all</pre>
+  <p>It resolves the datasets, runs every algorithm, and rewrites <code>manifest/screenshots.json</code> and the
+  images under <code>screenshots/</code>. Point it at a different folder with
+  <code>--data</code> and the whole guide regenerates against your own city.</p>
+</section>
+<section class="mod" id="gui-dashboard">
+  <div class="grouplabel">Getting started</div>
+  <h2>The dashboard — one studio, three workspaces</h2>
+  <div class="q">Where do I even start?</div>
+  <p>Everything in 02CartoLab is reachable from one window. The left rail switches between three workspaces: the Symbology Studio (Quick Style, 2.5D Buildings, Thematic Maps, Palette &amp; Accessibility), the Layout Studio (Template Gallery, Map Sheet Studio, Grid + QPT Studio, 3D Isometric Stacker) and the Processing Hub, which lists every algorithm with a Run button. A collapsible drawer at the bottom holds system diagnostics and the run log.</p>
+  <h3 class="sec">Step by step</h3>
+  <ol class="steps"><li>Open the studio from Plugins ▸ 02CartoLab ▸ 02CartoLab Studio.</li><li>The status chip in the header reports the plugin&#x27;s own health; it reads ALL READY when every subsystem is available.</li><li>Use the left rail to move between the Symbology Studio, the Layout Studio and the Processing Hub.</li><li>Expand Diagnostics &amp; Run Log at the bottom to see what each operation actually did — this is the first place to look when something does not happen.</li><li>The Processing Hub doubles as documentation: every algorithm lists its own parameters and help text.</li></ol>
+  <h3 class="sec">The result</h3>
+  <div class="gallery">
+  <figure class="shot"><a href="screenshots/web/gui_dashboard/dashboard_quick_style.jpg" target="_blank" rel="noopener"><img src="screenshots/web/gui_dashboard/dashboard_quick_style.jpg" alt="Symbology Studio · Quick Style" loading="lazy"></a><figcaption>Symbology Studio · Quick Style</figcaption></figure>
+  <figure class="shot"><a href="screenshots/web/gui_dashboard/dashboard_25d.jpg" target="_blank" rel="noopener"><img src="screenshots/web/gui_dashboard/dashboard_25d.jpg" alt="Symbology Studio · 2.5D Buildings" loading="lazy"></a><figcaption>Symbology Studio · 2.5D Buildings</figcaption></figure>
+  <figure class="shot"><a href="screenshots/web/gui_dashboard/dashboard_thematic.jpg" target="_blank" rel="noopener"><img src="screenshots/web/gui_dashboard/dashboard_thematic.jpg" alt="Symbology Studio · Thematic Maps" loading="lazy"></a><figcaption>Symbology Studio · Thematic Maps</figcaption></figure>
+  <figure class="shot"><a href="screenshots/web/gui_dashboard/dashboard_palette.jpg" target="_blank" rel="noopener"><img src="screenshots/web/gui_dashboard/dashboard_palette.jpg" alt="Symbology Studio · Palette &amp; Accessibility" loading="lazy"></a><figcaption>Symbology Studio · Palette &amp; Accessibility</figcaption></figure>
+  <figure class="shot"><a href="screenshots/web/gui_dashboard/dashboard_templates.jpg" target="_blank" rel="noopener"><img src="screenshots/web/gui_dashboard/dashboard_templates.jpg" alt="Layout Studio · Template Gallery" loading="lazy"></a><figcaption>Layout Studio · Template Gallery</figcaption></figure>
+  <figure class="shot"><a href="screenshots/web/gui_dashboard/dashboard_mapsheet.jpg" target="_blank" rel="noopener"><img src="screenshots/web/gui_dashboard/dashboard_mapsheet.jpg" alt="Layout Studio · Map Sheet Studio" loading="lazy"></a><figcaption>Layout Studio · Map Sheet Studio</figcaption></figure>
+  <figure class="shot"><a href="screenshots/web/gui_dashboard/dashboard_grid_qpt.jpg" target="_blank" rel="noopener"><img src="screenshots/web/gui_dashboard/dashboard_grid_qpt.jpg" alt="Layout Studio · Grid + QPT Studio" loading="lazy"></a><figcaption>Layout Studio · Grid + QPT Studio</figcaption></figure>
+  <figure class="shot"><a href="screenshots/web/gui_dashboard/dashboard_isometric.jpg" target="_blank" rel="noopener"><img src="screenshots/web/gui_dashboard/dashboard_isometric.jpg" alt="Layout Studio · 3D Isometric Stacker" loading="lazy"></a><figcaption>Layout Studio · 3D Isometric Stacker</figcaption></figure>
+  <figure class="shot"><a href="screenshots/web/gui_dashboard/dashboard_processing.jpg" target="_blank" rel="noopener"><img src="screenshots/web/gui_dashboard/dashboard_processing.jpg" alt="Processing Hub" loading="lazy"></a><figcaption>Processing Hub</figcaption></figure>
+  </div>
+  <div class="read"><strong>Read the output.</strong> The dashboard is not a separate application from the Processing Toolbox — the same engines are exposed in both places. Use the dashboard for interactive, see-the-result work; use the Processing Hub (or the Model Builder) for anything that has to repeat, be scripted or run in a batch.</div>
+  <div class="trouble"><h4>When it goes wrong</h4><ul><li>The window opens but stays empty — the plugin may still be loading; give it a moment and re-open.</li><li>A layer does not appear in the combos — the layer must be in the project, not merely visible in the canvas.</li><li>Nothing happens on Apply — open Diagnostics &amp; Run Log; the reason is written there.</li></ul></div>
+</section>
+<section class="mod" id="quick-style">
+  <div class="grouplabel">Symbology Studio</div>
+  <h2>Quick Style — one-click thematic styling</h2>
+  <div class="q">How dense is İzmir, and can I publish that map without opening the symbology panel?</div>
+  <p>Quick Style turns any vector layer into a publication-ready choropleth or categorical map in a single action. Numeric fields are classified automatically, text fields become categories, and the colour palette comes from the plugin&#x27;s own library (ColorBrewer plus the colour-blind-safe scientific ramps).</p>
+  <h3 class="sec">Step by step</h3>
+  <ol class="steps"><li>Open the 02CartoLab Studio from Plugins ▸ 02CartoLab ▸ 02CartoLab Studio and switch to the Symbology Studio workspace.</li><li>In the Quick Style panel choose Layer: the İzmir district layer and Field: pop_density.</li><li>Set Style as: Graduated (numeric), Classes: 5 and Break method: Geometric interval — the right choice for the long-tailed density distribution of a real city.</li><li>Pick Palette: Viridis (sequential, colour-blind safe) and leave the white outline ticked.</li><li>Press Apply Quick Style. The layer in the canvas is restyled immediately.</li><li>Export the result with Export QML Style to reuse the exact symbology in another project.</li></ol>
+  <h3 class="sec">The result</h3>
+  <figure class="shot wide"><a href="screenshots/web/quick_style/quick_style_4panel.jpg" target="_blank" rel="noopener"><img src="screenshots/web/quick_style/quick_style_4panel.jpg" alt="Quick Style" loading="lazy"></a><figcaption>Quick Style<span class="fig-hint">click to enlarge</span></figcaption></figure>
+  <div class="read"><strong>Read the output.</strong> The classes are equal-area in colour space but not in count. Compare the two ends of the ramp: with a geometric interval the darkest band covers the sprawling outer districts, the brightest band the compact central ones. Always read the legend, never the colour alone.</div>
+  <h3 class="sec">Parameters</h3>
+  <table class="params"><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody><tr><td class="mono">INPUT</td><td>Vector layer</td><td class="mono sm">Vector layer</td><td class="mono sm">—</td></tr><tr><td class="mono">FIELD</td><td>Field to style</td><td class="mono sm">Field</td><td class="mono sm">—</td></tr><tr><td class="mono">MODE</td><td>Style as<div class="opts">Auto (detect field type) · Graduated (numeric) · Categorized (unique values)</div></td><td class="mono sm">Enumeration</td><td class="mono sm">Auto (detect field type)</td></tr><tr><td class="mono">CLASSES</td><td>Number of classes (graduated)</td><td class="mono sm">Number</td><td class="mono sm">5</td></tr><tr><td class="mono">METHOD</td><td>Class break method (graduated)<div class="opts">Quantile (equal count) · Equal interval · Geometric interval · Natural Breaks (Fisher-Jenks) · Head/Tail Breaks (power-law) · Standard Deviation · Box Plot / Tukey Outliers · Equal Area (Quantile) · Maximum Breaks (largest gaps) · Pretty Breaks (nice round numbers)</div></td><td class="mono sm">Enumeration</td><td class="mono sm">Quantile (equal count)</td></tr><tr><td class="mono">PALETTE</td><td>Colour palette<div class="opts">Batlow · Viridis · Magma · Plasma · Inferno · Cividis · Sunset · Turbo · Mako · Rocket · Bamako · Nuuk · Earth · Bathymetry · …</div></td><td class="mono sm">Enumeration</td><td class="mono sm">Batlow</td></tr><tr><td class="mono">REVERSE</td><td>Reverse palette</td><td class="mono sm">Boolean</td><td class="mono sm"></td></tr><tr><td class="mono">OUTLINE</td><td>Thin white outline</td><td class="mono sm">Boolean</td><td class="mono sm">True</td></tr><tr><td class="mono">MONOCHROME</td><td>Monochrome print-safe patterns (polygons)</td><td class="mono sm">Boolean</td><td class="mono sm"></td></tr></tbody></table>
+  <h3 class="sec">Exact run used for the screenshots</h3>
+  <pre class="run">INPUT            = İzmir mahalle (2024)
+FIELD            = pop_density
+MODE             = 1
+CLASSES          = 5
+METHOD           = 2
+PALETTE          = 15
+REVERSE          = False
+OUTLINE          = True
+MONOCHROME       = False</pre>
+  <div class="trouble"><h4>When it goes wrong</h4><ul><li>The field list is empty — the layer has no numeric field, or the layer is not yet in the project.</li><li>The map looks flat — the field is a rate that is almost constant; check the attribute table for NULLs before classifying.</li><li>The style disappears on save — Quick Style styles the layer in place; save the layer as GeoPackage to keep the symbology.</li></ul></div>
+  <p style="font-size:.82rem;color:var(--muted);margin-top:1.2rem">Processing ID: <code class="mono">zero2cartolab:quick_style</code></p>
+</section>
+<section class="mod" id="quick-style-monochrome">
+  <div class="grouplabel">Symbology Studio</div>
+  <h2>Monochrome print — photocopy-safe symbology</h2>
+  <div class="q">My journal prints in greyscale and photocopies the figure. Will the map still be readable?</div>
+  <p>With Monochrome print enabled, Quick Style replaces the colour ramp with black-and-white hatch and dot patterns that darken with the value. The legend keeps the numbers, so no information is lost when the figure is printed, photocopied or faxed.</p>
+  <h3 class="sec">Step by step</h3>
+  <ol class="steps"><li>Repeat the Quick Style workflow with the same layer, field and break method.</li><li>Tick Monochrome print instead of choosing a colour palette.</li><li>Apply the style and inspect the legend: each class now carries a distinct pattern, not just a shade of grey.</li><li>Export the QML style so every figure in the manuscript uses the same pattern language.</li></ol>
+  <h3 class="sec">The result</h3>
+  <figure class="shot wide"><a href="screenshots/web/quick_style_monochrome/quick_style_monochrome_4panel.jpg" target="_blank" rel="noopener"><img src="screenshots/web/quick_style_monochrome/quick_style_monochrome_4panel.jpg" alt="Quick Style — Monochrome Print" loading="lazy"></a><figcaption>Quick Style — Monochrome Print<span class="fig-hint">click to enlarge</span></figcaption></figure>
+  <div class="read"><strong>Read the output.</strong> Pattern density is the value channel. Light diagonal hatching = low, solid black = high. Check the darkest pattern against the smallest class: if two adjacent classes use patterns that read the same at final print size, reduce the number of classes.</div>
+  <h3 class="sec">Parameters</h3>
+  <table class="params"><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody><tr><td class="mono">INPUT</td><td>Vector layer</td><td class="mono sm">Vector layer</td><td class="mono sm">—</td></tr><tr><td class="mono">FIELD</td><td>Field to style</td><td class="mono sm">Field</td><td class="mono sm">—</td></tr><tr><td class="mono">MODE</td><td>Style as<div class="opts">Auto (detect field type) · Graduated (numeric) · Categorized (unique values)</div></td><td class="mono sm">Enumeration</td><td class="mono sm">Auto (detect field type)</td></tr><tr><td class="mono">CLASSES</td><td>Number of classes (graduated)</td><td class="mono sm">Number</td><td class="mono sm">5</td></tr><tr><td class="mono">METHOD</td><td>Class break method (graduated)<div class="opts">Quantile (equal count) · Equal interval · Geometric interval · Natural Breaks (Fisher-Jenks) · Head/Tail Breaks (power-law) · Standard Deviation · Box Plot / Tukey Outliers · Equal Area (Quantile) · Maximum Breaks (largest gaps) · Pretty Breaks (nice round numbers)</div></td><td class="mono sm">Enumeration</td><td class="mono sm">Quantile (equal count)</td></tr><tr><td class="mono">PALETTE</td><td>Colour palette<div class="opts">Batlow · Viridis · Magma · Plasma · Inferno · Cividis · Sunset · Turbo · Mako · Rocket · Bamako · Nuuk · Earth · Bathymetry · …</div></td><td class="mono sm">Enumeration</td><td class="mono sm">Batlow</td></tr><tr><td class="mono">REVERSE</td><td>Reverse palette</td><td class="mono sm">Boolean</td><td class="mono sm"></td></tr><tr><td class="mono">OUTLINE</td><td>Thin white outline</td><td class="mono sm">Boolean</td><td class="mono sm">True</td></tr><tr><td class="mono">MONOCHROME</td><td>Monochrome print-safe patterns (polygons)</td><td class="mono sm">Boolean</td><td class="mono sm"></td></tr></tbody></table>
+  <h3 class="sec">Exact run used for the screenshots</h3>
+  <pre class="run">INPUT            = İzmir mahalle (2024)
+FIELD            = pop_density
+MODE             = 1
+CLASSES          = 5
+METHOD           = 2
+PALETTE          = 21
+REVERSE          = False
+OUTLINE          = True
+MONOCHROME       = True</pre>
+  <div class="trouble"><h4>When it goes wrong</h4><ul><li>Patterns look identical in the legend — reduce Classes from 5 to 4 or 3.</li><li>The layer renders black everywhere — the fill colour of the base symbol is black; switch the symbol fill to white before applying monochrome.</li></ul></div>
+  <p style="font-size:.82rem;color:var(--muted);margin-top:1.2rem">Processing ID: <code class="mono">zero2cartolab:quick_style</code></p>
+</section>
+<section class="mod" id="building-25d">
+  <div class="grouplabel">Symbology Studio</div>
+  <h2>2.5D building styling — extrusion that survives</h2>
+  <div class="q">Can I show Kadifekale&#x27;s building massing as a real 3D-style extrusion instead of a pasted QML hack?</div>
+  <p>The 2.5D engine applies a native QGIS 25d renderer driven by a height or floor-count field. It writes the rule as a reusable expression, so the style can be re-applied to any layer with the same field, and it can be exported as a legend-friendly QML where each floor band is its own QGIS legend rule.</p>
+  <h3 class="sec">Step by step</h3>
+  <ol class="steps"><li>In the Symbology Studio open the 2.5D Buildings panel.</li><li>Choose the layer and set Height field: height_m. If your data stores floors instead, set Height source: Floor count field and Floor height: 3.5 m.</li><li>Pick a material preset — Warm Civic, Cool Slate, Urban Core Gold and eight more.</li><li>Set Angle (45° is a good default), Height scale, and MAX_HEIGHT to clamp outliers.</li><li>Enable Shadow and Wall shading so the massing reads as volume rather than flat colour.</li><li>Apply the native 2.5D renderer, or switch Render mode to Per-floor colour bands to get one legend rule per storey.</li><li>Export the QML style for reuse.</li></ol>
+  <h3 class="sec">The result</h3>
+  <figure class="shot wide"><a href="screenshots/web/building_25d/building_25d_4panel.jpg" target="_blank" rel="noopener"><img src="screenshots/web/building_25d/building_25d_4panel.jpg" alt="2.5D Building Styling" loading="lazy"></a><figcaption>2.5D Building Styling<span class="fig-hint">click to enlarge</span></figcaption></figure>
+  <div class="read"><strong>Read the output.</strong> Compare the flat input with the result: the extrusion turns Kadifekale&#x27;s street wall into a legible massing model. MAX_HEIGHT is the single most important control — without it one 300 m tower flattens every other building in the frame. Shadows only read if the building is big enough on screen: zoom in, don&#x27;t shout.</div>
+  <h3 class="sec">Parameters</h3>
+  <table class="params"><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody><tr><td class="mono">INPUT</td><td>Polygon layer</td><td class="mono sm">Vector layer</td><td class="mono sm">—</td></tr><tr><td class="mono">HEIGHT_FIELD</td><td>Height field</td><td class="mono sm">Field</td><td class="mono sm">—</td></tr><tr><td class="mono">HEIGHT_MODE</td><td>Height source<div class="opts">Height field is already in metres/map units · Floor count field (floors x floor height)</div></td><td class="mono sm">Enumeration</td><td class="mono sm">Height field is already in metres/map units</td></tr><tr><td class="mono">FLOOR_HEIGHT</td><td>Floor height, used only when height source is floor count</td><td class="mono sm">Number</td><td class="mono sm">3.5</td></tr><tr><td class="mono">RENDER_MODE</td><td>Renderer style<div class="opts">Native 2.5D material · Per-floor colour bands</div></td><td class="mono sm">Enumeration</td><td class="mono sm">Native 2.5D material</td></tr><tr><td class="mono">FLOOR_PALETTE</td><td>Floor colour palette, used by per-floor bands<div class="opts">Civic Spectrum · Planning Bands · Soft Atlas · Turbo Height Spectrum · Viridis Height Spectrum</div></td><td class="mono sm">Enumeration</td><td class="mono sm">Civic Spectrum</td></tr><tr><td class="mono">MAX_FLOORS</td><td>Maximum floor bands, 0 scans the layer automatically</td><td class="mono sm">Number</td><td class="mono sm"></td></tr><tr><td class="mono">PRESET</td><td>Visual preset<div class="opts">Warm Civic · Cool Slate · Limestone and Teal · Night Copper · Urban Core Gold · Suburban Pastoral · Cyberpunk Night · Nordic Minimalist · Emerald Metropolis · Terracotta Mediterranean</div></td><td class="mono sm">Enumeration</td><td class="mono sm">Warm Civic</td></tr><tr><td class="mono">ANGLE</td><td>Projection angle in degrees</td><td class="mono sm">Number</td><td class="mono sm">110.0</td></tr><tr><td class="mono">HEIGHT_SCALE</td><td>Height scale multiplier</td><td class="mono sm">Number</td><td class="mono sm">1.0</td></tr><tr><td class="mono">MAX_HEIGHT</td><td>Maximum rendered height, 0 for no clamp</td><td class="mono sm">Number</td><td class="mono sm"></td></tr><tr><td class="mono">STEPPED</td><td>Snap heights to stepped floors</td><td class="mono sm">Boolean</td><td class="mono sm"></td></tr><tr><td class="mono">STEP_HEIGHT</td><td>Step height in map units</td><td class="mono sm">Number</td><td class="mono sm">3.5</td></tr><tr><td class="mono">SHADOW_ENABLED</td><td>Enable soft shadow</td><td class="mono sm">Boolean</td><td class="mono sm">True</td></tr><tr><td class="mono">SHADOW_SPREAD</td><td>Shadow spread in map units</td><td class="mono sm">Number</td><td class="mono sm">3.5</td></tr><tr><td class="mono">WALL_SHADING</td><td>Enable directional wall shading</td><td class="mono sm">Boolean</td><td class="mono sm">True</td></tr></tbody></table>
+  <h3 class="sec">Exact run used for the screenshots</h3>
+  <pre class="run">INPUT            = osm_buildings
+HEIGHT_FIELD     = height_m
+HEIGHT_MODE      = 0
+FLOOR_HEIGHT     = 3.5
+RENDER_MODE      = 0
+FLOOR_PALETTE    = 0
+MAX_FLOORS       = 12
+PRESET           = 0
+ANGLE            = 45.0
+HEIGHT_SCALE     = 1.0
+MAX_HEIGHT       = 60.0
+STEPPED          = False
+STEP_HEIGHT      = 3.5
+SHADOW_ENABLED   = True
+SHADOW_SPREAD    = 1.2
+WALL_SHADING     = True
+SUMMARY          = 02CartoLab 2.5D style applied · Layer: osm_buildings · Height field: height_m · Height source: height · Render</pre>
+  <div class="trouble"><h4>When it goes wrong</h4><ul><li>Nothing extrudes — the height field is text, or contains NULLs; the expression uses coalesce() so NULL becomes 0.</li><li>The map is all roof colour — Wall shading is off, so no wall faces are drawn.</li><li>Floors are wrong — the floor height does not match your data; 3.5 m is the Turkish residential norm, offices are often 3.6–4.0 m.</li></ul></div>
+  <p style="font-size:.82rem;color:var(--muted);margin-top:1.2rem">Processing ID: <code class="mono">zero2cartolab:building_25d_style</code></p>
+</section>
+<section class="mod" id="palette-accessibility">
+  <div class="grouplabel">Symbology Studio</div>
+  <h2>Palette &amp; Accessibility — CVD simulation and WCAG scoring</h2>
+  <div class="q">Will my map still be readable for a reader with deuteranopia, and does it pass the journal&#x27;s contrast rule?</div>
+  <p>The Palette &amp; Accessibility inspector lists every ramp in the plugin&#x27;s library with live swatches, a five-mode colour-vision-deficiency simulation (normal, deuteranopia, protanopia, tritanopia, achromatopsia) and a WCAG 2.1 contrast score for each palette against the page.</p>
+  <h3 class="sec">Step by step</h3>
+  <ol class="steps"><li>Open Symbology Studio ▸ Palette &amp; Accessibility and choose the layer you are styling.</li><li>Filter Palette type: Sequential, Diverging or Qualitative, and tick Colour-blind safe only to see only the verified ramps.</li><li>Select a palette and read the score line: it reports the palette family, the colour-blind safety badge and the WCAG contrast ratio.</li><li>Use the CVD simulation strip to preview the same ramp under each deficiency mode.</li><li>For a two-variable map, check that the two axes remain distinguishable in every mode, not just in normal vision.</li></ol>
+  <h3 class="sec">The result</h3>
+  <figure class="shot wide"><a href="screenshots/web/gui_dashboard/dashboard_palette.jpg" target="_blank" rel="noopener"><img src="screenshots/web/gui_dashboard/dashboard_palette.jpg" alt="Symbology Studio · Palette &amp; Accessibility" loading="lazy"></a><figcaption>Symbology Studio · Palette &amp; Accessibility<span class="fig-hint">click to enlarge</span></figcaption></figure>
+  <div class="read"><strong>Read the output.</strong> A palette is colour-blind safe when the ramp keeps a lightness gradient as well as a hue gradient. A hue-only ramp collapses into indistinguishable bands under deuteranopia — the simulation strip makes that collapse visible before publication, not after review.</div>
+  <div class="trouble"><h4>When it goes wrong</h4><ul><li>The contrast ratio looks low — a pale ramp on white paper fails WCAG for small text; darken the ramp or add a frame.</li><li>No palette appears — the filter is too restrictive; clear &#x27;Colour-blind safe only&#x27; first.</li></ul></div>
+</section>
+<section class="mod" id="normalize-field">
+  <div class="grouplabel">Data Preparation</div>
+  <h2>Normalization &amp; rates — map the rate, not the count</h2>
+  <div class="q">Raw population just redraws the city footprint. How do I map dependency instead?</div>
+  <p>A choropleth of raw totals mostly shows where the city is built. This algorithm turns any field into a comparable rate: ratio per denominator, z-score, robust z-score (median/MAD), min-max, percentile rank, log, location quotient, winsorized min-max, decile rank, Tukey hinge rank, logistic, power and quantile-uniform scaling. The result is written as a new field and styled automatically.</p>
+  <h3 class="sec">Step by step</h3>
+  <ol class="steps"><li>Open Processing Toolbox ▸ 02CartoLab ▸ Choropleth Normalization &amp; Rates.</li><li>Set Input to the district layer, Field to pop_total and Method to Rate (numerator / denominator).</li><li>Choose Denominator: pop_15_64 — the working-age population — and Scale: 1000 for residents per 1 000 working-age people.</li><li>Pick a sequential palette and 5 classes, then Run.</li><li>Open the output attribute table: the new field holds the rate, and the layer already carries the matching graduated renderer.</li></ol>
+  <h3 class="sec">The result</h3>
+  <figure class="shot wide"><a href="screenshots/web/normalize_field/normalize_field_4panel.jpg" target="_blank" rel="noopener"><img src="screenshots/web/normalize_field/normalize_field_4panel.jpg" alt="Choropleth Normalization &amp; Rates" loading="lazy"></a><figcaption>Choropleth Normalization &amp; Rates<span class="fig-hint">click to enlarge</span></figcaption></figure>
+  <div class="read"><strong>Read the output.</strong> A value above 1 means the neighbourhood depends on people outside its own working-age group. Values below 1 mean it has a demographic surplus. The rate is the map; the count is only context.</div>
+  <h3 class="sec">Parameters</h3>
+  <table class="params"><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody><tr><td class="mono">INPUT</td><td>Input layer</td><td class="mono sm">Input layer</td><td class="mono sm">—</td></tr><tr><td class="mono">FIELD</td><td>Value field (numerator)</td><td class="mono sm">Field</td><td class="mono sm">—</td></tr><tr><td class="mono">METHOD</td><td>Method<div class="opts">Rate (numerator / denominator) · Z-score (standardise) · Robust z-score (median / MAD) · Robust IQR (median / IQR) · Min-max to 0-1 · Percentile rank (0-100) · Log (base 10) · Location Quotient (Specialisation Index) · Winsorized Min-Max (5th-95th percentile clamp) · Decile rank (1-10) · Tukey Hinge Rank (1-6 Box Plot class) · Sigmoid logistic scaling (0-1) · Power transform (Box-Cox / Yeo-Johnson) · Quantile uniform normalization (0-1)</div></td><td class="mono sm">Enumeration</td><td class="mono sm">Rate (numerator / denominator)</td></tr><tr><td class="mono">DENOMINATOR</td><td>Denominator field (Rate / LQ only)</td><td class="mono sm">Field</td><td class="mono sm">—</td></tr><tr><td class="mono">SCALE</td><td>Rate scale (e.g. 1000, 100000)</td><td class="mono sm">Number</td><td class="mono sm">1.0</td></tr><tr><td class="mono">PALETTE</td><td>Color ramp for output styling<div class="opts">Batlow · Viridis · Magma · Plasma · Inferno · Cividis · Sunset · Turbo · Mako · Rocket · Bamako · Nuuk · Earth · Bathymetry · …</div></td><td class="mono sm">Enumeration</td><td class="mono sm">Batlow</td></tr><tr><td class="mono">CLASSES</td><td>Number of classes for graduated style</td><td class="mono sm">Number</td><td class="mono sm">5</td></tr><tr><td class="mono">OUTPUT</td><td>Normalized output</td><td class="mono sm">Output layer</td><td class="mono sm">—</td></tr></tbody></table>
+  <h3 class="sec">Exact run used for the screenshots</h3>
+  <pre class="run">INPUT            = İzmir mahalle (2024)
+FIELD            = pop_total
+METHOD           = 0
+DENOMINATOR      = pop_15_64
+SCALE            = 1000.0
+PALETTE          = 15
+CLASSES          = 5</pre>
+  <div class="trouble"><h4>When it goes wrong</h4><ul><li>The result is empty — the denominator field contains NULLs or zeros.</li><li>The scale looks odd — logarithmic and quantile methods are for heavy-tailed data; try Rate or Z-score for a linear variable.</li><li>NULL values are counted as zero — normalize first, then filter NULLs in the attribute table.</li></ul></div>
+  <p style="font-size:.82rem;color:var(--muted);margin-top:1.2rem">Processing ID: <code class="mono">zero2cartolab:normalize_field</code></p>
+</section>
+<section class="mod" id="classification">
+  <div class="grouplabel">Classification Engine</div>
+  <h2>Adaptive classification — GIC, Jenks, Head/Tail</h2>
+  <div class="q">How many classes does a skewed urban indicator actually need, and which break method fits it?</div>
+  <p>The classification engine implements seven break methods: Adaptive Geometric Interval (GIC), Head/Tail Breaks, Fisher-Jenks, standard deviation, Tukey box plot, maximum breaks and pretty round breaks. The output layer carries the class field and the matching renderer, so it drops straight into a layout.</p>
+  <h3 class="sec">Step by step</h3>
+  <ol class="steps"><li>Open Processing Toolbox ▸ 02CartoLab ▸ Advanced Classification.</li><li>Set Input to the district layer, Field to pop_density and Classes to 5.</li><li>Choose Method: Adaptive Geometric Interval (GIC) — it follows the shape of a long-tailed distribution instead of forcing equal counts.</li><li>Pick a palette and Run.</li><li>Compare the result with Fisher-Jenks: run the algorithm again with METHOD = Fisher-Jenks and compare the class limits.</li></ol>
+  <h3 class="sec">The result</h3>
+  <figure class="shot wide"><a href="screenshots/web/classification/classification_4panel.jpg" target="_blank" rel="noopener"><img src="screenshots/web/classification/classification_4panel.jpg" alt="Adaptive Classification (GIC / Jenks / Head-Tail)" loading="lazy"></a><figcaption>Adaptive Classification (GIC / Jenks / Head-Tail)<span class="fig-hint">click to enlarge</span></figcaption></figure>
+  <div class="read"><strong>Read the output.</strong> GIC produces ordered, readable intervals that follow the data&#x27;s own spread; Jenks minimises within-class variance at the cost of irregular limits. If the two maps look the same, the distribution is not skewed enough for the choice to matter — and that is a useful result too.</div>
+  <h3 class="sec">Parameters</h3>
+  <table class="params"><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody><tr><td class="mono">INPUT</td><td>Input layer</td><td class="mono sm">Input layer</td><td class="mono sm">—</td></tr><tr><td class="mono">FIELD</td><td>Field to classify</td><td class="mono sm">Field</td><td class="mono sm">—</td></tr><tr><td class="mono">CLASSES</td><td>Number of classes</td><td class="mono sm">Number</td><td class="mono sm">5</td></tr><tr><td class="mono">METHOD</td><td>Classification method<div class="opts">Adaptive Geometric Interval (GIC) · Head/Tail Breaks · Fisher-Jenks Natural Breaks · Standard Deviation · Box Plot / Tukey Breaks · Maximum Distribution Breaks · Pretty Nice-Round Breaks</div></td><td class="mono sm">Enumeration</td><td class="mono sm">Adaptive Geometric Interval (GIC)</td></tr><tr><td class="mono">PALETTE</td><td>Color ramp<div class="opts">Batlow · Viridis · Magma · Plasma · Inferno · Cividis · Sunset · Turbo · Mako · Rocket · Bamako · Nuuk · Earth · Bathymetry · …</div></td><td class="mono sm">Enumeration</td><td class="mono sm">Batlow</td></tr><tr><td class="mono">OUTPUT</td><td>Classified output</td><td class="mono sm">Output layer</td><td class="mono sm">—</td></tr></tbody></table>
+  <h3 class="sec">Exact run used for the screenshots</h3>
+  <pre class="run">INPUT            = İzmir mahalle (2024)
+FIELD            = pop_density
+CLASSES          = 5
+METHOD           = 0
+PALETTE          = 15</pre>
+  <div class="trouble"><h4>When it goes wrong</h4><ul><li>Too many classes for the data — the values are near-constant; reduce Classes.</li><li>A class is empty — the breaks collapse; try a different method or reduce the class count.</li><li>Values are treated as text — the field must be numeric.</li></ul></div>
+  <p style="font-size:.82rem;color:var(--muted);margin-top:1.2rem">Processing ID: <code class="mono">zero2cartolab:geometric_interval_classification</code></p>
+</section>
+<section class="mod" id="bivariate">
+  <div class="grouplabel">Thematic Mapping</div>
+  <h2>Bivariate choropleth — two variables, one honest map</h2>
+  <div class="q">Which İzmir neighbourhoods are both old and full of children — the ones that need care and schools at once?</div>
+  <p>A bivariate choropleth classifies two numeric variables into an N×N matrix and colours every polygon by the combination of its two class bands. The output carries a bivar_class field and a categorized renderer, and the plugin can export the matching legend matrix as vector geometry.</p>
+  <h3 class="sec">Step by step</h3>
+  <ol class="steps"><li>Open Processing Toolbox ▸ 02CartoLab ▸ Bivariate Choropleth Map.</li><li>Set Input to the district layer. FIELD_X: elderly_share (share aged 65+), FIELD_Y: child_share (share aged 0–14).</li><li>Set CLASSES: 3 for a 3×3 matrix, METHOD: Quantile (Equal Count).</li><li>Choose PALETTE_PRESET: Blue - Orange (Density &amp; Economy) — or pick Custom Corner Colours to control all four corners.</li><li>Run. The output is styled automatically with a categorized renderer on bivar_class.</li><li>Run Export Bivariate 2D Legend Matrix with the same settings to obtain the diamond or square legend.</li></ol>
+  <h3 class="sec">The result</h3>
+  <figure class="shot wide"><a href="screenshots/web/bivariate/bivariate_4panel.jpg" target="_blank" rel="noopener"><img src="screenshots/web/bivariate/bivariate_4panel.jpg" alt="Bivariate Choropleth" loading="lazy"></a><figcaption>Bivariate Choropleth<span class="fig-hint">click to enlarge</span></figcaption></figure>
+  <div class="read"><strong>Read the output.</strong> Read the matrix as two axes at once. The upper-right cell — high on both axes — is the hardest quadrant: an old population needing care and a young population needing schools in the same neighbourhoods. The legend is not decoration; without the axis labels the colours are meaningless.</div>
+  <h3 class="sec">Parameters</h3>
+  <table class="params"><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody><tr><td class="mono">INPUT</td><td>Input vector layer</td><td class="mono sm">Input layer</td><td class="mono sm">—</td></tr><tr><td class="mono">FIELD_X</td><td>Horizontal axis field (X)</td><td class="mono sm">Field</td><td class="mono sm">—</td></tr><tr><td class="mono">FIELD_Y</td><td>Vertical axis field (Y)</td><td class="mono sm">Field</td><td class="mono sm">—</td></tr><tr><td class="mono">CLASSES</td><td>Number of classes per axis (N x N)</td><td class="mono sm">Number</td><td class="mono sm">3</td></tr><tr><td class="mono">METHOD</td><td>Classification method<div class="opts">Quantile (Equal Count - Recommended) · Geometric Interval · Fisher-Jenks Natural Breaks · Equal Interval</div></td><td class="mono sm">Enumeration</td><td class="mono sm">Quantile (Equal Count - Recommended)</td></tr><tr><td class="mono">PALETTE_PRESET</td><td>Colour Palette Preset<div class="opts">Teal - Brown (Environment &amp; Resilience) · Stevens Pink - Cyan (Demographics &amp; Social) · Blue - Orange (Density &amp; Economy) · Purple - Green (Land Use &amp; Canopy) · Night Neon (Dark Theme Visuals) · Custom Corner Colours</div></td><td class="mono sm">Enumeration</td><td class="mono sm">Teal - Brown (Environment &amp; Resilience)</td></tr><tr><td class="mono">COLOR_LL</td><td>Bottom-Left colour (Low X, Low Y) [if Custom]</td><td class="mono sm">Colour</td><td class="mono sm">—</td></tr><tr><td class="mono">COLOR_LH</td><td>Top-Left colour (Low X, High Y) [if Custom]</td><td class="mono sm">Colour</td><td class="mono sm">—</td></tr><tr><td class="mono">COLOR_HL</td><td>Bottom-Right colour (High X, Low Y) [if Custom]</td><td class="mono sm">Colour</td><td class="mono sm">—</td></tr><tr><td class="mono">COLOR_HH</td><td>Top-Right colour (High X, High Y) [if Custom]</td><td class="mono sm">Colour</td><td class="mono sm">—</td></tr><tr><td class="mono">OUTPUT</td><td>Bivariate Layer</td><td class="mono sm">Output layer</td><td class="mono sm">—</td></tr></tbody></table>
+  <h3 class="sec">Exact run used for the screenshots</h3>
+  <pre class="run">INPUT            = İzmir mahalle (2024)
+FIELD_X          = elderly_share
+FIELD_Y          = child_share
+CLASSES          = 3
+METHOD           = 0
+PALETTE_PRESET   = 2
+COLOR_LL         = #eff3ff
+COLOR_LH         = #bdd7e7
+COLOR_HL         = #fdbb84
+COLOR_HH         = #e34a33</pre>
+  <div class="trouble"><h4>When it goes wrong</h4><ul><li>Only one colour appears — one of the fields has almost no variance; check the attribute table.</li><li>The corners look swapped — verify the palette preset is not the Custom one with the corner colours mixed up (LOW-LOW, LOW-HIGH, HIGH-LOW, HIGH-HIGH).</li><li>The map is unreadable — reduce CLASSES to 2 or pick a higher-contrast preset.</li></ul></div>
+  <p style="font-size:.82rem;color:var(--muted);margin-top:1.2rem">Processing ID: <code class="mono">zero2cartolab:bivariate_choropleth</code></p>
+</section>
+<section class="mod" id="bivariate-matrix">
+  <div class="grouplabel">Thematic Mapping</div>
+  <h2>Bivariate legend matrix — export the key, not the picture</h2>
+  <div class="q">How do I get a publication-ready bivariate legend into my manuscript without redrawing it?</div>
+  <p>This algorithm writes the N×N colour matrix as a standalone vector polygon layer plus an HTML preview. Use DIAMOND for the classic bivariate diamond key, or squares. The geometry can be dropped straight into a print layout as a legend item.</p>
+  <h3 class="sec">Step by step</h3>
+  <ol class="steps"><li>Open Processing Toolbox ▸ 02CartoLab ▸ Export Bivariate 2D Legend Matrix.</li><li>Set CLASSES: 3 and choose the same PALETTE_PRESET as the map.</li><li>Tick DIAMOND for a diamond key; leave CELL_SIZE at 30 mm for a print layout, or lower it for a slide.</li><li>Set LABEL_X and LABEL_Y to the exact variable names used in the map caption.</li><li>Run and choose the output location. The layer carries the matrix; OUTPUT_HTML gives a browser-ready preview.</li></ol>
+  <h3 class="sec">The result</h3>
+  <figure class="shot wide"><a href="screenshots/web/bivariate_matrix/bivariate_matrix.jpg" target="_blank" rel="noopener"><img src="screenshots/web/bivariate_matrix/bivariate_matrix.jpg" alt="Bivariate 2D Legend Matrix" loading="lazy"></a><figcaption>Bivariate 2D Legend Matrix<span class="fig-hint">click to enlarge</span></figcaption></figure>
+  <div class="read"><strong>Read the output.</strong> The matrix is the legend of a bivariate map. If the labels in the matrix do not match the caption, the reader cannot decode the map. Generate the matrix from the same preset and class count as the map, every single time.</div>
+  <h3 class="sec">Parameters</h3>
+  <table class="params"><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody><tr><td class="mono">CLASSES</td><td>Number of classes per axis (N x N)</td><td class="mono sm">Number</td><td class="mono sm">3</td></tr><tr><td class="mono">PALETTE_PRESET</td><td>Colour Palette Preset<div class="opts">Teal - Brown (Environment &amp; Resilience) · Stevens Pink - Cyan (Demographics &amp; Social) · Blue - Orange (Density &amp; Economy) · Purple - Green (Land Use &amp; Canopy) · Night Neon (Dark Theme Visuals) · Custom Corner Colours</div></td><td class="mono sm">Enumeration</td><td class="mono sm">Teal - Brown (Environment &amp; Resilience)</td></tr><tr><td class="mono">COLOR_LL</td><td>Bottom-Left colour (Low X, Low Y) [if Custom]</td><td class="mono sm">Colour</td><td class="mono sm">—</td></tr><tr><td class="mono">COLOR_LH</td><td>Top-Left colour (Low X, High Y) [if Custom]</td><td class="mono sm">Colour</td><td class="mono sm">—</td></tr><tr><td class="mono">COLOR_HL</td><td>Bottom-Right colour (High X, Low Y) [if Custom]</td><td class="mono sm">Colour</td><td class="mono sm">—</td></tr><tr><td class="mono">COLOR_HH</td><td>Top-Right colour (High X, High Y) [if Custom]</td><td class="mono sm">Colour</td><td class="mono sm">—</td></tr><tr><td class="mono">DIAMOND</td><td>Rotate 45 degrees (Diamond Legend)</td><td class="mono sm">Boolean</td><td class="mono sm"></td></tr><tr><td class="mono">CELL_SIZE</td><td>Cell size (map units / mm)</td><td class="mono sm">Number</td><td class="mono sm">100.0</td></tr><tr><td class="mono">ORIGIN_X</td><td>Origin X coordinate (grid corner/center)</td><td class="mono sm">Number</td><td class="mono sm"></td></tr><tr><td class="mono">ORIGIN_Y</td><td>Origin Y coordinate (grid corner/center)</td><td class="mono sm">Number</td><td class="mono sm"></td></tr><tr><td class="mono">LABEL_X</td><td>Horizontal axis variable name (X)</td><td class="mono sm">String</td><td class="mono sm">Variable X</td></tr><tr><td class="mono">LABEL_Y</td><td>Vertical axis variable name (Y)</td><td class="mono sm">String</td><td class="mono sm">Variable Y</td></tr><tr><td class="mono">OUTPUT</td><td>Bivariate Matrix Layer</td><td class="mono sm">Output layer</td><td class="mono sm">—</td></tr></tbody></table>
+  <h3 class="sec">Exact run used for the screenshots</h3>
+  <pre class="run">CLASSES          = 3
+PALETTE_PRESET   = 2
+COLOR_LL         = #eff3ff
+COLOR_LH         = #bdd7e7
+COLOR_HL         = #fdbb84
+COLOR_HH         = #e34a33
+DIAMOND          = True
+CELL_SIZE        = 30.0
+ORIGIN_X         = 0.0
+ORIGIN_Y         = 0.0
+LABEL_X          = 65+ yaş payı
+LABEL_Y          = 0-14 yaş payı
+HTML             = &lt;div style=&quot;padding:12px; font-family:sans-serif;&quot;&gt;&lt;h3 style=&quot;margin-bottom:8px; color:#0f172a;&quot;&gt;Bivariate Legend Matrix (3x3)&lt;/h3&gt;&lt;p style=&quot;margin-top:0; font-size:12px; color:#64748b;&quot;&gt;&lt;b&gt;Y:&lt;/b&gt; 0-14 yaş payı &amp;nbsp;|&amp;nbsp; &lt;b&gt;X:&lt;/b&gt; 65+ yaş payı&lt;/p&gt;&lt;table style=&quot;border-collapse:collapse; margin:12px 0;&quot;&gt;&lt;tr&gt;&lt;td style=&quot;font-weight:bold; padding-right:6px; font-size:11px; color:#333;&quot;&gt;High&lt;/td&gt;&lt;td style=&quot;background-color:#e27c38; width:60px; height:60px; text-align:center; color:#ffffff; font-family:sans-serif; font-size:10px; font-weight:bold; text-shadow:0 1px 2px rgba(0,0,0,0.8); border:1px solid #ffffff;&quot;&gt;1,3&lt;/td&gt;&lt;td style=&quot;background-color:#8f513e; width:60px; height:60px; text-align:center; color:#ffffff; font-family:sans-serif; font-size:10px; font-weight:bold; text-shadow:0 1px 2px rgba(0,0,0,0.8); border:1px solid #ffffff;&quot;&gt;2,3&lt;/td&gt;&lt;td style=&quot;background-color:#3d2645; width:60px; height:60px; text-align:center; color:#ffffff; font-family:sans-serif; font-size:10px; font-weight:bold; text-shadow:0 1px 2px rgba(0,0,0,0.8); border:1px solid #ffffff;&quot;&gt;3,3&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;font-weight:bold; padding-right:6px; font-size:11px; color:#333;&quot;&gt;Medium&lt;/td&gt;&lt;td style=&quot;background-color:#e9b798; width:60px; height:60px; text-align:center; color:#ffffff; font-family:sans-serif; font-size:10px; font-weight:bold; text-shadow:0 1px 2px rgba(0,0,0,0.8); border:1px solid #ffffff;&quot;&gt;1,2&lt;/td&gt;&lt;td style=&quot;background-color:#8e7c81; width:60px; height:60px; text-align:center; color:#ffffff; font-family:sans-serif; font-size:10px; font-weight:bold; text-shadow:0 1px 2px rgba(0,0,0,0.8); border:1px solid #ffffff;&quot;&gt;2,2&lt;/td&gt;&lt;td style=&quot;background-color:#34416a; width:60px; height:60px; text-align:center; color:#ffffff; font-family:sans-serif; font-size:10px; font-weight:bold; text-shadow:0 1px 2px rgba(0,0,0,0.8); border:1px solid #ffffff;&quot;&gt;3,2&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;font-weight:bold; padding-right:6px; font-size:11px; color:#333;&quot;&gt;Low&lt;/td&gt;&lt;td style=&quot;background-color:#f0f3f8; width:60px; height:60px; text-align:center; color:#ffffff; font-family:sans-serif; font-size:10px; font-weight:bold; text-shadow:0 1px 2px rgba(0,0,0,0.8); border:1px solid #ffffff;&quot;&gt;1,1&lt;/td&gt;&lt;td style=&quot;background-color:#8da7c3; width:60px; height:60px; text-align:center; color:#ffffff; font-family:sans-serif; font-size:10px; font-weight:bold; text-shadow:0 1px 2px rgba(0,0,0,0.8); border:1px solid #ffffff;&quot;&gt;2,1&lt;/td&gt;&lt;td style=&quot;background-color:#2b5c8f; width:60px; height:60px; text-align:center; color:#ffffff; font-family:sans-serif; font-size:10px; font-weight:bold; text-shadow:0 1px 2px rgba(0,0,0,0.8); border:1px solid #ffffff;&quot;&gt;3,1&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/div&gt;</pre>
+  <div class="trouble"><h4>When it goes wrong</h4><ul><li>The legend does not match the map — the class count or preset differs between the two runs.</li><li>The diamonds are too small on the page — raise CELL_SIZE or scale the item in the layout.</li></ul></div>
+  <p style="font-size:.82rem;color:var(--muted);margin-top:1.2rem">Processing ID: <code class="mono">zero2cartolab:bivariate_matrix_export</code></p>
+</section>
+<section class="mod" id="value-by-alpha">
+  <div class="grouplabel">Thematic Mapping</div>
+  <h2>Value-by-Alpha — fade the uncertain, don&#x27;t hide it</h2>
+  <div class="q">My estimate is unreliable in some neighbourhoods. How do I show that without pretending the data is missing?</div>
+  <p>Value-by-Alpha separates the thematic variable from the reliability variable: hue carries the value, opacity carries the confidence. Low-confidence features fade instead of disappearing into a &#x27;no data&#x27; colour — the map states its own uncertainty.</p>
+  <h3 class="sec">Step by step</h3>
+  <ol class="steps"><li>Open Processing Toolbox ▸ 02CartoLab ▸ Value-by-Alpha (VbA) Map.</li><li>Set FIELD_COLOUR to pop_density — the value you want the reader to see.</li><li>Set FIELD_ALPHA to working_share — the share of the working-age population, used here as the reliability proxy.</li><li>Set ALPHA_MIN: 64 and ALPHA_MAX: 255. Both are integers on a 0–255 opacity scale, where 0 is invisible and 255 fully opaque: 64 means the least reliable areas stay 25 % visible, 255 means the most reliable are solid.</li><li>Choose a CVD-safe palette (Cividis) and 5 classes, then Run.</li><li>Compare with the plain choropleth: the faded areas are exactly the places where the estimate should not be trusted.</li></ol>
+  <h3 class="sec">The result</h3>
+  <figure class="shot wide"><a href="screenshots/web/value_by_alpha/value_by_alpha_4panel.jpg" target="_blank" rel="noopener"><img src="screenshots/web/value_by_alpha/value_by_alpha_4panel.jpg" alt="Value-by-Alpha" loading="lazy"></a><figcaption>Value-by-Alpha<span class="fig-hint">click to enlarge</span></figcaption></figure>
+  <div class="read"><strong>Read the output.</strong> A faded polygon is not missing data — it is uncertain data. That distinction is the entire point: a normal choropleth hides uncertainty behind a single grey, which reads as &#x27;nothing here&#x27;. Keep the caption explicit about what the alpha variable means, or the reader will not know.</div>
+  <h3 class="sec">Parameters</h3>
+  <table class="params"><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody><tr><td class="mono">INPUT</td><td>Input layer</td><td class="mono sm">Input layer</td><td class="mono sm">—</td></tr><tr><td class="mono">FIELD_COLOUR</td><td>Primary variable (colour)</td><td class="mono sm">Field</td><td class="mono sm">—</td></tr><tr><td class="mono">FIELD_ALPHA</td><td>Reliability variable (opacity)</td><td class="mono sm">Field</td><td class="mono sm">—</td></tr><tr><td class="mono">ALPHA_MIN</td><td>Minimum opacity (least reliable)</td><td class="mono sm">Number</td><td class="mono sm">25</td></tr><tr><td class="mono">ALPHA_MAX</td><td>Maximum opacity (most reliable)</td><td class="mono sm">Number</td><td class="mono sm">255</td></tr><tr><td class="mono">PALETTE</td><td>Color ramp (for primary variable)<div class="opts">Viridis · Plasma · Inferno · Magma · Cividis · Turbo · Mako · Rocket · Blues · Oranges · Purples · Greens</div></td><td class="mono sm">Enumeration</td><td class="mono sm">Viridis</td></tr><tr><td class="mono">CLASSES</td><td>Number of classes</td><td class="mono sm">Number</td><td class="mono sm">5</td></tr><tr><td class="mono">OUTPUT</td><td>VbA output</td><td class="mono sm">Output layer</td><td class="mono sm">—</td></tr></tbody></table>
+  <h3 class="sec">Exact run used for the screenshots</h3>
+  <pre class="run">INPUT            = İzmir mahalle (2024)
+FIELD_COLOUR     = pop_density
+FIELD_ALPHA      = working_share
+ALPHA_MIN        = 64
+ALPHA_MAX        = 255
+PALETTE          = 5
+CLASSES          = 5</pre>
+  <div class="trouble"><h4>When it goes wrong</h4><ul><li>The map comes out blank — ALPHA_MIN/MAX are integers on a 0–255 scale. Typing 0.25 and 1.0 is silently truncated to 0 and 1, which renders everything invisible. Use 64 and 255.</li><li>Everything is faded — the alpha field is inverted or has a tiny range; check the field statistics.</li><li>The map looks like a plain choropleth — ALPHA_MIN is too close to ALPHA_MAX.</li></ul></div>
+  <p style="font-size:.82rem;color:var(--muted);margin-top:1.2rem">Processing ID: <code class="mono">zero2cartolab:value_by_alpha</code></p>
+</section>
+<section class="mod" id="ridge-map">
+  <div class="grouplabel">Thematic Mapping</div>
+  <h2>Ridge map — turn any raster into relief</h2>
+  <div class="q">Can I show Kadifekale&#x27;s terrain — or any continuous surface — as a ridge-line map instead of a flat hillshade?</div>
+  <p>The ridge engine samples a raster along parallel scanlines and draws each scanline as a profile, producing the stacked ridgelines of a Joy-Division chart. The source can be a DEM, a heat surface, a density raster or an accessibility index.</p>
+  <h3 class="sec">Step by step</h3>
+  <ol class="steps"><li>Reproject the raster to a projected CRS first — Raster ▸ Reproject Project Layer, or Processing ▸ GDAL ▸ Reproject. The ridge engine multiplies the raw elevation by the vertical exaggeration and adds it to the scanline position, so a DEM in degrees would throw the ridges thousands of degrees away. The plugin refuses a geographic CRS with an explanatory error.</li><li>Open Processing Toolbox ▸ 02CartoLab ▸ Ridge Map.</li><li>Set RASTER to the reprojected DEM and EXTENT to the area you want, in the DEM&#x27;s own CRS (xmin,xmax,ymin,ymax).</li><li>N_LINES: 120 gives a dense relief. SMOOTH: 2 removes single-cell noise.</li><li>VERTICAL_SCALE is the exaggeration of the raw elevation. Derive it from the data: (map height × 0.3) ÷ maximum elevation makes the tallest ridge rise about a third of the frame. Change it and compare — too little flattens the relief, too much turns it into a cartoon.</li><li>Set LINE_COLOR near-black, LINE_WIDTH: 0.28 and Run. The output is vector, so it can be styled and labelled in a layout.</li></ol>
+  <h3 class="sec">The result</h3>
+  <figure class="shot wide"><a href="screenshots/web/ridge_map/ridge_map_4panel.jpg" target="_blank" rel="noopener"><img src="screenshots/web/ridge_map/ridge_map_4panel.jpg" alt="Ridge Map (Joy Division)" loading="lazy"></a><figcaption>Ridge Map (Joy Division)<span class="fig-hint">click to enlarge</span></figcaption></figure>
+  <div class="read"><strong>Read the output.</strong> The horizontal axis is distance, the vertical axis is the surface value. Dark ridges are high ground. Change VERTICAL_SCALE and watch the terrain change character — too little and it flattens, too much and it becomes a cartoon. The right value is the one that reveals structure without inventing it.</div>
+  <h3 class="sec">Parameters</h3>
+  <table class="params"><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody><tr><td class="mono">RASTER</td><td>Input raster (single-band)</td><td class="mono sm">Raster layer</td><td class="mono sm">—</td></tr><tr><td class="mono">N_LINES</td><td>Number of scanlines</td><td class="mono sm">Number</td><td class="mono sm">60</td></tr><tr><td class="mono">VERTICAL_SCALE</td><td>Vertical exaggeration</td><td class="mono sm">Number</td><td class="mono sm">1.0</td></tr><tr><td class="mono">LINE_SPACING</td><td>Line spacing (map units)</td><td class="mono sm">Number</td><td class="mono sm">1.0</td></tr><tr><td class="mono">SMOOTH</td><td>Smoothing passes (0 = raw)</td><td class="mono sm">Number</td><td class="mono sm">2</td></tr><tr><td class="mono">EXTENT</td><td>Clip extent (optional = raster extent)</td><td class="mono sm">Extent</td><td class="mono sm">—</td></tr><tr><td class="mono">LINE_COLOR</td><td>Ridge line color</td><td class="mono sm">Colour</td><td class="mono sm">—</td></tr><tr><td class="mono">LINE_WIDTH</td><td>Ridge line width (mm)</td><td class="mono sm">Number</td><td class="mono sm">0.35</td></tr><tr><td class="mono">OUTPUT</td><td>Ridge lines output</td><td class="mono sm">Output layer</td><td class="mono sm">—</td></tr></tbody></table>
+  <h3 class="sec">Exact run used for the screenshots</h3>
+  <pre class="run">RASTER           = dem_utm35n
+N_LINES          = 120
+VERTICAL_SCALE   = 3.868
+LINE_SPACING     = 0.0
+SMOOTH           = 2.0
+EXTENT           = …5.625940838,4252875.625940838 [EPSG:32635]
+LINE_COLOR       = #111827
+LINE_WIDTH       = 0.28</pre>
+  <div class="trouble"><h4>When it goes wrong</h4><ul><li>The plugin refuses the input — the raster is in a geographic CRS (EPSG:4326). Reproject it to UTM; the error message says so explicitly.</li><li>The ridges collapse into a single vertical line — the same cause, or the vertical exaggeration was applied to degree values.</li><li>The ridges are flat lines — VERTICAL_SCALE is too low for the elevation range.</li><li>The ridges are noisy — raise SMOOTH.</li></ul></div>
+  <p style="font-size:.82rem;color:var(--muted);margin-top:1.2rem">Processing ID: <code class="mono">zero2cartolab:ridge_map</code></p>
+</section>
+<section class="mod" id="dot-density">
+  <div class="grouplabel">Thematic Mapping</div>
+  <h2>Dot-density map — one dot, N people</h2>
+  <div class="q">Where do people actually live inside these neighbourhoods, instead of just how many?</div>
+  <p>The dot-density engine seeds dots inside each polygon — one dot per N units of a count field — placing them away from edges and never inside holes. The same seed always produces the same map, so figures are reproducible across a report.</p>
+  <h3 class="sec">Step by step</h3>
+  <ol class="steps"><li>Open Processing Toolbox ▸ 02CartoLab ▸ Dot-Density Map.</li><li>Set INPUT to the district layer and FIELD to pop_total.</li><li>Set VALUE_PER_DOT: 500 — one dot per 500 residents.</li><li>Choose DOT_SIZE: 2.0 mm, DOT_COLOR and a SEED (42 is a good reproducible default).</li><li>Run and compare with the choropleth of the same variable: the dots show where the density is, not just how much.</li></ol>
+  <h3 class="sec">The result</h3>
+  <figure class="shot wide"><a href="screenshots/web/dot_density/dot_density_4panel.jpg" target="_blank" rel="noopener"><img src="screenshots/web/dot_density/dot_density_4panel.jpg" alt="Dot-Density Map" loading="lazy"></a><figcaption>Dot-Density Map<span class="fig-hint">click to enlarge</span></figcaption></figure>
+  <div class="read"><strong>Read the output.</strong> The dot pattern carries spatial information the choropleth loses: it shows that a dense district is dense in one compact core rather than spread evenly. Never change the seed between figures of the same dataset — the same data must produce the same picture.</div>
+  <h3 class="sec">Parameters</h3>
+  <table class="params"><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody><tr><td class="mono">INPUT</td><td>Input polygon layer</td><td class="mono sm">Input layer</td><td class="mono sm">—</td></tr><tr><td class="mono">FIELD</td><td>Count field</td><td class="mono sm">Field</td><td class="mono sm">—</td></tr><tr><td class="mono">VALUE_PER_DOT</td><td>Value represented by one dot</td><td class="mono sm">Number</td><td class="mono sm">100.0</td></tr><tr><td class="mono">DOT_SIZE</td><td>Dot marker size (mm)</td><td class="mono sm">Number</td><td class="mono sm">1.0</td></tr><tr><td class="mono">DOT_COLOR</td><td>Dot marker color</td><td class="mono sm">Colour</td><td class="mono sm">—</td></tr><tr><td class="mono">SEED</td><td>Random seed</td><td class="mono sm">Number</td><td class="mono sm">42</td></tr><tr><td class="mono">OUTPUT</td><td>Dot-density output</td><td class="mono sm">Output layer</td><td class="mono sm">—</td></tr></tbody></table>
+  <h3 class="sec">Exact run used for the screenshots</h3>
+  <pre class="run">INPUT            = İzmir mahalle (2024)
+FIELD            = pop_total
+VALUE_PER_DOT    = 500.0
+DOT_SIZE         = 2.0
+DOT_COLOR        = #7c3aed
+SEED             = 42</pre>
+  <div class="trouble"><h4>When it goes wrong</h4><ul><li>Too many dots — raise VALUE_PER_DOT (fewer dots, same meaning).</li><li>The dots overflow the polygon — the count exceeds the area; this is a data problem, not a rendering one.</li><li>The map differs between runs — the seed was changed.</li></ul></div>
+  <p style="font-size:.82rem;color:var(--muted);margin-top:1.2rem">Processing ID: <code class="mono">zero2cartolab:dot_density</code></p>
+</section>
+<section class="mod" id="proportional-symbols">
+  <div class="grouplabel">Thematic Mapping</div>
+  <h2>Proportional symbols — Flannery-compensated circles</h2>
+  <div class="q">Our values live at points, not polygons. How do I size the symbols so the reader&#x27;s eye is not misled?</div>
+  <p>The proportional-symbol engine builds graduated point symbols with Flannery compensation: because people systematically under-estimate area differences, the symbol areas are scaled so that perceived size matches actual value. Symbols come in five shapes and the legend carries the nested values.</p>
+  <h3 class="sec">Step by step</h3>
+  <ol class="steps"><li>Open Processing Toolbox ▸ 02CartoLab ▸ Proportional Symbols (Flannery).</li><li>Set INPUT to a point layer — here the interior points of the district layer, each carrying pop_total.</li><li>Set FIELD: pop_total, MAX_SIZE: 14.0 and MIN_SIZE: 2.0 (millimetres at layout scale).</li><li>Choose SHAPE: Circle for area, Square or Diamond when the figure is printed in black and white.</li><li>Leave FLANNERY ticked, set the fill and outline colours, then Run.</li><li>Place the result in a layout: the legend is generated with the nested sample values.</li></ol>
+  <h3 class="sec">The result</h3>
+  <figure class="shot wide"><a href="screenshots/web/proportional_symbols/proportional_symbols_4panel.jpg" target="_blank" rel="noopener"><img src="screenshots/web/proportional_symbols/proportional_symbols_4panel.jpg" alt="Proportional Symbols (Flannery)" loading="lazy"></a><figcaption>Proportional Symbols (Flannery)<span class="fig-hint">click to enlarge</span></figcaption></figure>
+  <div class="read"><strong>Read the output.</strong> The area of the symbol, not its radius, carries the value. Flannery compensation corrects the well-documented human bias that makes a circle that looks twice as big actually read as much more than double. Turn it off and the map quietly lies by about a third.</div>
+  <h3 class="sec">Parameters</h3>
+  <table class="params"><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody><tr><td class="mono">INPUT</td><td>Input layer</td><td class="mono sm">Input layer</td><td class="mono sm">—</td></tr><tr><td class="mono">FIELD</td><td>Magnitude field</td><td class="mono sm">Field</td><td class="mono sm">—</td></tr><tr><td class="mono">MAX_SIZE</td><td>Maximum symbol size (mm)</td><td class="mono sm">Number</td><td class="mono sm">16.0</td></tr><tr><td class="mono">MIN_SIZE</td><td>Minimum symbol size (mm)</td><td class="mono sm">Number</td><td class="mono sm">2.0</td></tr><tr><td class="mono">SHAPE</td><td>Symbol shape<div class="opts">Circle · Square · Diamond · Triangle · Star</div></td><td class="mono sm">Enumeration</td><td class="mono sm">Circle</td></tr><tr><td class="mono">FILL_COLOR</td><td>Symbol fill color</td><td class="mono sm">Colour</td><td class="mono sm">—</td></tr><tr><td class="mono">OUTLINE_COLOR</td><td>Symbol outline color</td><td class="mono sm">Colour</td><td class="mono sm">—</td></tr><tr><td class="mono">FLANNERY</td><td>Apply Flannery perceptual compensation</td><td class="mono sm">Boolean</td><td class="mono sm">True</td></tr><tr><td class="mono">OUTPUT</td><td>Proportional symbols output</td><td class="mono sm">Output layer</td><td class="mono sm">—</td></tr></tbody></table>
+  <h3 class="sec">Exact run used for the screenshots</h3>
+  <pre class="run">INPUT            = İzmir mahalle noktaları
+FIELD            = pop_total
+MAX_SIZE         = 14.0
+MIN_SIZE         = 2.0
+SHAPE            = 0
+FILL_COLOR       = #e38e4f
+OUTLINE_COLOR    = #7c2d12
+FLANNERY         = True</pre>
+  <div class="trouble"><h4>When it goes wrong</h4><ul><li>The symbols are too big and cover the map — reduce MAX_SIZE.</li><li>Small values are invisible — raise MIN_SIZE, or filter the input to the top N.</li><li>The legend shows no values — the output layer must be added to the layout&#x27;s legend.</li></ul></div>
+  <p style="font-size:.82rem;color:var(--muted);margin-top:1.2rem">Processing ID: <code class="mono">zero2cartolab:proportional_symbols</code></p>
+</section>
+<section class="mod" id="flow-map">
+  <div class="grouplabel">Thematic Mapping</div>
+  <h2>Origin–Destination flow map — curved desire lines</h2>
+  <div class="q">How do people or goods move between places, and in which direction?</div>
+  <p>The flow engine converts an origin–destination table into curved, arrowed desire lines on the map. Width is proportional to volume, large flows are drawn first so small ones stay visible, and A→B and B→A are kept apart so a return trip never hides under the outward one.</p>
+  <h3 class="sec">Step by step</h3>
+  <ol class="steps"><li>Prepare a ZONES layer (polygons or points) with a unique id field, and an OD table with three fields: origin, destination and volume. The data/od_table.csv shipped with this guide is a working example.</li><li>Open Processing Toolbox ▸ 02CartoLab ▸ Origin-Destination Flow Map.</li><li>Set ZONES and ZONE_ID, then FLOWS with the ORIGIN, DEST and VOLUME field names.</li><li>Tick DIRECTED to keep the arrowheads and separate opposite directions; set MIN_VOLUME to drop the noise, and TOP_N to keep only the strongest links.</li><li>Tune CURVATURE (0.3 is a good default), MAX_WIDTH / MIN_WIDTH, and END_GAP so the line starts clear of the anchor.</li><li>Run. The output is graduated by volume and drawn with large flows underneath.</li></ol>
+  <h3 class="sec">The result</h3>
+  <figure class="shot wide"><a href="screenshots/web/flow_map/flow_map_4panel.jpg" target="_blank" rel="noopener"><img src="screenshots/web/flow_map/flow_map_4panel.jpg" alt="Origin-Destination Flow Map" loading="lazy"></a><figcaption>Origin-Destination Flow Map<span class="fig-hint">click to enlarge</span></figcaption></figure>
+  <div class="read"><strong>Read the output.</strong> The line width is the volume, the curvature is purely graphic, and the arrowhead is the direction. Read the map as a network of desire lines, not as a road map: crossing lines mean competing routes, not intersections. If a return flow is invisible, DIRECTED was probably off.</div>
+  <h3 class="sec">Parameters</h3>
+  <table class="params"><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody><tr><td class="mono">ZONES</td><td>Zones layer</td><td class="mono sm">Input layer</td><td class="mono sm">—</td></tr><tr><td class="mono">ZONE_ID</td><td>Zone id field</td><td class="mono sm">Field</td><td class="mono sm">—</td></tr><tr><td class="mono">FLOWS</td><td>Origin-destination table</td><td class="mono sm">Input layer</td><td class="mono sm">—</td></tr><tr><td class="mono">ORIGIN</td><td>Origin id field</td><td class="mono sm">Field</td><td class="mono sm">—</td></tr><tr><td class="mono">DEST</td><td>Destination id field</td><td class="mono sm">Field</td><td class="mono sm">—</td></tr><tr><td class="mono">VOLUME</td><td>Volume field</td><td class="mono sm">Field</td><td class="mono sm">—</td></tr><tr><td class="mono">DIRECTED</td><td>Keep directions separate (A→B and B→A)</td><td class="mono sm">Boolean</td><td class="mono sm">True</td></tr><tr><td class="mono">MIN_VOLUME</td><td>Minimum volume to draw</td><td class="mono sm">Number</td><td class="mono sm"></td></tr><tr><td class="mono">TOP_N</td><td>Keep only the N largest flows (0 = all)</td><td class="mono sm">Number</td><td class="mono sm"></td></tr><tr><td class="mono">CURVATURE</td><td>Curvature (0 = straight lines)</td><td class="mono sm">Number</td><td class="mono sm">0.2</td></tr><tr><td class="mono">MAX_WIDTH</td><td>Maximum line width (mm)</td><td class="mono sm">Number</td><td class="mono sm">5.0</td></tr><tr><td class="mono">MIN_WIDTH</td><td>Minimum line width (mm)</td><td class="mono sm">Number</td><td class="mono sm">0.3</td></tr><tr><td class="mono">END_GAP</td><td>Gap at each end (% of flow length)</td><td class="mono sm">Number</td><td class="mono sm">4.0</td></tr><tr><td class="mono">ARROWS</td><td>Draw arrowheads</td><td class="mono sm">Boolean</td><td class="mono sm">True</td></tr><tr><td class="mono">PALETTE</td><td>Colour ramp<div class="opts">YlOrRd · Blues · Viridis · Plasma · Magma · Purples · Greys</div></td><td class="mono sm">Enumeration</td><td class="mono sm">YlOrRd</td></tr><tr><td class="mono">OUTPUT</td><td>Flow lines</td><td class="mono sm">Output layer</td><td class="mono sm">—</td></tr></tbody></table>
+  <h3 class="sec">Exact run used for the screenshots</h3>
+  <pre class="run">ZONES            = OD zones
+ZONE_ID          = zone_id
+FLOWS            = OD table
+ORIGIN           = origin_id
+DEST             = dest_id
+VOLUME           = flow_vol
+DIRECTED         = True
+MIN_VOLUME       = 5.0
+TOP_N            = 0
+CURVATURE        = 0.32
+MAX_WIDTH        = 4.0
+MIN_WIDTH        = 0.25
+END_GAP          = 6.0
+ARROWS           = True
+PALETTE          = 0</pre>
+  <div class="trouble"><h4>When it goes wrong</h4><ul><li>No lines appear — the origin/destination ids in the table do not match the ZONE_ID values; the algorithm warns about unmatched ids.</li><li>All lines are the same width — VOLUME points to a text field or a constant.</li><li>Lines start inside the anchor — raise END_GAP.</li></ul></div>
+  <p style="font-size:.82rem;color:var(--muted);margin-top:1.2rem">Processing ID: <code class="mono">zero2cartolab:flow_map</code></p>
+</section>
+<section class="mod" id="cartogram">
+  <div class="grouplabel">Cartogram Engine</div>
+  <h2>Continuous-area cartogram — reshape by value</h2>
+  <div class="q">Where does İzmir&#x27;s population really live, if the map is drawn so that area means people?</div>
+  <p>The cartogram engine continuously distorts every polygon so that its area is proportional to the chosen value, while shared borders stay contiguous and neighbourhoods stay neighbours. The result is a topology-preserving map in which geography is truthful but area carries the message.</p>
+  <h3 class="sec">Step by step</h3>
+  <ol class="steps"><li>Open Processing Toolbox ▸ 02CartoLab ▸ Continuous-Area Cartogram (Diffusion).</li><li>Set INPUT to a projected polygon layer — the engine measures areas in map units, so a geographic CRS is rejected. Use the district layer in EPSG:32635.</li><li>Set FIELD: pop_total.</li><li>MAX_ITERATIONS: 60 and MAX_ERROR: 5 (average area error in percent) control how long the diffusion runs.</li><li>Choose PALETTE: Viridis and Run.</li><li>Read the two outputs: ITERATIONS (rounds used) and RESIDUAL_ERROR (how far the areas still are from the target).</li></ol>
+  <h3 class="sec">The result</h3>
+  <figure class="shot wide"><a href="screenshots/web/cartogram/cartogram_4panel.jpg" target="_blank" rel="noopener"><img src="screenshots/web/cartogram/cartogram_4panel.jpg" alt="Continuous-Area Cartogram" loading="lazy"></a><figcaption>Continuous-Area Cartogram<span class="fig-hint">click to enlarge</span></figcaption></figure>
+  <div class="read"><strong>Read the output.</strong> Compare the input and the result: the mountainous eastern districts shrink towards nothing because few people live there, while the compact central districts swell. The cartogram keeps the adjacency structure, so a district never floats away from its neighbours — that is what makes it readable where a Dorling cartogram is not.</div>
+  <h3 class="sec">Parameters</h3>
+  <table class="params"><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody><tr><td class="mono">INPUT</td><td>Input polygon layer</td><td class="mono sm">Input layer</td><td class="mono sm">—</td></tr><tr><td class="mono">FIELD</td><td>Area-representation field</td><td class="mono sm">Field</td><td class="mono sm">—</td></tr><tr><td class="mono">MAX_ITERATIONS</td><td>Max iterations</td><td class="mono sm">Number</td><td class="mono sm">30</td></tr><tr><td class="mono">MAX_ERROR</td><td>Max average error (%)</td><td class="mono sm">Number</td><td class="mono sm">5.0</td></tr><tr><td class="mono">PALETTE</td><td>Color ramp for cartogram styling<div class="opts">Plasma · Viridis · Inferno · Magma · Cividis · Turbo · Mako · Rocket · Blues · Oranges · YlOrRd · Purples · Greens</div></td><td class="mono sm">Enumeration</td><td class="mono sm">Plasma</td></tr><tr><td class="mono">OUTPUT</td><td>Cartogram output</td><td class="mono sm">Output layer</td><td class="mono sm">—</td></tr></tbody></table>
+  <h3 class="sec">Exact run used for the screenshots</h3>
+  <pre class="run">INPUT            = İzmir ilçeleri
+FIELD            = pop_total
+MAX_ITERATIONS   = 60
+MAX_ERROR        = 5.0
+PALETTE          = 1
+ITERATIONS       = 60
+RESIDUAL_ERROR   = 4.4972432621029514e+18</pre>
+  <div class="trouble"><h4>When it goes wrong</h4><ul><li>The engine refuses the input — the CRS is geographic; reproject to a projected CRS first.</li><li>The result is scrambled — the value field has zeros or extreme outliers; clean the field and rerun.</li><li>The shapes did not change enough — raise MAX_ITERATIONS and lower MAX_ERROR.</li></ul></div>
+  <p style="font-size:.82rem;color:var(--muted);margin-top:1.2rem">Processing ID: <code class="mono">zero2cartolab:compute_cartogram</code></p>
+</section>
+<section class="mod" id="dorling">
+  <div class="grouplabel">Cartogram Engine</div>
+  <h2>Dorling cartogram — circles that keep their place</h2>
+  <div class="q">Can I show totals without destroying the shape of the geography?</div>
+  <p>A Dorling cartogram replaces every polygon with a circle whose area is proportional to the value, positioned close to its original location by a force-directed relaxation. Districts with large values and small footprints stay visible instead of being squeezed out.</p>
+  <h3 class="sec">Step by step</h3>
+  <ol class="steps"><li>Open Processing Toolbox ▸ 02CartoLab ▸ Dorling Circle Cartogram.</li><li>Set INPUT to the district layer and FIELD: pop_total.</li><li>SIZE_FACTOR scales the circles; ATTRACTION (0.6) pulls them back to their home position; GAP (3.0) keeps circles from touching.</li><li>ITERATIONS: 300 gives the relaxation time to settle.</li><li>Choose PALETTE: Viridis and Run.</li><li>Read the ROUNDS and RESIDUAL outputs to check how close the layout settled.</li></ol>
+  <h3 class="sec">The result</h3>
+  <figure class="shot wide"><a href="screenshots/web/dorling/dorling_4panel.jpg" target="_blank" rel="noopener"><img src="screenshots/web/dorling/dorling_4panel.jpg" alt="Dorling Circle Cartogram" loading="lazy"></a><figcaption>Dorling Circle Cartogram<span class="fig-hint">click to enlarge</span></figcaption></figure>
+  <div class="read"><strong>Read the output.</strong> Use Dorling when the shape of the unit carries information — a coastline, a river, a border — and you still need to show totals. Use the continuous cartogram when the shape itself is the message. A Dorling circle says &#x27;this much population, roughly here&#x27;; a distorted polygon says &#x27;this much population, and this is what the land looks like under that pressure&#x27;.</div>
+  <h3 class="sec">Parameters</h3>
+  <table class="params"><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody><tr><td class="mono">INPUT</td><td>Areal units (polygons)</td><td class="mono sm">Input layer</td><td class="mono sm">—</td></tr><tr><td class="mono">FIELD</td><td>Value field</td><td class="mono sm">Field</td><td class="mono sm">—</td></tr><tr><td class="mono">SIZE_FACTOR</td><td>Size factor (total circle area / layer area)</td><td class="mono sm">Number</td><td class="mono sm">0.5</td></tr><tr><td class="mono">ATTRACTION</td><td>Attraction toward home position (0-1)</td><td class="mono sm">Number</td><td class="mono sm">0.1</td></tr><tr><td class="mono">GAP</td><td>Gap between circles (layer units)</td><td class="mono sm">Number</td><td class="mono sm"></td></tr><tr><td class="mono">ITERATIONS</td><td>Settling iterations</td><td class="mono sm">Number</td><td class="mono sm">150</td></tr><tr><td class="mono">PALETTE</td><td>Colour ramp<div class="opts">Viridis · YlGnBu · YlOrRd · Plasma · Magma · Blues · Purples</div></td><td class="mono sm">Enumeration</td><td class="mono sm">Viridis</td></tr><tr><td class="mono">OUTPUT</td><td>Dorling cartogram</td><td class="mono sm">Output layer</td><td class="mono sm">—</td></tr></tbody></table>
+  <h3 class="sec">Exact run used for the screenshots</h3>
+  <pre class="run">INPUT            = İzmir ilçeleri
+FIELD            = pop_total
+SIZE_FACTOR      = 1.0
+ATTRACTION       = 0.6
+GAP              = 3.0
+ITERATIONS       = 300
+PALETTE          = 0
+ROUNDS           = 316
+RESIDUAL         = 0.00242618183044963</pre>
+  <div class="trouble"><h4>When it goes wrong</h4><ul><li>Circles overlap — raise GAP.</li><li>Circles drift far from their origin — lower ATTRACTION.</li><li>Circles are invisible — the values are too small relative to SIZE_FACTOR; raise it.</li></ul></div>
+  <p style="font-size:.82rem;color:var(--muted);margin-top:1.2rem">Processing ID: <code class="mono">zero2cartolab:dorling_cartogram</code></p>
+</section>
+<section class="mod" id="hexbin">
+  <div class="grouplabel">Aggregation</div>
+  <h2>Hexbin aggregation — density without overplotting</h2>
+  <div class="q">Too many points, too little map. How do I aggregate them honestly?</div>
+  <p>The hexbin engine bins a point layer into a pointy-top hexagonal grid and aggregates a weight per cell — count, sum or mean. Hexagons tile the plane with no gaps, which keeps the density surface continuous while removing the overplotting that hides real structure.</p>
+  <h3 class="sec">Step by step</h3>
+  <ol class="steps"><li>Open Processing Toolbox ▸ 02CartoLab ▸ Hexbin Aggregation.</li><li>Set INPUT to a point layer — the interior points of the district layer, each carrying pop_total.</li><li>Set CELL_SIZE: 1500 (hexagon edge in map units — the mesh size of your analysis) and WEIGHT: pop_total.</li><li>Choose STAT: Sum of weight to accumulate population per cell, or Mean of weight for an average.</li><li>Choose CLASSIFIER: Quantile and CLASSES: 5, then a palette, and Run.</li><li>The output carries hex_count, hex_sum and hex_mean so you can re-classify without recomputing.</li></ol>
+  <h3 class="sec">The result</h3>
+  <figure class="shot wide"><a href="screenshots/web/hexbin/hexbin_4panel.jpg" target="_blank" rel="noopener"><img src="screenshots/web/hexbin/hexbin_4panel.jpg" alt="Hexbin Aggregation" loading="lazy"></a><figcaption>Hexbin Aggregation<span class="fig-hint">click to enlarge</span></figcaption></figure>
+  <div class="read"><strong>Read the output.</strong> A hexagonal mesh removes the false precision of small administrative units: the map shows a smooth surface rather than a patchwork of arbitrary boundaries. Choose the cell size from your question — 1.5 km cells answer neighbourhood questions, 500 m cells answer street-level ones.</div>
+  <h3 class="sec">Parameters</h3>
+  <table class="params"><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody><tr><td class="mono">INPUT</td><td>Input point layer</td><td class="mono sm">Input layer</td><td class="mono sm">—</td></tr><tr><td class="mono">CELL_SIZE</td><td>Hexagon radius (map units)</td><td class="mono sm">Number</td><td class="mono sm">1000.0</td></tr><tr><td class="mono">WEIGHT</td><td>Weight field (for sum / mean)</td><td class="mono sm">Field</td><td class="mono sm">—</td></tr><tr><td class="mono">STAT</td><td>Statistic<div class="opts">Count · Sum of weight · Mean of weight</div></td><td class="mono sm">Enumeration</td><td class="mono sm">Count</td></tr><tr><td class="mono">PALETTE</td><td>Color ramp<div class="opts">Viridis · Plasma · Inferno · Magma · Cividis · Turbo · Mako · Rocket · Blues · Oranges · YlOrRd · Purples · Greens</div></td><td class="mono sm">Enumeration</td><td class="mono sm">Viridis</td></tr><tr><td class="mono">CLASSIFIER</td><td>Classification method<div class="opts">Quantile · Equal Interval · Natural Breaks (Jenks) · Pretty Breaks</div></td><td class="mono sm">Enumeration</td><td class="mono sm">Quantile</td></tr><tr><td class="mono">CLASSES</td><td>Number of classes</td><td class="mono sm">Number</td><td class="mono sm">5</td></tr><tr><td class="mono">OUTPUT</td><td>Hexbin output</td><td class="mono sm">Output layer</td><td class="mono sm">—</td></tr></tbody></table>
+  <h3 class="sec">Exact run used for the screenshots</h3>
+  <pre class="run">INPUT            = İzmir mahalle noktaları
+CELL_SIZE        = 1500.0
+WEIGHT           = pop_total
+STAT             = 1
+PALETTE          = 5
+CLASSIFIER       = 0
+CLASSES          = 5</pre>
+  <div class="trouble"><h4>When it goes wrong</h4><ul><li>The output is empty — CELL_SIZE is larger than the data extent.</li><li>Only a few cells are filled — the point layer is sparse relative to the cell size.</li><li>The surface looks blocky — switch CLASSIFIER to Natural Breaks (Jenks) for a skewed distribution.</li></ul></div>
+  <p style="font-size:.82rem;color:var(--muted);margin-top:1.2rem">Processing ID: <code class="mono">zero2cartolab:hexbin_aggregate</code></p>
+</section>
+<section class="mod" id="label-points">
+  <div class="grouplabel">Labeling</div>
+  <h2>Visual-centre label points — labels that stay inside the shape</h2>
+  <div class="q">Why do my district names keep falling off the districts?</div>
+  <p>Centroid labels drift outside concave shapes. The label-point engine computes the pole of inaccessibility for every polygon — the point furthest from the polygon edge, which is guaranteed to lie inside — and writes it as a new point layer you can join to your label layer.</p>
+  <h3 class="sec">Step by step</h3>
+  <ol class="steps"><li>Open Processing Toolbox ▸ 02CartoLab ▸ Visual-Center Label Points.</li><li>Set INPUT to the polygon layer and PRECISION: 1.0 (the search tolerance in map units; lower is finer).</li><li>Run. The output is a point layer with one anchor per polygon.</li><li>Join the anchor layer to your label layer on the polygon id.</li><li>In the label layer set the anchor mode to the joined point, and add a callout line for the labels that would still overlap.</li></ol>
+  <h3 class="sec">The result</h3>
+  <figure class="shot wide"><a href="screenshots/web/label_points/label_points_4panel.jpg" target="_blank" rel="noopener"><img src="screenshots/web/label_points/label_points_4panel.jpg" alt="Visual-Center Label Points" loading="lazy"></a><figcaption>Visual-Center Label Points<span class="fig-hint">click to enlarge</span></figcaption></figure>
+  <div class="read"><strong>Read the output.</strong> The anchor is the visually strongest position inside the shape — the same principle that puts a logo in the optical centre of a triangle. For long, thin or crescent-shaped districts it is the difference between a legible label and one that hangs in the sea.</div>
+  <h3 class="sec">Parameters</h3>
+  <table class="params"><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody><tr><td class="mono">INPUT</td><td>Input polygon layer</td><td class="mono sm">Input layer</td><td class="mono sm">—</td></tr><tr><td class="mono">PRECISION</td><td>Precision (map units, 0 = auto)</td><td class="mono sm">Number</td><td class="mono sm"></td></tr><tr><td class="mono">OUTPUT</td><td>Label points output</td><td class="mono sm">Output layer</td><td class="mono sm">—</td></tr></tbody></table>
+  <h3 class="sec">Exact run used for the screenshots</h3>
+  <pre class="run">INPUT            = İzmir mahalle (2024)
+PRECISION        = 1.0</pre>
+  <div class="trouble"><h4>When it goes wrong</h4><ul><li>Anchors are not exactly inside — increase PRECISION (coarser search) or fix the geometry with Fix geometries.</li><li>Labels still collide — the anchor solves containment, not collision; use the callout line or the plugin&#x27;s label placement settings.</li><li>The result is empty for some polygons — the geometry is invalid; run Fix geometries first.</li></ul></div>
+  <p style="font-size:.82rem;color:var(--muted);margin-top:1.2rem">Processing ID: <code class="mono">zero2cartolab:label_points</code></p>
+</section>
+<section class="mod" id="graticule">
+  <div class="grouplabel">Map Reference</div>
+  <h2>Graticule — a labelled reference grid</h2>
+  <div class="q">My reader needs to locate a point on the map. What reference grid should I add?</div>
+  <p>The graticule engine draws meridians and parallels on a round interval and attaches a coordinate label to every line. It is the cheapest way to make a thematic map locatable and citable.</p>
+  <h3 class="sec">Step by step</h3>
+  <ol class="steps"><li>Open Processing Toolbox ▸ 02CartoLab ▸ Graticule / Reference Grid.</li><li>Set EXTENT to the map area in the layer&#x27;s CRS, for example 500000,650000,4050000,4120000 [EPSG:32635].</li><li>Set X_INTERVAL and Y_INTERVAL: 10000 for a 10 km metric grid, or 1 for a 1° geographic grid.</li><li>Choose LINE_STYLE: Dashed Line for a quiet reference, LINE_COLOR: grey and LINE_WIDTH: 0.35.</li><li>Run and add the result below the data layers.</li><li>For a survey-style neatline, use the Layout Studio&#x27;s Grid + QPT Studio presets instead.</li></ol>
+  <h3 class="sec">The result</h3>
+  <figure class="shot wide"><a href="screenshots/web/graticule/graticule_4panel.jpg" target="_blank" rel="noopener"><img src="screenshots/web/graticule/graticule_4panel.jpg" alt="Graticule / Reference Grid" loading="lazy"></a><figcaption>Graticule / Reference Grid<span class="fig-hint">click to enlarge</span></figcaption></figure>
+  <div class="read"><strong>Read the output.</strong> A graticule is a reference layer: it always sits beneath the data and never competes with it. In the metric UTM grid the numbers are eastings and northings, which let a reader convert a visual position into a coordinate. In a geographic grid they are degrees, which lets them locate the place by name.</div>
+  <h3 class="sec">Parameters</h3>
+  <table class="params"><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody><tr><td class="mono">EXTENT</td><td>Grid extent</td><td class="mono sm">Extent</td><td class="mono sm">—</td></tr><tr><td class="mono">X_INTERVAL</td><td>Vertical line (meridian) interval, 0 = auto</td><td class="mono sm">Number</td><td class="mono sm"></td></tr><tr><td class="mono">Y_INTERVAL</td><td>Horizontal line (parallel) interval, 0 = auto</td><td class="mono sm">Number</td><td class="mono sm"></td></tr><tr><td class="mono">LINE_STYLE</td><td>Grid line style<div class="opts">Solid Line · Dashed Line · Dotted Line · Dash-Dot Line</div></td><td class="mono sm">Enumeration</td><td class="mono sm">Dashed Line</td></tr><tr><td class="mono">LINE_COLOR</td><td>Grid line color</td><td class="mono sm">Colour</td><td class="mono sm">—</td></tr><tr><td class="mono">LINE_WIDTH</td><td>Grid line width (mm)</td><td class="mono sm">Number</td><td class="mono sm">0.25</td></tr><tr><td class="mono">OUTPUT</td><td>Graticule output</td><td class="mono sm">Output layer</td><td class="mono sm">—</td></tr></tbody></table>
+  <h3 class="sec">Exact run used for the screenshots</h3>
+  <pre class="run">EXTENT           = ….1852393625,4359618.902638675 [EPSG:32635]
+X_INTERVAL       = 10000.0
+Y_INTERVAL       = 10000.0
+LINE_STYLE       = 1
+LINE_COLOR       = #64748b
+LINE_WIDTH       = 0.35</pre>
+  <div class="trouble"><h4>When it goes wrong</h4><ul><li>The grid does not appear — EXTENT and the interval are mismatched; check the extent format and CRS.</li><li>Too many lines — increase the interval.</li><li>The grid dominates the map — reduce the width and use a light grey.</li></ul></div>
+  <p style="font-size:.82rem;color:var(--muted);margin-top:1.2rem">Processing ID: <code class="mono">zero2cartolab:graticule_grid</code></p>
+</section>
+<section class="mod" id="layout-templates">
+  <div class="grouplabel">Layout Studio</div>
+  <h2>Template gallery — ten publication archetypes</h2>
+  <div class="q">Which print archetype should this deliverable use?</div>
+  <p>The Layout Studio turns a styled map into a finished page. Ten archetypes are built in: Report Figure (16:9), Academic Journal (A4 two-column), Exhibition Poster (A1/A2), Fact Sheet (A4 portrait), Comparative Diptych, UTM Field Sheet, Planning Review Board, Spatial Data Story, Atlas Production Sheet and Emergency Operations Brief. Each has calibrated margins, a type hierarchy and a grid — not a blank page with a picture on it.</p>
+  <h3 class="sec">Step by step</h3>
+  <ol class="steps"><li>Open the Layout Studio from the dashboard and choose the Template Gallery tab.</li><li>Pick the archetype that matches the deliverable — the gallery shows each one&#x27;s page size and purpose.</li><li>The template is created in the current project with your layers; refine the title, subtitle and credits.</li><li>Add a grid preset from Grid + QPT Studio if the archetype needs a reference frame.</li><li>Open the layout in the Print Layout Designer to fine-tune the map frame and legend.</li><li>Export from the Layout Manager as PNG, PDF or SVG at 150, 300 or 600 dpi.</li></ol>
+  <h3 class="sec">The result</h3>
+  <div class="gallery">
+  <figure class="shot"><a href="screenshots/web/layout_templates/report_figure.jpg" target="_blank" rel="noopener"><img src="screenshots/web/layout_templates/report_figure.jpg" alt="Report Figure — 16:9" loading="lazy"></a><figcaption>Report Figure — 16:9</figcaption></figure>
+  <figure class="shot"><a href="screenshots/web/layout_templates/academic_journal.jpg" target="_blank" rel="noopener"><img src="screenshots/web/layout_templates/academic_journal.jpg" alt="Academic Journal — A4 two-column" loading="lazy"></a><figcaption>Academic Journal — A4 two-column</figcaption></figure>
+  <figure class="shot"><a href="screenshots/web/layout_templates/poster_exhibition.jpg" target="_blank" rel="noopener"><img src="screenshots/web/layout_templates/poster_exhibition.jpg" alt="Exhibition Poster — A2" loading="lazy"></a><figcaption>Exhibition Poster — A2</figcaption></figure>
+  <figure class="shot"><a href="screenshots/web/layout_templates/fact_sheet.jpg" target="_blank" rel="noopener"><img src="screenshots/web/layout_templates/fact_sheet.jpg" alt="Fact Sheet — A4 portrait" loading="lazy"></a><figcaption>Fact Sheet — A4 portrait</figcaption></figure>
+  <figure class="shot"><a href="screenshots/web/layout_templates/side_by_side_diptych.jpg" target="_blank" rel="noopener"><img src="screenshots/web/layout_templates/side_by_side_diptych.jpg" alt="Comparative Diptych" loading="lazy"></a><figcaption>Comparative Diptych</figcaption></figure>
+  <figure class="shot"><a href="screenshots/web/layout_templates/utm_field_sheet.jpg" target="_blank" rel="noopener"><img src="screenshots/web/layout_templates/utm_field_sheet.jpg" alt="UTM Field Sheet" loading="lazy"></a><figcaption>UTM Field Sheet</figcaption></figure>
+  <figure class="shot"><a href="screenshots/web/layout_templates/planning_board.jpg" target="_blank" rel="noopener"><img src="screenshots/web/layout_templates/planning_board.jpg" alt="Planning Review Board" loading="lazy"></a><figcaption>Planning Review Board</figcaption></figure>
+  <figure class="shot"><a href="screenshots/web/layout_templates/data_story.jpg" target="_blank" rel="noopener"><img src="screenshots/web/layout_templates/data_story.jpg" alt="Spatial Data Story" loading="lazy"></a><figcaption>Spatial Data Story</figcaption></figure>
+  <figure class="shot"><a href="screenshots/web/layout_templates/atlas_production.jpg" target="_blank" rel="noopener"><img src="screenshots/web/layout_templates/atlas_production.jpg" alt="Atlas Production Sheet" loading="lazy"></a><figcaption>Atlas Production Sheet</figcaption></figure>
+  <figure class="shot"><a href="screenshots/web/layout_templates/emergency_brief.jpg" target="_blank" rel="noopener"><img src="screenshots/web/layout_templates/emergency_brief.jpg" alt="Emergency Operations Brief" loading="lazy"></a><figcaption>Emergency Operations Brief</figcaption></figure>
+  </div>
+  <div class="read"><strong>Read the output.</strong> Choose the archetype by the reading distance, not by taste: a Report Figure is read on a laptop, an Academic Journal page is read at 40 cm, an Exhibition Poster is read at 2 m. The templates encode exactly those differences in type size, margin and data density.</div>
+  <div class="trouble"><h4>When it goes wrong</h4><ul><li>The template ignores my layer — the layer must be loaded and visible in the project before the template is created.</li><li>The legend overflows — reduce the number of classes or the legend font size in the Designer.</li><li>The map frame is empty — set the map extent and CRS on the map item after creating the template.</li></ul></div>
+</section>
+<section class="mod" id="map-sheet">
+  <div class="grouplabel">Layout Studio</div>
+  <h2>Auto Map Sheet — a finished layout in one click</h2>
+  <div class="q">I have a styled map and no time. Can I get a complete, credited, scaled print sheet?</div>
+  <p>Auto Map Sheet builds a finished publication layout from the current view: a titled map frame, a filtered legend, a fitted scale bar, a north arrow, an optional coordinate grid and a credits line — then registers it in the project so you can refine or export it immediately.</p>
+  <h3 class="sec">Step by step</h3>
+  <ol class="steps"><li>Style your layers first, then set the canvas extent to the area you want to publish.</li><li>Open the Layout Studio ▸ Map Sheet Studio tab.</li><li>Choose the page size (A4 landscape is the default) and a typography preset: swiss_modern, academic_serif, technical_blueprint or editorial_warm.</li><li>Set the title, subtitle and credits, and decide which furniture to include: title, legend, scale bar, north arrow, coordinate grid, frame.</li><li>Build the sheet. It is added to the project&#x27;s layout manager and opens in the Designer.</li><li>Export as PNG, PDF or SVG from the Layout Manager at 150, 300 or 600 dpi.</li></ol>
+  <h3 class="sec">The result</h3>
+  <figure class="shot wide"><a href="screenshots/web/map_sheet/map_sheet.jpg" target="_blank" rel="noopener"><img src="screenshots/web/map_sheet/map_sheet.jpg" alt="Auto Map Sheet" loading="lazy"></a><figcaption>Auto Map Sheet<span class="fig-hint">click to enlarge</span></figcaption></figure>
+  <div class="read"><strong>Read the output.</strong> The scale bar is fitted to the map&#x27;s real geographic width — geodesic on geographic CRS, unit-aware and space-fitted on projected ones. That is why the sheet never shows a scale bar that is technically correct but visually wrong, or a north arrow pointing at nothing on a projected map.</div>
+  <div class="trouble"><h4>When it goes wrong</h4><ul><li>The map frame shows a different area than the canvas — the sheet uses the canvas extent at the moment of building; zoom the canvas first.</li><li>The legend overflows the page — fewer classes, or a smaller legend font in the Designer.</li><li>No north arrow — it is suppressed automatically where the map rotation makes it meaningless.</li></ul></div>
+</section>
+
+<section class="mod" id="cheat-sheet">
+  <div class="grouplabel">Cheat sheet</div>
+  <h2>Every module, one line</h2>
+  <table class="cheat">
+    <thead><tr><th>Module</th><th>Workspace</th><th>Processing ID</th></tr></thead>
+    <tbody><tr><td><a href="#gui-dashboard">The dashboard — one studio, three workspaces</a></td><td>Getting started</td><td class="mono sm">—</td></tr><tr><td><a href="#quick-style">Quick Style — one-click thematic styling</a></td><td>Symbology Studio</td><td class="mono sm">zero2cartolab:quick_style</td></tr><tr><td><a href="#quick-style-monochrome">Monochrome print — photocopy-safe symbology</a></td><td>Symbology Studio</td><td class="mono sm">zero2cartolab:quick_style</td></tr><tr><td><a href="#building-25d">2.5D building styling — extrusion that survives</a></td><td>Symbology Studio</td><td class="mono sm">zero2cartolab:building_25d_style</td></tr><tr><td><a href="#palette-accessibility">Palette &amp; Accessibility — CVD simulation and WCAG scoring</a></td><td>Symbology Studio</td><td class="mono sm">—</td></tr><tr><td><a href="#normalize-field">Normalization &amp; rates — map the rate, not the count</a></td><td>Data Preparation</td><td class="mono sm">zero2cartolab:normalize_field</td></tr><tr><td><a href="#classification">Adaptive classification — GIC, Jenks, Head/Tail</a></td><td>Classification Engine</td><td class="mono sm">zero2cartolab:geometric_interval_classification</td></tr><tr><td><a href="#bivariate">Bivariate choropleth — two variables, one honest map</a></td><td>Thematic Mapping</td><td class="mono sm">zero2cartolab:bivariate_choropleth</td></tr><tr><td><a href="#bivariate-matrix">Bivariate legend matrix — export the key, not the picture</a></td><td>Thematic Mapping</td><td class="mono sm">zero2cartolab:bivariate_matrix_export</td></tr><tr><td><a href="#value-by-alpha">Value-by-Alpha — fade the uncertain, don&#x27;t hide it</a></td><td>Thematic Mapping</td><td class="mono sm">zero2cartolab:value_by_alpha</td></tr><tr><td><a href="#ridge-map">Ridge map — turn any raster into relief</a></td><td>Thematic Mapping</td><td class="mono sm">zero2cartolab:ridge_map</td></tr><tr><td><a href="#dot-density">Dot-density map — one dot, N people</a></td><td>Thematic Mapping</td><td class="mono sm">zero2cartolab:dot_density</td></tr><tr><td><a href="#proportional-symbols">Proportional symbols — Flannery-compensated circles</a></td><td>Thematic Mapping</td><td class="mono sm">zero2cartolab:proportional_symbols</td></tr><tr><td><a href="#flow-map">Origin–Destination flow map — curved desire lines</a></td><td>Thematic Mapping</td><td class="mono sm">zero2cartolab:flow_map</td></tr><tr><td><a href="#cartogram">Continuous-area cartogram — reshape by value</a></td><td>Cartogram Engine</td><td class="mono sm">zero2cartolab:compute_cartogram</td></tr><tr><td><a href="#dorling">Dorling cartogram — circles that keep their place</a></td><td>Cartogram Engine</td><td class="mono sm">zero2cartolab:dorling_cartogram</td></tr><tr><td><a href="#hexbin">Hexbin aggregation — density without overplotting</a></td><td>Aggregation</td><td class="mono sm">zero2cartolab:hexbin_aggregate</td></tr><tr><td><a href="#label-points">Visual-centre label points — labels that stay inside the shape</a></td><td>Labeling</td><td class="mono sm">zero2cartolab:label_points</td></tr><tr><td><a href="#graticule">Graticule — a labelled reference grid</a></td><td>Map Reference</td><td class="mono sm">zero2cartolab:graticule_grid</td></tr><tr><td><a href="#layout-templates">Template gallery — ten publication archetypes</a></td><td>Layout Studio</td><td class="mono sm">—</td></tr><tr><td><a href="#map-sheet">Auto Map Sheet — a finished layout in one click</a></td><td>Layout Studio</td><td class="mono sm">—</td></tr></tbody>
+  </table>
+</section>
+</main>
+</div>
+
+<footer>
+  <p><strong>02CartoLab Practical Guide</strong> · version 1.5.1 ·
+  every screenshot produced by the plugin in a real QGIS runtime on real urban data.</p>
+  <p><a href="https://plugins.qgis.org/plugins/zero2cartolab/">QGIS Plugin Hub</a> ·
+  <a href="../CARTOLAB_REFERENCE_MANUAL.html">Reference Manual</a> ·
+  <a href="https://github.com/YusufEminoglu/zero2cartolab">GitHub</a> ·
+  <a href="https://gitlab.com/geophilo1/zero2cartolab">GitLab</a></p>
+  <p style="opacity:.65">© 2026 Yusuf Eminoğlu · GEOPHILO · GPL-3.0</p>
+</footer>
+<script>
+const links=[...document.querySelectorAll('nav.side a')];
+const secs=[...document.querySelectorAll('section.mod')];
+const obs=new IntersectionObserver(es=>{
+  es.forEach(e=>{if(e.isIntersecting){
+    const id=e.target.id;
+    links.forEach(l=>l.classList.toggle('active',l.getAttribute('href')==='#'+id));
+  }});
+},{rootMargin:'-15% 0px -70% 0px',threshold:0});
+secs.forEach(s=>obs.observe(s));
+
+const search=document.getElementById('q');
+if(search){
+  search.addEventListener('input',()=>{
+    const q=search.value.toLowerCase().trim();
+    document.querySelectorAll('section.mod').forEach(s=>{
+      s.style.display=(!q||s.textContent.toLowerCase().includes(q))?'':'none';
+    });
+    document.querySelectorAll('nav.side h5').forEach(h=>{
+      let n=h.nextElementSibling, any=false;
+      while(n&&n.tagName!=='H5'){if(n.style.display!=='none')any=true;n=n.nextElementSibling;}
+      h.style.display=any?'':'none';
+    });
+  });
+}
+</script>
+</body></html>
