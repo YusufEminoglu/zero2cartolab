@@ -26,6 +26,10 @@ The map types journals and design studios actually ask for —
 
 **[Comprehensive Academic Reference Manual](https://geophilo.com/zero2cartolab/)** — complete documentation of every feature, parameter, and workflow. Hosted on Web Documentation.
 
+**[Practical Guide](https://geophilo.com/zero2cartolab/PRACTICAL_GUIDE/practical_guide.html)** — 21 hands-on modules with real screenshots: the planning question each tool answers, the exact clicks or Processing parameters, the real output, how to read it, and what breaks. Every image was produced by running the plugin against real urban data — 1 317 İzmir neighbourhoods, 16 385 OSM buildings, a Copernicus DEM and a live origin–destination table.
+
+> **Türkçe:** [Pratik Kılavuz (PDF/print)](https://geophilo.com/zero2cartolab/PRACTICAL_GUIDE/practical_guide_static.html) · [English print version](https://geophilo.com/zero2cartolab/PRACTICAL_GUIDE/practical_guide_static_en.html)
+
 
 ## ✨ Why 02CartoLab?
 

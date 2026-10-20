@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Ridge Map accepted a geographic-CRS raster and silently collapsed the
+  scanlines into one unreadable vertical line, because the vertical
+  exaggeration multiplies the raw raster value and adds it to the scanline
+  position — in degrees, a 100 m elevation threw the ridges thousands of
+  degrees away. Geographic inputs are now rejected with an explicit
+  reprojection message, exactly like the cartogram engine.
 - Value-by-Alpha core engine (`apply_value_by_alpha`) produced a renderer that
   classified nothing; rewritten as graduated colour + data-defined opacity.
 - Scatter charts ignored the Top-N setting; pie/donut charts now reject
@@ -24,6 +30,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Styling post-processors release their reference after running; preprocessing
   loops honour cancellation; the dashboard no longer rebuilds while hidden and
   the stale duplicate 2.5D panel builder was removed.
+
+### Documentation
+
+- New **Practical Guide** (`docs/PRACTICAL_GUIDE/`): 21 modules, each one a
+  real planning question answered step by step, with screenshots captured by
+  running the real plugin against real urban data. Parameter tables are
+  extracted from the live Processing registry so the guide cannot drift from
+  the code. Published at `https://geophilo.com/zero2cartolab/PRACTICAL_GUIDE/`.
+- The landing-page showcase images are now genuine plugin output (real İzmir
+  choropleths, a real exported layout) instead of illustrative concept art.
 
 ## [1.5.0] - 2026-10-11
 
