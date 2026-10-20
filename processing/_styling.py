@@ -14,6 +14,7 @@ load every result at the end, so instances are kept rather than rotated.
 """
 from __future__ import annotations
 
+from contextlib import suppress
 from typing import Callable
 
 from qgis.core import QgsProcessingLayerPostProcessorInterface
@@ -27,14 +28,19 @@ class _StylePostProcessor(QgsProcessingLayerPostProcessorInterface):
         self._apply = apply
 
     def postProcessLayer(self, layer, context, feedback) -> None:
-        if layer is None:
-            return
         try:
-            self._apply(layer)
-            layer.triggerRepaint()
-        except Exception as exc:
-            if feedback is not None:
-                feedback.reportError(f"Could not apply 02CartoLab symbology: {exc}", False)
+            if layer is not None:
+                try:
+                    self._apply(layer)
+                    layer.triggerRepaint()
+                except Exception as exc:
+                    if feedback is not None:
+                        feedback.reportError(f"Could not apply 02CartoLab symbology: {exc}", False)
+        finally:
+            # QGIS calls a post-processor exactly once; drop our reference so a
+            # long session does not accumulate wrappers in _ALIVE.
+            with suppress(ValueError):
+                _ALIVE.remove(self)
 
 
 def style_output(context, dest_id: str, apply: Callable, feedback=None) -> bool:

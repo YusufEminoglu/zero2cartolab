@@ -233,6 +233,8 @@ class BivariateChoroplethAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
         x_vals, y_vals = [], []
         features_raw = []
         for feat in source.getFeatures():
+            if feedback.isCanceled():
+                break
             fx = safe_float(feat[field_x])
             fy = safe_float(feat[field_y])
             if fx is not None and fy is not None:

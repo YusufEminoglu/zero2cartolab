@@ -102,6 +102,8 @@ class GraticuleAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
             parameters, self.OUTPUT, context,
             out_fields, QgsWkbTypes.Type.LineString, crs,
         )
+        if sink is None:
+            raise QgsProcessingException(self.invalidSinkError(parameters, self.OUTPUT))
 
         lines = graticule_lines(xmin, ymin, xmax, ymax, x_step, y_step)
         for ln in lines:

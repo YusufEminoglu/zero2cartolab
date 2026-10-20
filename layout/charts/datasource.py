@@ -1,8 +1,22 @@
 """Bounded QGIS layer extraction for Print Layout charts."""
 from __future__ import annotations
 
+try:
+    from qgis.core import NULL as _QGIS_NULL
+except Exception:  # headless unit-test runs without QGIS
+    _QGIS_NULL = None
+
 
 MAX_ROWS = 50_000
+
+
+def _is_null(value) -> bool:
+    """QGIS-NULL-aware check; ``repr`` kept as a provider-wrapper fallback."""
+    if value is None:
+        return True
+    if _QGIS_NULL is not None and value is _QGIS_NULL:
+        return True
+    return repr(value) == "NULL"
 
 
 def extract_columns(layer, field_names, selected_only: bool = False, max_rows: int = MAX_ROWS):
@@ -22,5 +36,5 @@ def extract_columns(layer, field_names, selected_only: bool = False, max_rows: i
         attrs = feature.attributes()
         for name, index in indices.items():
             value = attrs[index]
-            out[name].append(None if value is None or repr(value) == "NULL" else value)
+            out[name].append(None if _is_null(value) else value)
     return out

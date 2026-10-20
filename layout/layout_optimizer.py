@@ -171,7 +171,11 @@ def optimize_layout_visual_balance(
             credits_item.attemptMove(QgsLayoutPoint(sidebar_x, bottom - credits_h, _Mm))
             credits_item.attemptResize(QgsLayoutSize(sidebar_w, credits_h, _Mm))
             bottom -= credits_h + 2.0
-        sb_y = bottom - 12.0
+        try:
+            sb_h = max(12.0, float(scalebar_item.sceneBoundingRect().height())) if scalebar_item is not None else 12.0
+        except (AttributeError, RuntimeError, TypeError, ValueError):
+            sb_h = 12.0
+        sb_y = bottom - sb_h
         furniture_top = sb_y
         if scalebar_item is not None:
             scalebar_item.attemptMove(QgsLayoutPoint(sidebar_x, sb_y, _Mm))

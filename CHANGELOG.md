@@ -4,7 +4,26 @@ All notable changes to the **02CartoLab** plugin will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.5.1] - 2026-10-20
+
+### Fixed
+
+- Value-by-Alpha core engine (`apply_value_by_alpha`) produced a renderer that
+  classified nothing; rewritten as graduated colour + data-defined opacity.
+- Scatter charts ignored the Top-N setting; pie/donut charts now reject
+  negative values with a clear message.
+- Cartogram: re-running one engine instance no longer duplicates features, and
+  geographic-CRS inputs are rejected with a reprojection hint.
+- `log_scale` rejects invalid bases; `polylabel` clamps NaN/negative precision;
+  `hexgrid` rejects size <= 0/NaN; solar-angle inputs are range-validated.
+- Label-points output is now styled; hexbin output is styled even when no
+  statistic values exist; graticule checks for a missing sink.
+- Print-atlas setup fails cleanly when `updateFeatures()` raises; chart data
+  extraction uses the real QGIS NULL sentinel; the 2.5D algorithm validates the
+  height field; proportional-symbol styling now scales size by the field.
+- Styling post-processors release their reference after running; preprocessing
+  loops honour cancellation; the dashboard no longer rebuilds while hidden and
+  the stale duplicate 2.5D panel builder was removed.
 
 ## [1.5.0] - 2026-10-11
 

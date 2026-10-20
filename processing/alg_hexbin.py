@@ -168,8 +168,25 @@ class HexbinAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
                 lambda layer: _apply_hex_graduated(layer, stat_field, breaks, colours),
                 feedback,
             )
+        else:
+            # Empty or all-NULL input still produces an output layer; it should
+            # arrive styled instead of falling back to the random default.
+            style_output(context, dest_id, _apply_hex_single, feedback)
 
         return {self.OUTPUT: dest_id}
+
+
+def _apply_hex_single(layer):
+    """Neutral single-symbol style for hexbin outputs without classifiable values."""
+    from qgis.core import QgsFillSymbol, QgsSingleSymbolRenderer
+
+    symbol = QgsFillSymbol.createSimple({
+        "color": "44,123,182,180",
+        "outline_color": "30,60,90,255",
+        "outline_width": "0.2",
+    })
+    layer.setRenderer(QgsSingleSymbolRenderer(symbol))
+    layer.triggerRepaint()
 
 
 def _hex_classes(values, pal_name, n_classes, clf_idx):

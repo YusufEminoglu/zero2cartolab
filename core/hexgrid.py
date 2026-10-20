@@ -21,6 +21,8 @@ SQRT3 = math.sqrt(3.0)
 
 def axial_from_point(x: float, y: float, size: float) -> Tuple[float, float]:
     """Fractional axial coordinates (q, r) for a pixel, origin at (0, 0)."""
+    if size <= 0 or not math.isfinite(size):
+        raise ValueError(f"Hex size must be a positive finite number, got {size!r}")
     q = (SQRT3 / 3.0 * x - 1.0 / 3.0 * y) / size
     r = (2.0 / 3.0 * y) / size
     return q, r

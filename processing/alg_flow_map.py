@@ -193,6 +193,8 @@ class FlowMapAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
         # zone points
         pairs = []
         for feat in zones.getFeatures():
+            if feedback.isCanceled():
+                break
             geom = feat.geometry()
             if geom is None or geom.isEmpty():
                 continue

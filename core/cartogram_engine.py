@@ -148,6 +148,11 @@ class CartogramEngine:
         self._area_value_ratio = 1.0
 
     def _load_features(self) -> None:
+        # Reset state so re-running the same engine never doubles features.
+        self.features = []
+        self._total_area = 0.0
+        self._total_value = 0.0
+        self._area_value_ratio = 1.0
         for feat in self.source.getFeatures():
             geom = feat.geometry()
             if geom.isEmpty() or geom.isNull():

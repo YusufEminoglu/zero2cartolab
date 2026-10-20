@@ -131,7 +131,12 @@ def percentile_rank(values) -> List[Optional[float]]:
 
 
 def log_scale(values, base: float = 10.0) -> List[Optional[float]]:
-    """Log transform; if any value <= 0 the whole series is shifted to be > 0."""
+    """Log transform; if any value <= 0 the whole series is shifted to be > 0.
+
+    ``base`` must be finite, positive and not 1 (log base 1 is undefined).
+    """
+    if not math.isfinite(base) or base <= 0 or base == 1:
+        raise ValueError(f"Invalid logarithm base: {base!r} (need a finite value > 0, != 1)")
     c = _clean(values)
     if not c:
         return [None for _ in values]

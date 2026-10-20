@@ -108,6 +108,8 @@ class GeometricIntervalAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
         values = []
         features_raw = []
         for feat in source.getFeatures():
+            if feedback.isCanceled():
+                break
             fv = safe_float(feat[field_name])
             if fv is not None:
                 values.append(fv)

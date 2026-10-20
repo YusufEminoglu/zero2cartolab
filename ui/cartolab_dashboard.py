@@ -349,8 +349,20 @@ class CartoLabDashboard(_QDialogBase):
                 sig.disconnect(self._on_layers_changed)
 
     def _on_layers_changed(self, *args) -> None:
+        if not self.isVisible():
+            # Defer the expensive refresh until the dashboard is shown again.
+            self._layers_changed_while_hidden = True
+            return
         self._refresh_all_layer_combos()
         self._refresh()
+
+    def showEvent(self, event) -> None:
+        with suppress(Exception):
+            if getattr(self, "_layers_changed_while_hidden", False):
+                self._layers_changed_while_hidden = False
+                self._refresh_all_layer_combos()
+                self._refresh()
+        super().showEvent(event)
 
     def _refresh_all_layer_combos(self) -> None:
         """Refresh all layer comboboxes across every tab when project layers change."""
@@ -1465,161 +1477,6 @@ class CartoLabDashboard(_QDialogBase):
     # ── Layout Tools ──────────────────────────────────────────────────
 
     # 2.5D Styling
-
-    def _build_25d_tab(self) -> None:
-        self.tab_25d = QScrollArea()
-        self.tab_25d.setWidgetResizable(True)
-        self.tab_25d.setFrameShape(QFrame.Shape.NoFrame)
-        tab_body = QWidget()
-        self.tab_25d.setWidget(tab_body)
-        lyt = QVBoxLayout(tab_body)
-        lyt.setContentsMargins(12, 12, 12, 12)
-        lyt.setSpacing(10)
-
-        source_group = self._make_group("Layer and Height")
-        source_layout = QGridLayout(source_group)
-        source_layout.setColumnMinimumWidth(0, 150)
-        source_layout.setColumnStretch(1, 1)
-        source_layout.setColumnStretch(2, 0)
-        source_layout.addWidget(QLabel("Polygon layer:"), 0, 0)
-        self.layer25d_combo = QComboBox()
-        self.layer25d_combo.currentIndexChanged.connect(self._refresh_25d_fields)
-        source_layout.addWidget(self.layer25d_combo, 0, 1)
-        refresh_layers = QPushButton("Refresh Layers")
-        refresh_layers.setObjectName("ghost")
-        refresh_layers.clicked.connect(self._refresh_25d_layers)
-        source_layout.addWidget(refresh_layers, 0, 2)
-
-        source_layout.addWidget(QLabel("Height field:"), 1, 0)
-        self.height25d_combo = QComboBox()
-        self.height25d_combo.currentIndexChanged.connect(self._on_25d_height_field_changed)
-        source_layout.addWidget(self.height25d_combo, 1, 1, 1, 2)
-
-        source_layout.addWidget(QLabel("Height source:"), 2, 0)
-        self.mode25d_combo = QComboBox()
-        self.mode25d_combo.addItem("Height field is already in metres/map units", HEIGHT_MODE_HEIGHT)
-        self.mode25d_combo.addItem("Floor count field (floors x floor height)", HEIGHT_MODE_FLOOR_COUNT)
-        self.mode25d_combo.currentIndexChanged.connect(self._on_25d_mode_changed)
-        source_layout.addWidget(self.mode25d_combo, 2, 1, 1, 2)
-
-        source_layout.addWidget(QLabel("Visual preset:"), 3, 0)
-        self.preset25d_combo = QComboBox()
-        for key, preset in STYLE_25D_PRESETS.items():
-            self.preset25d_combo.addItem(preset["label"], key)
-        self.preset25d_combo.currentIndexChanged.connect(self._on_25d_preset_changed)
-        source_layout.addWidget(self.preset25d_combo, 3, 1, 1, 2)
-        lyt.addWidget(source_group)
-
-        geom_group = self._make_group("Extrusion Geometry")
-        geom_layout = QGridLayout(geom_group)
-        geom_layout.setColumnMinimumWidth(0, 125)
-        geom_layout.setColumnMinimumWidth(2, 125)
-        geom_layout.setColumnStretch(1, 1)
-        geom_layout.setColumnStretch(3, 1)
-        self.angle25d_spin = self._make_double_spin(0, 359, 110, 1, " degrees")
-        self.scale25d_spin = self._make_double_spin(0.01, 100, 1, 0.1, "x")
-        self.floor_height25d_spin = self._make_double_spin(0.01, 100, 3.5, 0.1, " map units/floor")
-        self.max25d_spin = self._make_double_spin(0, 1000000, 0, 1, " map units")
-        self.step25d_check = QCheckBox("Snap heights to stepped floors")
-        self.step25d_spin = self._make_double_spin(0.01, 100000, 3.5, 0.1, " map units")
-
-        geom_layout.addWidget(QLabel("Projection angle:"), 0, 0)
-        geom_layout.addWidget(self.angle25d_spin, 0, 1)
-        geom_layout.addWidget(QLabel("Vertical scale:"), 0, 2)
-        geom_layout.addWidget(self.scale25d_spin, 0, 3)
-        self.floor_height25d_label = QLabel("Floor height:")
-        geom_layout.addWidget(self.floor_height25d_label, 1, 0)
-        geom_layout.addWidget(self.floor_height25d_spin, 1, 1)
-        geom_layout.addWidget(QLabel("Maximum height:"), 1, 2)
-        geom_layout.addWidget(self.max25d_spin, 1, 3)
-        geom_layout.addWidget(self.step25d_check, 2, 0, 1, 2)
-        geom_layout.addWidget(self.step25d_spin, 2, 2, 1, 2)
-        lyt.addWidget(geom_group)
-
-        floor_group = self._make_group("Floor Colour Bands")
-        floor_layout = QGridLayout(floor_group)
-        floor_layout.setColumnMinimumWidth(0, 150)
-        floor_layout.setColumnMinimumWidth(2, 150)
-        floor_layout.setColumnStretch(1, 1)
-        floor_layout.setColumnStretch(3, 1)
-        self.floor_bands25d_check = QCheckBox("Colour each floor separately")
-        self.floor_bands25d_check.toggled.connect(self._on_25d_floor_bands_changed)
-        self.floor_palette25d_label = QLabel("Floor palette:")
-        self.floor_palette25d_combo = QComboBox()
-        for key, palette in FLOOR_BAND_PALETTES.items():
-            self.floor_palette25d_combo.addItem(palette["label"], key)
-        self.floor_palette25d_combo.currentIndexChanged.connect(self._update_25d_status_preview)
-        self.max_floors25d_label = QLabel("Maximum floor bands:")
-        self.max_floors25d_spin = QSpinBox()
-        self.max_floors25d_spin.setRange(0, 80)
-        self.max_floors25d_spin.setSpecialValueText("Auto from layer")
-        self.max_floors25d_spin.setValue(0)
-        self.max_floors25d_spin.setToolTip("Use 0 to scan the selected floor-count field and match the layer automatically.")
-        self.max_floors25d_spin.valueChanged.connect(self._update_25d_status_preview)
-
-        floor_layout.addWidget(self.floor_bands25d_check, 0, 0, 1, 2)
-        floor_layout.addWidget(self.floor_palette25d_label, 1, 0)
-        floor_layout.addWidget(self.floor_palette25d_combo, 1, 1)
-        floor_layout.addWidget(self.max_floors25d_label, 1, 2)
-        floor_layout.addWidget(self.max_floors25d_spin, 1, 3)
-        lyt.addWidget(floor_group)
-
-        light_group = self._make_group("Lighting and Materials")
-        light_layout = QGridLayout(light_group)
-        light_layout.setColumnMinimumWidth(0, 110)
-        light_layout.setColumnMinimumWidth(2, 125)
-        light_layout.setColumnStretch(1, 1)
-        light_layout.setColumnStretch(3, 1)
-        self.roof25d_btn = self._make_color_button("#f2cf96")
-        self.wall25d_btn = self._make_color_button("#b36f43")
-        self.shadow25d_btn = self._make_color_button("#202833")
-        self.shadow25d_check = QCheckBox("Enable soft shadow")
-        self.shadow25d_check.setChecked(True)
-        self.wall_shading25d_check = QCheckBox("Enable directional wall shading")
-        self.wall_shading25d_check.setChecked(True)
-        self.shadow_spread25d_spin = self._make_double_spin(0, 100000, 3.5, 0.5, " map units")
-
-        self.roof25d_btn.clicked.connect(lambda: self._pick_25d_color(self.roof25d_btn, "Roof Color"))
-        self.wall25d_btn.clicked.connect(lambda: self._pick_25d_color(self.wall25d_btn, "Wall Color"))
-        self.shadow25d_btn.clicked.connect(lambda: self._pick_25d_color(self.shadow25d_btn, "Shadow Color"))
-
-        light_layout.addWidget(QLabel("Roof color:"), 0, 0)
-        light_layout.addWidget(self.roof25d_btn, 0, 1)
-        light_layout.addWidget(QLabel("Wall color:"), 0, 2)
-        light_layout.addWidget(self.wall25d_btn, 0, 3)
-        light_layout.addWidget(QLabel("Shadow color:"), 1, 0)
-        light_layout.addWidget(self.shadow25d_btn, 1, 1)
-        light_layout.addWidget(QLabel("Shadow spread:"), 1, 2)
-        light_layout.addWidget(self.shadow_spread25d_spin, 1, 3)
-        light_layout.addWidget(self.shadow25d_check, 2, 0, 1, 2)
-        light_layout.addWidget(self.wall_shading25d_check, 2, 2, 1, 2)
-        lyt.addWidget(light_group)
-
-        action_row = QHBoxLayout()
-        apply_btn = QPushButton("Apply 2.5D Style")
-        apply_btn.clicked.connect(self._on_apply_25d_style)
-        action_row.addWidget(apply_btn)
-        save_btn = QPushButton("Save QML Style")
-        save_btn.setObjectName("ghost")
-        save_btn.clicked.connect(self._on_save_25d_qml)
-        action_row.addWidget(save_btn)
-        copy_btn = QPushButton("Copy Style Summary")
-        copy_btn.setObjectName("ghost")
-        copy_btn.clicked.connect(self._on_copy_25d_summary)
-        action_row.addWidget(copy_btn)
-        for button in (apply_btn, save_btn, copy_btn):
-            button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        action_row.addStretch()
-        lyt.addLayout(action_row)
-
-        self.style25d_status = QTextBrowser()
-        self.style25d_status.setMaximumHeight(150)
-        lyt.addWidget(self.style25d_status)
-        lyt.addStretch()
-
-        self._refresh_25d_layers()
-        self._on_25d_preset_changed()
-        self._on_25d_mode_changed()
 
     def _build_25d_contents(self, tab_body: QWidget) -> None:
         lyt = QVBoxLayout(tab_body)

@@ -1443,6 +1443,61 @@ check("decile_rank built on fast ranks", norm.decile_rank([1, 2, 3, 4, 5, 6, 7, 
       str(norm.decile_rank(list(range(1, 11)))))
 
 # ===================================================================
+# Regression tests — 2026-10-20 audit
+# ===================================================================
+section("2026-10-20 audit regressions")
+
+for _bad_base, _label in ((1.0, "1"), (0.0, "0"), (-2.0, "negative"), (float("nan"), "NaN")):
+    try:
+        norm.log_scale([1.0, 10.0], base=_bad_base)
+        check(f"log_scale rejects base {_label}", False)
+    except ValueError:
+        check(f"log_scale rejects base {_label}", True)
+check("log_scale base 2 exact", norm.log_scale([1.0, 2.0, 4.0], base=2.0) == [0.0, 1.0, 2.0],
+      str(norm.log_scale([1.0, 2.0, 4.0], base=2.0)))
+
+for _bad_size in (0.0, -1.0, float("nan")):
+    try:
+        hxg.axial_from_point(1.0, 1.0, _bad_size)
+        check(f"axial_from_point rejects size {_bad_size}", False)
+    except ValueError:
+        check(f"axial_from_point rejects size {_bad_size}", True)
+
+_sq = [[(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0), (0.0, 0.0)]]
+_d = lblp.polylabel(_sq, precision=float("nan"))[2]
+check("polylabel NaN precision converges", _d > 0 and math.isfinite(_d), f"d={_d}")
+_d2 = lblp.polylabel(_sq, precision=-5.0)[2]
+check("polylabel negative precision converges", _d2 > 0 and math.isfinite(_d2), f"d={_d2}")
+
+for _args, _label in (((91.0,), "latitude 91"), ((38.4, 0), "day 0"), ((38.4, 172, 24.0), "hour 24")):
+    try:
+        sl.calculate_solar_position(*_args)
+        check(f"solar position rejects {_label}", False)
+    except ValueError:
+        check(f"solar position rejects {_label}", True)
+
+class _TwoFeatureLayer:
+    def getFeatures(self):
+        class _F:
+            def __init__(self, i): self._i = i
+            def geometry(self): return FakeGeometry()
+            def id(self): return self._i
+            def __getitem__(self, k): return 5.0
+        return [_F(1), _F(2)]
+
+_orig_geom2 = ce.QgsGeometry
+ce.QgsGeometry = _StaticGeom
+try:
+    _eng = ce.CartogramEngine(_TwoFeatureLayer(), "v", max_iterations=1)
+    _eng._load_features()
+    _n_first = len(_eng.features)
+    _eng._load_features()
+    check("cartogram engine reload does not duplicate features",
+          _n_first == 2 and len(_eng.features) == 2, f"{_n_first} -> {len(_eng.features)}")
+finally:
+    ce.QgsGeometry = _orig_geom2
+
+# ===================================================================
 # SUMMARY
 # ===================================================================
 section("RESULTS")

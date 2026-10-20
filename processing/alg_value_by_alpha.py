@@ -103,6 +103,8 @@ class ValueByAlphaAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
         reliability_vals = []
         features_raw = []
         for feat in source.getFeatures():
+            if feedback.isCanceled():
+                break
             pv = safe_float(feat[colour_field])
             rv = safe_float(feat[alpha_field])
             # NULLs stay None: they must not enter the colour breaks or the

@@ -71,6 +71,9 @@ def polylabel(rings: Sequence[Ring], precision: float = 1.0) -> Tuple[float, flo
     ``distance`` is the radius of the largest inscribed circle at that point —
     a useful proxy for how much label room the polygon offers.
     """
+    if not math.isfinite(precision) or precision <= 0:
+        # A non-positive or NaN precision never satisfies the stopping rule.
+        precision = 1.0
     if not rings or len(rings[0]) < 3:
         if rings and rings[0]:
             return rings[0][0][0], rings[0][0][1], 0.0

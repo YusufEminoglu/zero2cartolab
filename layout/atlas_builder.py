@@ -134,10 +134,13 @@ def setup_layout_atlas(
         atlas.setSortFeatures(False)
 
     # The filter may still match nothing; an atlas without pages is a failure.
-    feature_count = -1
-    with suppress(Exception):
+    try:
         feature_count = int(atlas.updateFeatures())
-    if feature_count == 0:
+    except Exception:
+        feature_count = -1
+    if feature_count <= 0:
+        # 0 = filter matched nothing; -1 = the update itself raised. Either way
+        # the atlas must not stay enabled in a half-configured state.
         atlas.setEnabled(False)
         return False
 

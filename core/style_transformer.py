@@ -146,75 +146,70 @@ def apply_value_by_alpha(
     colour_ramp_name: str = "Viridis",
 ) -> None:
     """
-    Apply Value-by-Alpha graduated symbology to a vector layer.
+    Apply Value-by-Alpha symbology to a vector layer.
 
-    The fill colour is determined by `colour_field` (using the given ramp)
-    and the opacity is driven by `alpha_field` (mapped to alpha channel).
-
-    Parameters
-    ----------
-    vector_layer : QgsVectorLayer
-        The layer to symbolise (modified in-place).
-    colour_field : str
-        Field name for determining hue/saturation.
-    alpha_field : str
-        Field name for determining opacity (lower = more transparent).
-    alpha_min, alpha_max : int
-        Alpha channel range [0-255] for the reliability field.
-    colour_ramp_name : str
-        Name of a QGIS colour ramp (e.g. "Viridis", "Magma", "Spectral").
+    Fill colour is graduated on ``colour_field`` (``colour_ramp_name`` ramp);
+    fill opacity is data-defined by ``alpha_field`` through a ``scale_linear``
+    expression mapped into [alpha_min, alpha_max] / 255, so every feature keeps
+    its own reliability-driven transparency. A layer with no valid values on
+    either field is left untouched.
     """
     from qgis.core import (
         QgsClassificationCustom, QgsGraduatedSymbolRenderer,
-        QgsRendererRange, QgsSymbol,
+        QgsProperty, QgsRendererRange, QgsSymbol, QgsSymbolLayer,
     )
 
-    # gather values
-    values = []
-    alphas = []
+    values: List[float] = []
+    alpha_values: List[float] = []
     for feat in vector_layer.getFeatures():
-        v = feat[colour_field]
-        a = feat[alpha_field]
-        if v is not None and a is not None:
-            values.append(float(v))
-            alphas.append(float(a))
+        try:
+            v = float(feat[colour_field])
+        except (TypeError, ValueError):
+            v = None
+        try:
+            a = float(feat[alpha_field])
+        except (TypeError, ValueError):
+            a = None
+        if v is not None and math.isfinite(v):
+            values.append(v)
+        if a is not None and math.isfinite(a):
+            alpha_values.append(a)
 
-    if not values:
+    if not values or not alpha_values:
         return
 
-    # classify colour field
     n_classes = min(5, len(set(values)))
     breaks = _jenks_breaks(values, n_classes)
-
-    # classify alpha field
-    alpha_breaks = _jenks_breaks(alphas, n_classes)
-    alpha_step = (alpha_max - alpha_min) / max(len(alpha_breaks) - 2, 1)
-
-    # build colour ramp
     ramp_colours = _get_ramp_colours(colour_ramp_name, n_classes)
 
+    alpha_lo = min(alpha_values)
+    alpha_hi = max(alpha_values)
+    if alpha_hi <= alpha_lo:
+        alpha_hi = alpha_lo + 1e-9
+    quoted_field = '"' + alpha_field.replace('"', '""') + '"'
+    opacity_expr = (
+        f"scale_linear({quoted_field}, {alpha_lo}, {alpha_hi}, "
+        f"{alpha_min / 255.0}, {alpha_max / 255.0})"
+    )
+    fill_opacity_prop = getattr(
+        getattr(QgsSymbolLayer, "Property", QgsSymbolLayer),
+        "FillOpacity",
+        getattr(QgsSymbolLayer, "PropertyFillOpacity", None),
+    )
+
     ranges = []
-    for i in range(n_classes):
+    for i in range(len(breaks) - 1):
         low_v, high_v = breaks[i], breaks[i + 1]
         col = ramp_colours[i % len(ramp_colours)]
+        sym = QgsSymbol.defaultSymbol(vector_layer.geometryType()).clone()
+        sym.setColor(col)
+        if fill_opacity_prop is not None:
+            for symbol_layer in sym.symbolLayers():
+                symbol_layer.setDataDefinedProperty(
+                    fill_opacity_prop, QgsProperty.fromExpression(opacity_expr))
+        ranges.append(QgsRendererRange(low_v, high_v, sym, f"{low_v:g} – {high_v:g}"))
 
-        for j in range(n_classes):
-            alpha_low = alpha_breaks[j]
-            alpha_high = alpha_breaks[j + 1]
-            alpha_val = int(alpha_min + j * alpha_step)
-
-            sym = QgsSymbol.defaultSymbol(vector_layer.geometryType()).clone()
-            sym.setColor(col)
-            sym.setOpacity(alpha_val / 255.0)
-
-            label = f"{col.name()} alpha={alpha_val}"
-            ranges.append(QgsRendererRange(
-                low_v * 1000 + alpha_low,  # compound key
-                high_v * 1000 + alpha_high,
-                sym, label,
-            ))
-
-    renderer = QgsGraduatedSymbolRenderer("", ranges)
+    renderer = QgsGraduatedSymbolRenderer(colour_field, ranges)
     renderer.setClassificationMethod(QgsClassificationCustom())
     vector_layer.setRenderer(renderer)
 

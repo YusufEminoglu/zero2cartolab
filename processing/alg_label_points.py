@@ -3,16 +3,17 @@
 from __future__ import annotations
 
 from qgis.core import (
-    QgsFeature, QgsFeatureSink, QgsGeometry, QgsPointXY,
+    QgsFeature, QgsFeatureSink, QgsGeometry, QgsMarkerSymbol, QgsPointXY,
     QgsProcessing, QgsProcessingAlgorithm, QgsProcessingException,
     QgsProcessingParameterFeatureSink, QgsProcessingParameterFeatureSource,
-    QgsProcessingParameterNumber, QgsWkbTypes,
+    QgsProcessingParameterNumber, QgsSingleSymbolRenderer, QgsWkbTypes,
 )
 from qgis.PyQt.QtCore import QVariant
 
 from ..core.label_points import polylabel, polygon_orientation_angle
 from ._fields import extend_fields, output_attributes
 from ._help_mixin import CartoLabHelpMixin
+from ._styling import style_output
 
 
 def _shoelace_area(ring):
@@ -129,4 +130,18 @@ class LabelPointsAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
             feedback.setProgress(int(100 * current / total))
 
         feedback.pushInfo(f"Computed {written} visual-center label points with distance and orientation angles.")
+
+        def _style(out_layer):
+            symbol = QgsMarkerSymbol.createSimple({
+                "name": "diamond",
+                "color": "#b2492f",
+                "outline_color": "#ffffff",
+                "outline_width": "0.3",
+                "size": "2.6",
+            })
+            out_layer.setRenderer(QgsSingleSymbolRenderer(symbol))
+            out_layer.triggerRepaint()
+
+        style_output(context, dest_id, _style, feedback)
+
         return {self.OUTPUT: dest_id}

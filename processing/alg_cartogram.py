@@ -106,6 +106,13 @@ class CartogramAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
         if source is None:
             raise QgsProcessingException(self.invalidSourceError(parameters, self.INPUT))
 
+        if source.sourceCrs().isGeographic():
+            raise QgsProcessingException(
+                "The cartogram engine measures area and displacement in map units; "
+                "a geographic CRS (degrees) would distort the result. "
+                "Reproject the input to a projected CRS (e.g. UTM) first."
+            )
+
         field_name = self.parameterAsString(parameters, self.FIELD, context)
         max_iter = self.parameterAsInt(parameters, self.MAX_ITERATIONS, context)
         max_error = self.parameterAsDouble(parameters, self.MAX_ERROR, context)
@@ -151,6 +158,8 @@ class CartogramAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
         cleaned_layer = context.getMapLayer(cleaned["OUTPUT"])
 
         for feat in cleaned_layer.getFeatures():
+            if feedback.isCanceled():
+                break
             geom = feat.geometry()
             if not geom.isNull() and not geom.isMultipart():
                 geom.convertToMultiType()

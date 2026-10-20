@@ -40,6 +40,12 @@ def calculate_solar_position(
     Calculate solar altitude angle (elevation above horizon in degrees)
     and solar azimuth angle (clockwise from North in degrees).
     """
+    if not math.isfinite(latitude_deg) or not -90.0 <= latitude_deg <= 90.0:
+        raise ValueError(f"latitude_deg must be within [-90, 90], got {latitude_deg!r}")
+    if not 1 <= int(day_of_year) <= 366:
+        raise ValueError(f"day_of_year must be within [1, 366], got {day_of_year!r}")
+    if not math.isfinite(solar_hour) or not 0.0 <= solar_hour < 24.0:
+        raise ValueError(f"solar_hour must be within [0, 24), got {solar_hour!r}")
     lat_rad = math.radians(latitude_deg)
 
     # Solar declination angle delta

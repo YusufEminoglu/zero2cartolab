@@ -65,7 +65,7 @@ def build_chart_data(spec: ChartSpec, columns):
                 pairs.append((x_value, y_value))
         if not pairs:
             raise ValueError("Scatter chart requires numeric X and Y fields.")
-        pairs = pairs[: max(spec.top_n, 50)]
+        pairs = pairs[: spec.top_n]
         x_values = [pair[0] for pair in pairs]
         categories = [f"{pair[0]:g}" for pair in pairs]
         values = [pair[1] for pair in pairs]
@@ -124,6 +124,11 @@ def build_chart_data(spec: ChartSpec, columns):
         values = [values[i] for i in ranked]
     if not categories:
         raise ValueError("The selected fields contain no chartable data.")
+    if spec.chart_type in ("pie", "donut") and any(v < 0 for v in values):
+        raise ValueError(
+            "Pie and donut charts require non-negative values; "
+            "a negative wedge cannot be drawn truthfully."
+        )
     result = {"categories": categories, "values": values}
     if x_values is not None:
         result["x_values"] = x_values

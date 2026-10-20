@@ -190,7 +190,13 @@ class Building25DStyleAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
 
     def processAlgorithm(self, parameters, context, feedback):
         layer = self.parameterAsVectorLayer(parameters, self.INPUT, context)
+        if layer is None:
+            raise QgsProcessingException(self.invalidSourceError(parameters, self.INPUT))
         height_field = self.parameterAsString(parameters, self.HEIGHT_FIELD, context)
+        if not height_field or layer.fields().lookupField(height_field) < 0:
+            raise QgsProcessingException(
+                f"Height field '{height_field}' does not exist on layer '{layer.name()}'."
+            )
         mode_idx = self.parameterAsEnum(parameters, self.HEIGHT_MODE, context)
         height_mode = self.HEIGHT_MODE_OPTIONS[mode_idx][1] if 0 <= mode_idx < len(self.HEIGHT_MODE_OPTIONS) else HEIGHT_MODE_HEIGHT
         render_idx = self.parameterAsEnum(parameters, self.RENDER_MODE, context)

@@ -134,7 +134,12 @@ def style_dot_density_layer(layer: QgsVectorLayer) -> bool:
 
 
 def style_proportional_layer(layer: QgsVectorLayer, field_name: str = "") -> bool:
-    """Apply semi-transparent copper circles with crisp outer ring."""
+    """Apply semi-transparent copper circles with crisp outer ring.
+
+    When ``field_name`` names an existing numeric field, symbol size becomes
+    data-defined with a square-root (area-honest) scale up to the field's
+    maximum; otherwise the fixed 4.0 mm marker is kept.
+    """
     if QgsSingleSymbolRenderer is None or layer is None:
         return False
     with suppress(Exception):
@@ -146,6 +151,32 @@ def style_proportional_layer(layer: QgsVectorLayer, field_name: str = "") -> boo
         })
         if hasattr(symbol, "setOpacity"):
             symbol.setOpacity(0.85)
+        if field_name and layer.fields().lookupField(field_name) >= 0:
+            import math
+
+            from qgis.core import QgsProperty, QgsSymbolLayer
+
+            vmax = 0.0
+            for feat in layer.getFeatures():
+                try:
+                    v = float(feat[field_name])
+                except (TypeError, ValueError):
+                    continue
+                if math.isfinite(v) and v > vmax:
+                    vmax = v
+            size_prop = getattr(
+                getattr(QgsSymbolLayer, "Property", QgsSymbolLayer),
+                "Size",
+                getattr(QgsSymbolLayer, "PropertySize", None),
+            )
+            if vmax > 0 and size_prop is not None and symbol.symbolLayerCount() > 0:
+                quoted = '"' + field_name.replace('"', '""') + '"'
+                expr = (
+                    f"scale_linear(sqrt(max({quoted}, 0)), 0, "
+                    f"{math.sqrt(vmax)}, 1.6, 6.0)"
+                )
+                symbol.symbolLayer(0).setDataDefinedProperty(
+                    size_prop, QgsProperty.fromExpression(expr))
         layer.setRenderer(QgsSingleSymbolRenderer(symbol))
         layer.triggerRepaint()
         return True
