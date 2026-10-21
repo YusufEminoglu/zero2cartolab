@@ -43,6 +43,8 @@ echo.
 echo Rebuilding the guide...
 where python >nul 2>nul && python build_guide.py || py -3 build_guide.py
 where python >nul 2>nul && python optimize_images.py || py -3 optimize_images.py
+REM Build once more so the guide always embeds the optimised copies.
+where python >nul 2>nul && python build_guide.py || py -3 build_guide.py
 
 echo.
 echo Done. Open practical_guide.html
