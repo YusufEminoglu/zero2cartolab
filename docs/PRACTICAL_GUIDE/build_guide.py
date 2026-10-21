@@ -784,8 +784,15 @@ def main() -> int:
         return 2
 
     inter = HERE / "practical_guide.html"
-    inter.write_text(build_interactive(g), encoding="utf-8")
+    html = build_interactive(g)
+    inter.write_text(html, encoding="utf-8")
     print(f"wrote {inter.name} ({inter.stat().st_size // 1024} KB)", flush=True)
+
+    # The directory URL (/<plugin>/PRACTICAL_GUIDE/) must open the guide
+    # instead of a 404, so the folder carries the guide as its index.
+    index = HERE / "index.html"
+    index.write_text(html, encoding="utf-8")
+    print(f"wrote {index.name} ({index.stat().st_size // 1024} KB)", flush=True)
 
     tr = HERE / "practical_guide_static.html"
     tr.write_text(build_static(g, "tr"), encoding="utf-8")
