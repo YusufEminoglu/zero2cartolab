@@ -117,7 +117,9 @@ def preflight_layout(layout: QgsLayout, tolerance: float = 0.75) -> List[Dict[st
                 height = float(extent.height()) if extent is not None else 0.0
                 divisions_x = width / interval_x if interval_x else 0.0
                 divisions_y = height / interval_y if interval_y else 0.0
-                if divisions_x > 14 or divisions_y > 14:
+                has_annotations = bool(hasattr(grid, "annotationEnabled") and grid.annotationEnabled())
+                max_divs = 14 if has_annotations else 30
+                if divisions_x > max_divs or divisions_y > max_divs:
                     issues.append(_issue(
                         "warning", "dense_grid",
                         "Coordinate grid is too dense for a publication layout; increase its interval.", item_id,

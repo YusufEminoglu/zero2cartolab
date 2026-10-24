@@ -117,7 +117,14 @@ def apply_typography_hierarchy(layout: QgsLayout, preset: str = "swiss_modern") 
 
         # Preserve intentional light/accent colors on dark banners or cards
         curr_col = item.fontColor() if hasattr(item, "fontColor") else None
-        is_light_text = curr_col is not None and (curr_col.lightness() > 170 or curr_col.name().lower() in ("#ffffff", "#f8fafc", "#38bdf8", "#94a3b8", "#cbd5e1", "#e0f2fe", "#2563eb", "#16a34a", "#dc2626"))
+        is_light_text = curr_col is not None and (
+            curr_col.lightness() > 170
+            or curr_col.name().lower() in (
+                "#ffffff", "#f8fafc", "#38bdf8", "#94a3b8", "#cbd5e1", "#e0f2fe",
+                "#2563eb", "#16a34a", "#dc2626", "#059669", "#fecaca", "#fee2e2",
+                "#93c5fd", "#1e40af", "#166534", "#b45309", "#9a3412",
+            )
+        )
 
         if "mono" in item_id_lower or "code" in item_id_lower:
             font.setFamily(mono_fam)

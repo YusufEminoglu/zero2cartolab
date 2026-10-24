@@ -119,6 +119,18 @@ def apply_paper_theme(layout: QgsLayout, theme_key: str = "blueprint") -> bool:
                 f_lbl.setFamily("Segoe UI")
                 item.setFont(f_lbl)
                 item.setBackgroundEnabled(False)
+                if hasattr(item, "id") and item.id() == "cartolab_north_arrow_label":
+                    with suppress(Exception):
+                        tf_na = item.textFormat()
+                        tf_na.setFont(f_lbl)
+                        tf_na.setColor(text_qcolor)
+                        buf_na = tf_na.buffer()
+                        buf_na.setEnabled(True)
+                        buf_na.setSize(0.75)
+                        buf_na.setColor(QColor(theme["bg_color"] if theme_key in ("dark_matter", "blueprint") else "#ffffff"))
+                        buf_na.setOpacity(0.90)
+                        tf_na.setBuffer(buf_na)
+                        item.setTextFormat(tf_na)
             elif isinstance(item, QgsLayoutItemMap):
                 item.setFrameEnabled(True)
                 if hasattr(item, "setFrameStrokeColor") and frame_qcolor:
@@ -130,12 +142,26 @@ def apply_paper_theme(layout: QgsLayout, theme_key: str = "blueprint") -> bool:
                     item.setBackgroundEnabled(True)
                 # Update map grids font
                 if hasattr(item, "grids"):
+                    halo_color = QColor(theme["bg_color"] if theme_key in ("dark_matter", "blueprint") else "#ffffff")
                     for grid in list(item.grids().asList()):
                         f_grid = QFont("Segoe UI", 8)
                         f_grid.setFamily("Segoe UI")
                         grid.setAnnotationFont(f_grid)
                         if text_qcolor:
                             grid.setAnnotationFontColor(text_qcolor)
+                        if hasattr(grid, "annotationTextFormat") and hasattr(grid, "setAnnotationTextFormat"):
+                            with suppress(Exception):
+                                tf_g = grid.annotationTextFormat()
+                                tf_g.setFont(f_grid)
+                                if text_qcolor:
+                                    tf_g.setColor(text_qcolor)
+                                buf_g = tf_g.buffer()
+                                buf_g.setEnabled(True)
+                                buf_g.setSize(0.85)
+                                buf_g.setColor(halo_color)
+                                buf_g.setOpacity(0.90)
+                                tf_g.setBuffer(buf_g)
+                                grid.setAnnotationTextFormat(tf_g)
             elif QgsLayoutItemLegend and isinstance(item, QgsLayoutItemLegend):
                 if theme_key in ("dark_matter", "blueprint") and bg_qcolor:
                     item.setBackgroundColor(bg_qcolor)
@@ -144,14 +170,30 @@ def apply_paper_theme(layout: QgsLayout, theme_key: str = "blueprint") -> bool:
                     item.setBackgroundEnabled(False)
                 if hasattr(item, "setFontColor") and text_qcolor:
                     item.setFontColor(text_qcolor)
+                with suppress(Exception):
+                    w_leg = float(item.rect().width())
+                    h_leg = float(item.rect().height())
+                    if w_leg > 0 and h_leg > 0:
+                        from .map_sheet import _fit_legend_to_box
+                        _fit_legend_to_box(item, w_leg, h_leg)
                 if hasattr(item, "rstyle") and QgsLegendStyle:
                     from .layout_utils import set_legend_style_text
-                    for style_attr in ("Title", "Group", "Subgroup", "SymbolLabel"):
+                    fit_pt = float(item.customProperty("cartolab/legend_fit_font_pt", 8.5) or 8.5)
+                    style_sizes = {
+                        "Title": min(10.0, fit_pt + 1.2),
+                        "Group": min(9.5, fit_pt + 0.8),
+                        "Subgroup": min(9.0, fit_pt + 0.4),
+                        "SymbolLabel": fit_pt,
+                    }
+                    for style_attr, sz in style_sizes.items():
                         with suppress(Exception):
                             style_enum = getattr(QgsLegendStyle, style_attr, getattr(getattr(QgsLegendStyle, "Style", None), style_attr, None))
                             if style_enum is not None:
-                                f_leg = QFont("Segoe UI", 9 if style_attr == "SymbolLabel" else 10)
+                                f_leg = QFont("Segoe UI", int(round(sz)))
                                 f_leg.setFamily("Segoe UI")
+                                if hasattr(f_leg, "setPointSizeF"):
+                                    f_leg.setPointSizeF(float(sz))
+                                f_leg.setBold(style_attr in ("Title", "Group"))
                                 set_legend_style_text(item, style_enum, f_leg, text_qcolor or None)
                 with suppress(Exception):
                     item.setAutoUpdateModel(False)
@@ -191,10 +233,11 @@ def apply_paper_theme(layout: QgsLayout, theme_key: str = "blueprint") -> bool:
             elif hasattr(item, "id") and item.id() == "cartolab_north_arrow":
                 with suppress(Exception):
                     if text_qcolor and QgsFillSymbol and hasattr(item, "setSymbol"):
+                        outline_col = theme["bg_color"] if theme_key in ("dark_matter", "blueprint") else "#ffffff"
                         sym = QgsFillSymbol.createSimple({
                             "color": text_qcolor.name(),
-                            "outline_color": text_qcolor.name(),
-                            "outline_width": "0.2",
+                            "outline_color": outline_col,
+                            "outline_width": "0.35",
                         })
                         item.setSymbol(sym)
             elif hasattr(item, "id") and item.id() == "cartolab_north_arrow_label":

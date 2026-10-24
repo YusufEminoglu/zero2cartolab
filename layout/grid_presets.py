@@ -51,7 +51,7 @@ GRID_PRESETS: Dict[str, Dict[str, Any]] = {
         "components": [
             {"style": "Solid", "frame": "Zebra", "divisions": 6, "color": "#334155",
              "width": 0.22, "sides": "all", "expression": "format_number(@grid_number, 0)"},
-            {"style": "Cross", "frame": "NoFrame", "divisions": 30, "color": "#94a3b8",
+            {"style": "Cross", "frame": "NoFrame", "divisions": 12, "color": "#94a3b8",
              "width": 0.10, "sides": "none", "cross": 1.6},
         ],
     },
@@ -242,10 +242,25 @@ def apply_grid_preset(
                     grid.setAnnotationPosition(inside, side_value)
             geographic = bool(component.get("geographic"))
             grid.setAnnotationPrecision(3 if geographic and ix < 0.05 else 2 if geographic else 0)
-            grid.setAnnotationFontColor(QColor(component.get("text_color", "#334155")))
-            grid.setAnnotationFrameDistance(float(component.get("annotation_distance", 1.5)))
+            txt_col = QColor(component.get("text_color", "#1e293b"))
+            grid.setAnnotationFontColor(txt_col)
+            grid.setAnnotationFrameDistance(float(component.get("annotation_distance", 1.8 if annotations_inside else 1.5)))
             if QFont is not None:
-                grid.setAnnotationFont(QFont("Segoe UI", 8))
+                f_grid = QFont("Segoe UI", 8)
+                f_grid.setFamily("Segoe UI")
+                grid.setAnnotationFont(f_grid)
+                if hasattr(grid, "annotationTextFormat") and hasattr(grid, "setAnnotationTextFormat"):
+                    with suppress(Exception):
+                        tf_grid = grid.annotationTextFormat()
+                        tf_grid.setFont(f_grid)
+                        tf_grid.setColor(txt_col)
+                        buf = tf_grid.buffer()
+                        buf.setEnabled(True)
+                        buf.setSize(0.85)
+                        buf.setColor(QColor("#ffffff"))
+                        buf.setOpacity(0.92)
+                        tf_grid.setBuffer(buf)
+                        grid.setAnnotationTextFormat(tf_grid)
             expression = component.get("expression")
             if expression:
                 with suppress(Exception):

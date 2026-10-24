@@ -143,22 +143,59 @@ def _legend_natural_size(legend) -> Optional[tuple]:
         return None
 
 
+def _split_long_token(word: str, max_chars: int) -> list:
+    """Split an overlong token at snake/kebab/path delimiters or into fixed chunks."""
+    if len(word) <= max_chars:
+        return [word]
+    parts: list = []
+    buf = ""
+    for ch in word:
+        buf += ch
+        if ch in ("_", "-", "/"):
+            parts.append(buf)
+            buf = ""
+    if buf:
+        parts.append(buf)
+    chunks: list = []
+    cur = ""
+    for part in parts:
+        while len(part) > max_chars:
+            if cur:
+                chunks.append(cur)
+                cur = ""
+            chunks.append(part[:max_chars])
+            part = part[max_chars:]
+        if cur and len(cur) + len(part) > max_chars:
+            chunks.append(cur)
+            cur = part
+        else:
+            cur += part
+    if cur:
+        chunks.append(cur)
+    return chunks or [word]
+
+
 def _wrap_text(text: str, max_chars: int) -> str:
     """Greedy word wrap with newlines (the legend renderer breaks lines on them)."""
+    max_chars = max(4, int(max_chars))
     lines: list = []
     for paragraph in str(text).split("\n"):
         line = ""
-        for word in paragraph.split():
-            if line and len(line) + 1 + len(word) > max_chars:
-                lines.append(line)
-                line = word
-            else:
-                line = f"{line} {word}" if line else word
+        for raw_word in paragraph.split():
+            for word in _split_long_token(raw_word, max_chars):
+                if line and len(line) + 1 + len(word) > max_chars:
+                    lines.append(line)
+                    line = word
+                else:
+                    line = f"{line} {word}" if line else word
         lines.append(line)
     return "\n".join(lines)
 
 
 _WRAPPED_PROPERTY = "cartolab/wrapped_legend_labels"
+_TRIMMED_PROPERTY = "cartolab/trimmed_legend_count"
+_ORIG_COUNT_PROPERTY = "cartolab/orig_legend_count"
+_CLEANED_PROPERTY = "cartolab/cleaned_legend_symbols"
 
 
 def _legend_layer_nodes(legend) -> list:
@@ -167,11 +204,144 @@ def _legend_layer_nodes(legend) -> list:
     return list(root.findLayers()) if root is not None else []
 
 
-def _unwrap_legend_labels(legend) -> None:
+def _order_layers_rasters_bottom(layers: Optional[List]) -> List:
+    """Place raster layers beneath vector layers so opaque DEMs never hide vectors."""
+    if not layers:
+        return []
+    vectors: List = []
+    rasters: List = []
+    for lyr in layers:
+        if lyr is None:
+            continue
+        is_raster = False
+        with suppress(Exception):
+            cls_name = type(lyr).__name__
+            is_raster = "Raster" in cls_name or int(getattr(lyr.type(), "value", lyr.type())) == 1
+        if is_raster:
+            rasters.append(lyr)
+        else:
+            vectors.append(lyr)
+    return vectors + rasters
+
+
+def _clean_legend_patch_symbol(symbol):
+    """Clone symbol without centroid/font text sub-layers that overflow tiny legend patches."""
+    if symbol is None or not hasattr(symbol, "clone") or not hasattr(symbol, "symbolLayerCount"):
+        return None
+    count = symbol.symbolLayerCount()
+    if count <= 1:
+        return None
+    remove_indices = [
+        idx for idx in range(count)
+        if type(symbol.symbolLayer(idx)).__name__ in ("QgsCentroidFillSymbolLayer", "QgsFontMarkerSymbolLayer")
+    ]
+    if not remove_indices or len(remove_indices) >= count:
+        return None
+    cloned = symbol.clone()
+    for idx in reversed(remove_indices):
+        with suppress(Exception):
+            cloned.deleteSymbolLayer(idx)
+    return cloned
+
+
+def _sync_legend_layers(legend, layers: Optional[List] = None) -> None:
+    """Populate legend's private layer tree from linked map layers and clean patch symbols."""
+    if legend is None:
+        return
+    with suppress(Exception):
+        from qgis.core import QgsMapLayerLegendUtils
+        target_layers = list(layers) if layers else []
+        if not target_layers and legend.linkedMap() is not None:
+            target_layers = list(legend.linkedMap().layers())
+        target_layers = [lyr for lyr in target_layers if lyr is not None]
+        legend.setAutoUpdateModel(False)
+        model = legend.model()
+        root = model.rootGroup() if model is not None else None
+        if root is None:
+            return
+        if target_layers:
+            existing_layers = [n.layer() for n in root.findLayers() if n.layer() is not None]
+            if existing_layers != target_layers:
+                root.clear()
+                for lyr in target_layers:
+                    root.addLayer(lyr)
+        for node in root.findLayers():
+            orig_nodes = list(model.layerOriginalLegendNodes(node))
+            if not node.customProperty(_ORIG_COUNT_PROPERTY) and not node.customProperty("legend/node-order"):
+                node.setCustomProperty(_ORIG_COUNT_PROPERTY, str(len(orig_nodes)))
+            if node.customProperty(_CLEANED_PROPERTY):
+                continue
+            cleaned_any = False
+            for idx, ln in enumerate(orig_nodes):
+                sym = ln.symbol() if hasattr(ln, "symbol") else None
+                cleaned = _clean_legend_patch_symbol(sym)
+                if cleaned is not None:
+                    QgsMapLayerLegendUtils.setLegendNodeCustomSymbol(node, idx, cleaned)
+                    cleaned_any = True
+            node.setCustomProperty(_CLEANED_PROPERTY, "1")
+            if cleaned_any:
+                model.refreshLayerLegend(node)
+
+
+def _node_base_symbol_label(model, node, index: int) -> str:
+    """Return the unwrapped label for ``index`` (including any (+N more) trim suffix)."""
+    import re
+    display_role = Qt.ItemDataRole.DisplayRole
+    orig_nodes = list(model.layerOriginalLegendNodes(node))
+    if index < 0 or index >= len(orig_nodes):
+        return ""
+    base = str(orig_nodes[index].data(display_role) or "").replace("\n", " ").strip()
+    base = re.sub(r"\s*\(\+\d+\s+more\)$", "", base).strip()
+    orig_total = int(node.customProperty(_ORIG_COUNT_PROPERTY) or len(orig_nodes))
+    trimmed_raw = node.customProperty(_TRIMMED_PROPERTY)
+    if trimmed_raw:
+        with suppress(Exception):
+            kept_count = int(trimmed_raw)
+            if 0 < kept_count < orig_total and index == kept_count - 1:
+                omitted = orig_total - kept_count
+                return f"{base} (+{omitted} more)" if base else f"(+{omitted} more)"
+    return base
+
+
+def _apply_trim_to_node(model, node, kept_count: Optional[int]) -> None:
+    """Restrict ``node`` to its first ``kept_count`` symbol items with a (+N more) suffix."""
+    from qgis.core import QgsMapLayerLegendUtils
+    orig_nodes = list(model.layerOriginalLegendNodes(node))
+    if not node.customProperty(_ORIG_COUNT_PROPERTY) and not node.customProperty("legend/node-order"):
+        node.setCustomProperty(_ORIG_COUNT_PROPERTY, str(len(orig_nodes)))
+    total = int(node.customProperty(_ORIG_COUNT_PROPERTY) or len(orig_nodes))
+    if kept_count is None or kept_count >= total or total <= 1:
+        if node.customProperty(_TRIMMED_PROPERTY):
+            prev_kept = int(node.customProperty(_TRIMMED_PROPERTY) or 0)
+            if prev_kept > 0:
+                node.removeCustomProperty(f"legend/label-{prev_kept - 1}")
+            node.removeCustomProperty(_TRIMMED_PROPERTY)
+        node.removeCustomProperty("legend/node-order")
+        model.refreshLayerLegend(node)
+        return
+    kept_count = max(1, int(kept_count))
+    prev_raw = node.customProperty(_TRIMMED_PROPERTY)
+    if prev_raw:
+        with suppress(Exception):
+            prev_kept = int(prev_raw)
+            if prev_kept > 0 and prev_kept != kept_count:
+                node.removeCustomProperty(f"legend/label-{prev_kept - 1}")
+    node.setCustomProperty(_TRIMMED_PROPERTY, str(kept_count))
+    QgsMapLayerLegendUtils.setLegendNodeOrder(node, list(range(kept_count)))
+    last_idx = kept_count - 1
+    QgsMapLayerLegendUtils.setLegendNodeUserLabel(
+        node, last_idx, _node_base_symbol_label(model, node, last_idx)
+    )
+    model.refreshLayerLegend(node)
+
+
+def _unwrap_legend_labels(legend, reset_trim: bool = False) -> None:
     """Remove labels a previous fit wrapped, restoring the natural labels."""
     from qgis.core import QgsMapLayerLegendUtils
     model = legend.model()
     for node in _legend_layer_nodes(legend):
+        if reset_trim and node.customProperty(_TRIMMED_PROPERTY):
+            _apply_trim_to_node(model, node, None)
         wrapped = node.customProperty(_WRAPPED_PROPERTY)
         if not wrapped:
             continue
@@ -180,21 +350,39 @@ def _unwrap_legend_labels(legend) -> None:
             if index < 0:
                 node.removeCustomProperty("legend/title-label")
             else:
-                QgsMapLayerLegendUtils.setLegendNodeUserLabel(node, index, "")
+                trimmed_raw = node.customProperty(_TRIMMED_PROPERTY)
+                is_trimmed_tail = False
+                if trimmed_raw and not reset_trim:
+                    with suppress(Exception):
+                        is_trimmed_tail = (index == int(trimmed_raw) - 1)
+                if is_trimmed_tail:
+                    QgsMapLayerLegendUtils.setLegendNodeUserLabel(
+                        node, index, _node_base_symbol_label(model, node, index)
+                    )
+                else:
+                    node.removeCustomProperty(f"legend/label-{index}")
         node.removeCustomProperty(_WRAPPED_PROPERTY)
         model.refreshLayerLegend(node)
 
 
 def _legend_label_texts(legend) -> list:
-    """(node, index, text) for every layer title (index -1) and symbol label."""
+    """(node, index, text) for every layer title (index -1) and active symbol label."""
     model = legend.model()
-    display_role = Qt.ItemDataRole.DisplayRole
     entries = []
     for node in _legend_layer_nodes(legend):
         title = node.customProperty("legend/title-label") or node.name()
         entries.append((node, -1, str(title)))
-        for index, legend_node in enumerate(model.layerOriginalLegendNodes(node)):
-            text = legend_node.data(display_role)
+        orig_nodes = list(model.layerOriginalLegendNodes(node))
+        total = len(orig_nodes)
+        active_count = total
+        trimmed_raw = node.customProperty(_TRIMMED_PROPERTY)
+        if trimmed_raw:
+            with suppress(Exception):
+                tc = int(trimmed_raw)
+                if 0 < tc < total:
+                    active_count = tc
+        for index in range(active_count):
+            text = _node_base_symbol_label(model, node, index)
             if text:
                 entries.append((node, index, str(text)))
     return entries
@@ -230,21 +418,46 @@ def _apply_legend_size(legend, size: float) -> tuple:
     legend.setBoxSpace(box_space)
     with suppress(Exception):
         legend.setColumnSpace(max(1.0, 2.0 * scale))
+    for style_name in ("Title", "Group", "Subgroup", "Symbol", "SymbolLabel"):
+        style_enum = _legend_style(legend, style_name)
+        if style_enum is None:
+            continue
+        with suppress(Exception):
+            st = legend.rstyle(style_enum)
+            Side = getattr(st, "Side", st)
+            top_side = getattr(Side, "Top", 0)
+            bottom_side = getattr(Side, "Bottom", 1)
+            left_side = getattr(Side, "Left", 2)
+            if style_name in ("Title", "Group", "Subgroup"):
+                st.setMargin(top_side, max(0.8, 2.0 * scale))
+                st.setMargin(bottom_side, max(0.4, 1.0 * scale))
+            elif style_name == "Symbol":
+                st.setMargin(top_side, max(0.4, 1.2 * scale))
+                st.setMargin(left_side, max(0.8, 1.5 * scale))
+            legend.setStyle(style_enum, st)
     return symbol_width, symbol_height, box_space
 
 
 def _fit_legend_to_box(legend, width_mm: float, height_mm: float) -> dict:
-    """Shrink typography/symbols, then wrap labels, until the legend fits its box.
+    """Shrink typography/symbols, wrap labels, and cap excess categories to fit box.
 
     Sizes are measured with QGIS's legend renderer (the same layout code the
     item paints with), so the result holds whatever font Qt falls back to.
     Type is first reduced to a legible 7 pt; if long labels still overflow,
     they are word-wrapped (in the legend's own model) before shrinking further.
+    When a dataset contains dozens of categories whose vertical stack exceeds
+    ``height_mm`` even at compact font sizes, the longest layer's legend nodes
+    are progressively capped with a ``(+N more)`` indicator so the legend never
+    bleeds outside its container.
     """
     result = {"font_pt": 9.0, "natural_width_mm": 0.0,
               "natural_height_mm": 0.0, "fits": False}
     with suppress(Exception):
-        _unwrap_legend_labels(legend)
+        _sync_legend_layers(legend)
+    with suppress(Exception):
+        legend.setColumnCount(1)
+    with suppress(Exception):
+        _unwrap_legend_labels(legend, reset_trim=True)
 
     def measure(size, symbol_width, symbol_height, box_space):
         natural = _legend_natural_size(legend)
@@ -261,6 +474,30 @@ def _fit_legend_to_box(legend, width_mm: float, height_mm: float) -> dict:
                 "natural_height_mm": natural_h,
                 "fits": natural_w <= width_mm and natural_h <= height_mm}
 
+    def wrap_for_size(size: float) -> dict:
+        with suppress(Exception):
+            _unwrap_legend_labels(legend, reset_trim=False)
+        res = measure(size, *_apply_legend_size(legend, size))
+        if res["fits"]:
+            return res
+        texts = []
+        with suppress(Exception):
+            texts = [text for _, _, text in _legend_label_texts(legend)]
+        longest = max((len(text) for text in texts), default=0)
+        if not longest or res["natural_width_mm"] <= width_mm:
+            return res
+        ratio = width_mm / max(1e-6, res["natural_width_mm"])
+        max_chars = max(6, int(longest * ratio * 0.95))
+        while True:
+            with suppress(Exception):
+                _unwrap_legend_labels(legend, reset_trim=False)
+                _wrap_legend_labels(legend, max_chars)
+            res = measure(size, *_apply_legend_size(legend, size))
+            if res["fits"] or res["natural_width_mm"] <= width_mm or max_chars <= 6:
+                break
+            max_chars = max(6, max_chars - max(1, max_chars // 8))
+        return res
+
     sizes = [9.0 - step * 0.5 for step in range(9)]  # 9.0 ... 5.0 pt
     for size in sizes:
         if size < 7.0:
@@ -270,28 +507,50 @@ def _fit_legend_to_box(legend, width_mm: float, height_mm: float) -> dict:
             break
 
     if not result["fits"]:
-        texts = []
-        with suppress(Exception):
-            texts = [text for _, _, text in _legend_label_texts(legend)]
-        longest = max((len(text) for text in texts), default=0)
         for size in [s for s in sizes if s <= 7.0]:
-            with suppress(Exception):
-                _unwrap_legend_labels(legend)
-            result = measure(size, *_apply_legend_size(legend, size))
-            if result["fits"] or not longest:
-                break
-            ratio = width_mm / max(1e-6, result["natural_width_mm"])
-            max_chars = max(8, int(longest * ratio * 0.95))
-            while True:
-                with suppress(Exception):
-                    _unwrap_legend_labels(legend)
-                    _wrap_legend_labels(legend, max_chars)
-                result = measure(size, *_apply_legend_size(legend, size))
-                if result["fits"] or result["natural_height_mm"] > height_mm or max_chars <= 8:
-                    break
-                max_chars = max(8, max_chars - max(1, max_chars // 10))
+            result = wrap_for_size(size)
             if result["fits"]:
                 break
+
+    if not result["fits"]:
+        with suppress(Exception):
+            _unwrap_legend_labels(legend, reset_trim=True)
+            model = legend.model()
+            nodes = _legend_layer_nodes(legend)
+            counts = {
+                id(n): (
+                    n,
+                    int(n.customProperty(_ORIG_COUNT_PROPERTY) or len(list(model.layerOriginalLegendNodes(n)))),
+                )
+                for n in nodes
+            }
+            for trim_size in (6.5, 6.0, 5.5, 5.0):
+                for n, orig_c in counts.values():
+                    _apply_trim_to_node(model, n, orig_c)
+                current = {nid: orig_c for nid, (_, orig_c) in counts.items()}
+                result = wrap_for_size(trim_size)
+                if result["fits"]:
+                    break
+                guard = 0
+                while not result["fits"] and guard < 40:
+                    guard += 1
+                    best_nid = max(
+                        current, key=lambda nid: current[nid], default=None
+                    )
+                    if best_nid is None or current[best_nid] <= 1:
+                        break
+                    cur_c = current[best_nid]
+                    if result["natural_height_mm"] > height_mm * 1.35 and cur_c > 4:
+                        frac = max(0.15, (height_mm / max(1e-6, result["natural_height_mm"])) * 0.85)
+                        new_c = max(1, min(cur_c - 1, int(cur_c * frac)))
+                    else:
+                        new_c = max(1, cur_c - 1)
+                    current[best_nid] = new_c
+                    _apply_trim_to_node(model, counts[best_nid][0], new_c)
+                    result = wrap_for_size(trim_size)
+                if result["fits"]:
+                    break
+
     # Lock the final box: no later refresh may expand it into page margins.
     legend.setResizeToContents(False)
     legend.attemptResize(QgsLayoutSize(width_mm, height_mm, _MM))
@@ -456,6 +715,38 @@ def _map_extent_width_km(map_item: QgsLayoutItemMap, project: QgsProject) -> flo
     return map_width_to_km(float(extent.width()), _crs_unit_to_km(crs))
 
 
+def _dataset_summary_metrics(layers, extent, crs, project: Optional[QgsProject] = None) -> dict:
+    """Compute real-world area (km²/ha) and feature/layer totals for KPI cards."""
+    area_km2 = 0.0
+    with suppress(Exception):
+        if extent is not None and not extent.isEmpty():
+            if _crs_is_geographic(crs):
+                w_km = _geodesic_extent_width_km(extent, crs, project) or _fallback_geographic_width_km(extent)
+                h_km = float(extent.height()) * 110.574
+            else:
+                factor = _crs_unit_to_km(crs)
+                w_km = map_width_to_km(float(extent.width()), factor)
+                h_km = map_width_to_km(float(extent.height()), factor)
+            area_km2 = max(0.0, w_km * h_km)
+    total_features = 0
+    layer_count = 0
+    for lyr in layers or []:
+        if lyr is None:
+            continue
+        layer_count += 1
+        with suppress(Exception):
+            if hasattr(lyr, "featureCount"):
+                fc = int(lyr.featureCount())
+                if fc > 0:
+                    total_features += fc
+    return {
+        "area_km2": area_km2,
+        "area_ha": area_km2 * 100.0,
+        "total_features": total_features,
+        "layer_count": layer_count,
+    }
+
+
 def _configure_scalebar(
     bar: QgsLayoutItemScaleBar,
     map_item: QgsLayoutItemMap,
@@ -590,7 +881,7 @@ def create_map_sheet(
     if extent is not None and not extent.isEmpty():
         zoom_map_to_extent(map_item, extent)
     if layers:
-        map_item.setLayers(list(layers))
+        map_item.setLayers(_order_layers_rasters_bottom(layers))
         map_item.setKeepLayerSet(True)
     if add_frame:
         map_item.setFrameEnabled(True)
@@ -653,7 +944,7 @@ def create_map_sheet(
         if hasattr(legend, "rstyle"):
             with suppress(Exception):
                 _set_legend_typography(legend, 9.0)
-        legend.setAutoUpdateModel(False)
+        _sync_legend_layers(legend, layers)
         legend.attemptMove(QgsLayoutPoint(map_x + map_w + gap, map_y, _MM))
         legend.attemptResize(QgsLayoutSize(legend_w, map_h, _MM))
         layout.addLayoutItem(legend)
@@ -748,9 +1039,10 @@ def _add_drawn_north_arrow(layout, x: float, y: float, size: float = 12.0, color
     arrow.setId("cartolab_north_arrow")
     arrow.setBackgroundEnabled(False)
     arrow.setFrameEnabled(False)
+    outline_col = "#0f172a" if str(color).lower() in ("#ffffff", "#f8fafc", "#e2e8f0", "white") else "#ffffff"
     if QgsFillSymbol:
         sym = QgsFillSymbol.createSimple({
-            "color": color, "outline_color": color, "outline_width": "0.2",
+            "color": color, "outline_color": outline_col, "outline_width": "0.35",
         })
         if sym:
             arrow.setSymbol(sym)
@@ -763,6 +1055,17 @@ def _add_drawn_north_arrow(layout, x: float, y: float, size: float = 12.0, color
     label.setFrameEnabled(False)
     label.setFont(_font(8.5, bold=True))
     label.setFontColor(QColor(color))
+    with suppress(Exception):
+        tf = label.textFormat()
+        tf.setFont(_font(8.5, bold=True))
+        tf.setColor(QColor(color))
+        buf = tf.buffer()
+        buf.setEnabled(True)
+        buf.setSize(0.75)
+        buf.setColor(QColor(outline_col))
+        buf.setOpacity(0.9)
+        tf.setBuffer(buf)
+        label.setTextFormat(tf)
     label.setHAlign(Qt.AlignmentFlag.AlignHCenter)
     label.setVAlign(Qt.AlignmentFlag.AlignVCenter)
     label.attemptResize(QgsLayoutSize(size, 4.5, _MM))

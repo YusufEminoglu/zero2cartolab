@@ -12,6 +12,7 @@ except ImportError:
 
 from ..core.layout_math import page_size_mm
 from .grid_presets import apply_grid_preset
+from .map_sheet import _dataset_summary_metrics
 from .paper_themes import apply_paper_theme
 from .template_gallery import (
     _add_north_arrow,
@@ -166,12 +167,16 @@ def create_planning_board_layout(
     if map_item:
         _create_legend(layout, map_item, sx + 5, content_y + 12, sidebar_w - 10,
                        content_h * 0.48, title="Plan layers")
-    notes = "Review status\n□ Draft   □ Technical review   □ Approved\n\nKey decision\n________________________________\n________________________________\n\nConditions / actions\n• ______________________________\n• ______________________________"
-    _create_label(layout, notes, sx + 5, content_y + content_h * 0.57,
-                  sidebar_w - 10, content_h * 0.38, font_size=7.6, color="#334155")
+    notes = "Review status\n□ Draft   □ Technical review   □ Approved\n\nKey decision\n_________________________\n_________________________\n\nConditions / actions\n• _______________________\n• _______________________"
+    _create_label(layout, notes, sx + 5, content_y + content_h * 0.59,
+                  sidebar_w - 10, content_h * 0.37, font_size=7.4, color="#334155")
     cards_y = content_y + content_h + gap
-    _metric_cards(layout, [("Study area", "— km²"), ("Population", "—"),
-                           ("Development", "— ha"), ("Review stage", "Draft")],
+    summary = _dataset_summary_metrics(resolved_layers, resolved_extent, resolved_crs, proj)
+    area_str = f"{summary['area_km2']:.1f} km²" if summary["area_km2"] > 0 else "— km²"
+    feat_str = f"{summary['total_features']:,}" if summary["total_features"] > 0 else "—"
+    ha_str = f"{summary['area_ha']:,.0f} ha" if summary["area_ha"] > 0 else "— ha"
+    _metric_cards(layout, [("Study area", area_str), ("Mapped features", feat_str),
+                           ("Development footprint", ha_str), ("Review stage", "Technical Review")],
                   margin, cards_y, page_w - 2 * margin, metrics_h)
     return _finish(layout, proj, theme)
 
@@ -245,7 +250,7 @@ def create_atlas_production_layout(
     margin, header_h, footer_h = 12.0, 24.0, 18.0
     _create_card_shape(layout, margin, margin, page_w - 2 * margin, header_h,
                        bg_color="#0f172a", border_color="#0f172a", border_width_mm=0)
-    _create_label(layout, "MAP BOOK · [% @atlas_featurenumber %] / [% @atlas_totalfeatures %]",
+    _create_label(layout, "MAP BOOK · SHEET [% coalesce(@atlas_featurenumber, 1) %] / [% coalesce(@atlas_totalfeatures, 1) %]",
                   margin + 5, margin + 4, page_w - 2 * margin - 10, 4,
                   font_size=7, bold=True, color="#93c5fd", item_id="cartolab_atlas_banner")
     _create_label(layout, title, margin + 5, margin + 8, page_w - 2 * margin - 10, 8,
@@ -260,11 +265,13 @@ def create_atlas_production_layout(
                                  frame_color="#0f172a", frame_width_mm=0.4)
     if map_item:
         _add_north_arrow(layout, page_w - margin - 16, map_y + 5, size=11)
-        _create_card_shape(layout, margin + 4, map_y + 4, 54, min(62, map_h * 0.34),
-                           bg_color="#ffffff", border_color="#e2e8f0", border_width_mm=0.2)
-        _create_legend(layout, map_item, margin + 5, map_y + 5, 50, min(58, map_h * 0.31),
+        _create_card_shape(layout, margin + 4, map_y + 4, 58, min(68, map_h * 0.36),
+                           bg_color="#ffffff", border_color="#cbd5e1", border_width_mm=0.25)
+        _create_legend(layout, map_item, margin + 6, map_y + 6, 54, min(64, map_h * 0.34),
                        title="Legend")
-        _create_scalebar(layout, map_item, margin + 5, map_y + map_h - 15,
+        _create_card_shape(layout, margin + 4, map_y + map_h - 19, 72, 16,
+                           bg_color="#ffffff", border_color="#cbd5e1", border_width_mm=0.2)
+        _create_scalebar(layout, map_item, margin + 7, map_y + map_h - 15,
                          max_width_mm=65)
     footer_y = page_h - margin - footer_h
     _create_card_shape(layout, margin, footer_y, page_w - 2 * margin, footer_h,
@@ -307,23 +314,23 @@ def create_emergency_brief_layout(
                                  crs=resolved_crs, frame_color="#7f1d1d", frame_width_mm=0.45)
     if map_item:
         projected = resolved_crs is not None and resolved_crs.isValid() and not resolved_crs.isGeographic()
-        # Inside labels on the free edges (the scale-bar card sits bottom-left).
+        # Inside labels on left and top; scale-bar card sits bottom-right clear of coordinates.
         apply_grid_preset(layout, "survey_crosshair" if projected else "graticule", map_item,
                           annotations_inside=True, annotation_sides="left_top")
-        _add_north_arrow(layout, margin + map_w - 16, content_y + 5, size=11)
-        _create_card_shape(layout, margin + 4, content_y + content_h - 20, 80, 18,
+        _add_north_arrow(layout, margin + map_w - 16, content_y + 10.5, size=11)
+        _create_card_shape(layout, margin + map_w - 84, content_y + content_h - 20, 80, 18,
                            bg_color="#ffffff", border_color="#fecaca", border_width_mm=0.2)
-        _create_scalebar(layout, map_item, margin + 7, content_y + content_h - 15,
+        _create_scalebar(layout, map_item, margin + map_w - 81, content_y + content_h - 15,
                          max_width_mm=70)
     sx = margin + map_w + gap
     _create_card_shape(layout, sx, content_y, sidebar_w, content_h, bg_color="#fff7ed",
                        border_color="#fdba74", border_width_mm=0.3)
     _create_label(layout, "STATUS & PRIORITIES", sx + 5, content_y + 5, sidebar_w - 10, 5,
                   font_size=7.5, bold=True, color="#9a3412")
-    _create_label(layout, "STATUS  □ WATCH  □ ACTIVE  □ CLOSED\n\nPriority locations\n1. ____________________\n2. ____________________\n3. ____________________\n\nAccess constraints\n• _____________________\n• _____________________\n\nNext update  ____ : ____",
-                  sx + 5, content_y + 13, sidebar_w - 10, content_h * 0.54,
-                  font_size=7.4, color="#431407")
+    _create_label(layout, "STATUS  □ WATCH  □ ACTIVE  □ CLOSED\n\nPriority locations\n1. ________________\n2. ________________\n3. ________________\n\nAccess constraints\n• _________________\n• _________________\n\nNext update  ____ : ____",
+                  sx + 5, content_y + 12, sidebar_w - 10, content_h * 0.45,
+                  font_size=7.2, color="#431407")
     if map_item:
-        _create_legend(layout, map_item, sx + 5, content_y + content_h * 0.60,
-                       sidebar_w - 10, content_h * 0.34, title="Operational layers")
+        _create_legend(layout, map_item, sx + 5, content_y + content_h * 0.58,
+                       sidebar_w - 10, content_h * 0.38, title="Operational layers")
     return _finish(layout, proj, theme)

@@ -149,12 +149,24 @@ def apply_coordinate_grid_decorator(
         else:
             grid.setAnnotationPrecision(0)
 
-        grid.setAnnotationFontColor(QColor("#475569"))
+        grid.setAnnotationFontColor(QColor("#1e293b"))
         if QFont is not None:
             f_grid = QFont("Segoe UI", 8)
             f_grid.setFamily("Segoe UI")
             grid.setAnnotationFont(f_grid)
-        grid.setAnnotationFrameDistance(1.5)
+            if hasattr(grid, "annotationTextFormat") and hasattr(grid, "setAnnotationTextFormat"):
+                with suppress(Exception):
+                    tf_grid = grid.annotationTextFormat()
+                    tf_grid.setFont(f_grid)
+                    tf_grid.setColor(QColor("#1e293b"))
+                    buf = tf_grid.buffer()
+                    buf.setEnabled(True)
+                    buf.setSize(0.85)
+                    buf.setColor(QColor("#ffffff"))
+                    buf.setOpacity(0.92)
+                    tf_grid.setBuffer(buf)
+                    grid.setAnnotationTextFormat(tf_grid)
+        grid.setAnnotationFrameDistance(1.8 if annotations_inside else 1.5)
         if annotations_inside:
             _pos_enum = getattr(QgsLayoutItemMapGrid, "AnnotationPosition", QgsLayoutItemMapGrid)
             _inside = getattr(_pos_enum, "InsideMapFrame", getattr(QgsLayoutItemMapGrid, "InsideMapFrame", 0))

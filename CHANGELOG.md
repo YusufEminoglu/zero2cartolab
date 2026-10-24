@@ -4,6 +4,25 @@ All notable changes to the **02CartoLab** plugin will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.2] - 2026-10-25
+
+### Fixed
+
+- **Print Layout Legend Fitting & Multi-Category Trimming (`layout/map_sheet.py`):**
+  - `_fit_legend_to_box` now persists the unfiltered category count (`cartolab/orig_legend_count`) and progressively trims oversized multi-category layers with an exact `(+N more)` indicator so 40+ category master-plan legends never overflow their sidebar or collide with lower panels.
+  - Restoring full legend node order now removes the `"legend/node-order"` and `"legend/label-*"` custom properties instead of calling `setLegendNodeOrder(node, [])` (which QGIS C++ interprets as `"empty"`).
+- **Clean Legend Patch Symbols (`layout/map_sheet.py`):**
+  - `_clean_legend_patch_symbol` clones legend node symbols without embedded `QgsCentroidFillSymbolLayer` / `QgsFontMarkerSymbolLayer` text sub-layers so text codes (such as zoning abbreviations) do not render inside 4x3 mm legend swatches, while leaving the map canvas renderer untouched.
+- **Unadded Layer Legend Sync & Raster-Bottom Z-Order (`layout/map_sheet.py`, `layout/template_gallery.py`):**
+  - `_sync_legend_layers` populates the legend's private layer tree directly from the linked map's layer list even when layers are not registered in `QgsProject.instance()`.
+  - `_order_layers_rasters_bottom` places raster layers beneath vector layers on layout map frames so opaque DEMs never obscure vector overlays.
+- **Coordinate Grid & North Arrow Halo Buffers (`layout/coordinate_grid.py`, `layout/grid_presets.py`, `layout/paper_themes.py`, `layout/advanced_templates.py`):**
+  - Added white text halo buffers (`QgsTextFormat.buffer()`) on coordinate grid annotations and the North Arrow so labels remain legible over dark rasters and dense vector linework.
+  - Repositioned the `emergency_brief` North Arrow and bottom-right scalebar card clear of inside-frame coordinate labels, and tuned the secondary `utm_field` sub-grid interval.
+- **Dynamic Template KPIs & Expression Fallbacks (`layout/map_sheet.py`, `layout/template_gallery.py`, `layout/advanced_templates.py`):**
+  - `fact_sheet` and `planning_board` now compute real study-area (`km²` and `ha`), feature-count, and density metrics from the active layers and extent via `_dataset_summary_metrics`.
+  - Added `coalesce(...)` fallbacks for `@project_crs` and `@atlas_featurenumber` / `@atlas_totalfeatures` so CRS footers and `atlas_production` sheet headers never render blank when project CRS or atlas coverage is unset.
+
 ## [1.5.1] - 2026-10-20
 
 ### Fixed

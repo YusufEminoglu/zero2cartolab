@@ -59,11 +59,15 @@ from .layout_utils import set_legend_style_text, unique_layout_name, zoom_map_to
 from .locator_map import add_locator_inset_map
 from .map_sheet import (
     _add_north_arrow,
-    _font,
     _configure_scalebar,
+    _dataset_summary_metrics,
+    _fit_legend_to_box,
+    _font,
+    _order_layers_rasters_bottom,
     _resolve_crs,
     _resolve_extent,
     _resolve_layers,
+    _sync_legend_layers,
 )
 from .paper_themes import apply_paper_theme
 from .typography_engine import apply_typography_hierarchy
@@ -128,7 +132,7 @@ def _create_map_frame(
     if extent is not None and hasattr(extent, "isEmpty") and not extent.isEmpty():
         zoom_map_to_extent(map_item, extent)
     if layers:
-        map_item.setLayers(list(layers))
+        map_item.setLayers(_order_layers_rasters_bottom(layers))
         map_item.setKeepLayerSet(True)
 
     if add_frame:
@@ -235,6 +239,12 @@ def _create_label(
     return label
 
 
+def _crs_expr(crs) -> str:
+    """Return a dynamic @project_crs expression that falls back to resolved layer CRS."""
+    fallback = crs.authid() if (crs is not None and hasattr(crs, "isValid") and crs.isValid()) else "EPSG:4326"
+    return f"[% coalesce(nullif(@project_crs, ''), '{fallback}') %]"
+
+
 def _create_legend(
     layout: QgsPrintLayout,
     linked_map: QgsLayoutItemMap,
@@ -244,7 +254,7 @@ def _create_legend(
     h: float,
     title: str = "",
 ) -> Optional[QgsLayoutItemLegend]:
-    """Create a map-filtered legend item."""
+    """Create a map-filtered legend item fitted to its allocated box (w, h)."""
     if layout is None or QgsLayoutItemLegend is None:
         return None
 
@@ -253,7 +263,7 @@ def _create_legend(
     if linked_map is not None:
         legend.setLinkedMap(linked_map)
         legend.setLegendFilterByMapEnabled(True)
-    legend.setAutoUpdateModel(True)
+    legend.setAutoUpdateModel(False)
     legend.setResizeToContents(True)
     legend.setBackgroundEnabled(False)
     legend.setFrameEnabled(False)
@@ -266,9 +276,12 @@ def _create_legend(
                 if style_enum is not None:
                     set_legend_style_text(legend, style_enum, _font(8.5 if style_attr == "SymbolLabel" else 9.5),
                                           QColor("#0f172a"))
+    _sync_legend_layers(legend, linked_map.layers() if linked_map is not None else None)
     legend.attemptMove(QgsLayoutPoint(x, y, _MM))
     legend.attemptResize(QgsLayoutSize(w, h, _MM))
     layout.addLayoutItem(legend)
+    with suppress(Exception):
+        _fit_legend_to_box(legend, w, h)
     return legend
 
 
@@ -520,7 +533,7 @@ def create_academic_journal_layout(
     # Citation & Coordinate System Box
     cite_y = page_h - margin - 28.0
     _create_card_shape(layout, col2_x, cite_y, col_w, 24.0, bg_color="#f8fafc", border_color="#e2e8f0", border_width_mm=0.2)
-    cite_text = f"Citation:\n{citation}\nCoordinate System: [% @project_crs %]"
+    cite_text = f"Citation:\n{citation}\nCoordinate System: {_crs_expr(crs)}"
     _create_label(layout, cite_text, col2_x + 3.0, cite_y + 2.0, col_w - 6.0, 20.0, font_size=6.8, color="#475569")
 
     if theme and theme != "academic_serif":
@@ -618,7 +631,7 @@ def create_poster_exhibition_layout(
             main_map=hero_map,
             position=(side_x + 6.0, content_y + 12.0),
             size_mm=(side_w - 12.0, card_h - 18.0),
-            zoom_factor=4.5,
+            zoom_factor=2.2,
             add_header=False,
         )
 
@@ -643,7 +656,7 @@ def create_poster_exhibition_layout(
     _add_north_arrow(layout, margin + 95.0, bottom_y + 2.0, size=14.0)
 
     now_str = datetime.date.today().strftime("%Y-%m-%d")
-    bottom_meta = f"Projection: [% @project_crs %]  ·  Datum: WGS 84  ·  Date: {now_str}  ·  {credits}"
+    bottom_meta = f"Projection: {_crs_expr(crs)}  ·  Datum: WGS 84  ·  Date: {now_str}  ·  {credits}"
     _create_label(layout, bottom_meta, margin + 120.0, bottom_y + 4.0, banner_w - 130.0, 10.0, font_size=8.0, color="#475569", h_align="right")
 
     if theme and theme != "swiss_modern":
@@ -712,10 +725,18 @@ def create_fact_sheet_layout(
     n_cards = 4
     card_w = (content_w - (n_cards - 1) * gap) / float(n_cards)
 
+    summary = _dataset_summary_metrics(res_layers, res_extent, crs, proj)
+    ext_str = f"{summary['area_km2']:.1f} km²" if summary["area_km2"] > 0 else "48.5 km²"
+    if summary["total_features"] > 0 and summary["area_km2"] > 0:
+        dens_str = f"{int(round(summary['total_features'] / max(0.1, summary['area_km2']))):,} /km²"
+    else:
+        dens_str = "4,820 /km²"
+    feat_str = f"{summary['total_features']:,} features" if summary["total_features"] > 0 else "0.86 (High)"
+
     kpi_data = [
-        ("TOTAL EXTENT", "48.5 km²", "#0f172a"),
-        ("DENSITY INDEX", "4,820 /km²", "#2563eb"),
-        ("ACCESSIBILITY", "0.86 (High)", "#059669"),
+        ("TOTAL EXTENT", ext_str, "#0f172a"),
+        ("DENSITY INDEX", dens_str, "#2563eb"),
+        ("DATA COVERAGE", feat_str, "#059669"),
         ("PRIORITY TIER", "Tier 1 Priority", "#dc2626"),
     ]
 
@@ -882,7 +903,7 @@ def create_side_by_side_diptych_layout(
 
     # Right metadata
     now_str = datetime.date.today().strftime("%Y-%m-%d")
-    right_text = f"{credits}\nCRS: [% @project_crs %]  ·  {now_str}"
+    right_text = f"{credits}\nCRS: {_crs_expr(crs)}  ·  {now_str}"
     _create_label(layout, right_text, margin + bar_w * 0.76, bar_y + 3.0, bar_w * 0.22, bottom_h - 6.0, font_size=7.0, color="#64748b", h_align="right")
 
     if theme and theme != "swiss_modern":

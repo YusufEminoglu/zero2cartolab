@@ -549,15 +549,15 @@ def _neutral(layer, color="#d7dde5"):
 def _band_label(painter, x, y, w, text, sub=""):
     painter.fillRect(QRectF(x, y, w, 36), QColor(ACCENT))
     painter.setPen(QColor("#ffffff"))
-    painter.setFont(QFont("Segoe UI", 10, QFont.Bold))
+    painter.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
     painter.drawText(QRectF(x + 12, y + 3, w - 24, 30),
-                     Qt.AlignLeft | Qt.AlignVCenter, text)
+                     Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, text)
     if sub:
         painter.fillRect(QRectF(x, y + 36, w, 20), QColor(255, 255, 255, 235))
         painter.setPen(QColor(INK_SOFT))
         painter.setFont(QFont("Segoe UI", 8))
         painter.drawText(QRectF(x + 12, y + 37, w - 24, 18),
-                         Qt.AlignLeft | Qt.AlignVCenter, sub)
+                         Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, sub)
 
 
 def _draw_map_panel(painter, x, y, w, h, layers, extent, label, sub):
@@ -565,7 +565,7 @@ def _draw_map_panel(painter, x, y, w, h, layers, extent, label, sub):
         painter.fillRect(QRectF(x, y, w, h), QColor(CANVAS))
         painter.setPen(QColor("#94a3b8"))
         painter.setFont(QFont("Segoe UI", 12))
-        painter.drawText(QRectF(x, y, w, h), Qt.AlignCenter, "no layer")
+        painter.drawText(QRectF(x, y, w, h), Qt.AlignmentFlag.AlignCenter, "no layer")
     else:
         img = _render(layers, extent, QSize(int(w), int(h)))
         if not img.isNull():
@@ -574,7 +574,7 @@ def _draw_map_panel(painter, x, y, w, h, layers, extent, label, sub):
             painter.fillRect(QRectF(x, y, w, h), QColor(CANVAS))
             painter.setPen(QColor("#94a3b8"))
             painter.setFont(QFont("Segoe UI", 12))
-            painter.drawText(QRectF(x, y, w, h), Qt.AlignCenter, "render unavailable")
+            painter.drawText(QRectF(x, y, w, h), Qt.AlignmentFlag.AlignCenter, "render unavailable")
     _band_label(painter, x, y, w, label, sub)
 
 
@@ -590,7 +590,7 @@ def _draw_params_panel(painter, x, y, w, h, title, sub, param_text, notes=""):
     painter.setPen(QPen(QColor(ACCENT_LIGHT), 1.4))
     painter.drawRect(QRectF(x + margin, body_top, w - 2 * margin, params_h))
     painter.setPen(QColor(INK))
-    painter.setFont(QFont("Segoe UI", 9, QFont.Bold))
+    painter.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
     painter.drawText(int(x + margin + 10), int(body_top + 18), title)
     painter.setFont(QFont("Consolas", 8))
     painter.setPen(QColor(INK_SOFT))
@@ -604,7 +604,7 @@ def _draw_params_panel(painter, x, y, w, h, title, sub, param_text, notes=""):
         painter.setPen(QPen(QColor("#f59e0b"), 1.4))
         painter.drawRect(QRectF(x + margin, ny, w - 2 * margin, notes_h))
         painter.setPen(QColor("#92400e"))
-        painter.setFont(QFont("Segoe UI", 9, QFont.Bold))
+        painter.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
         painter.drawText(int(x + margin + 10), int(ny + 18), "READ THE OUTPUT")
         painter.setFont(QFont("Segoe UI", 8))
         painter.setPen(QColor("#334155"))
@@ -639,7 +639,7 @@ def compose_4panel(module_id, display, panel_inputs, panel_params, panel_result,
 
     p.fillRect(QRectF(0, 0, PANEL_W * 2, HEADER_H), QColor(HEADER_BG))
     p.setPen(QColor(ACCENT_LIGHT))
-    p.setFont(QFont("Segoe UI", 15, QFont.Bold))
+    p.setFont(QFont("Segoe UI", 15, QFont.Weight.Bold))
     p.drawText(18, 30, f"02CartoLab — {display}")
     p.setPen(QColor("#94a3b8"))
     p.setFont(QFont("Segoe UI", 9))
@@ -665,7 +665,7 @@ def compose_single(module_id, display, layers, extent, out_path, caption="", foo
         p.fillRect(QRectF(0, 0, W, H), QColor(CANVAS))
     p.fillRect(QRectF(0, H, W, 78), QColor(HEADER_BG))
     p.setPen(QColor(ACCENT_LIGHT))
-    p.setFont(QFont("Segoe UI", 15, QFont.Bold))
+    p.setFont(QFont("Segoe UI", 15, QFont.Weight.Bold))
     p.drawText(18, 30, f"02CartoLab — {display}")
     p.setPen(QColor("#cbd5e1"))
     p.setFont(QFont("Segoe UI", 9))
