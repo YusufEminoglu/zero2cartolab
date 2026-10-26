@@ -31,4 +31,4 @@ changelog=
 
 experimental=False
 deprecated=False
-license=GPL-3
+license=GPL-3.0-or-later

@@ -7,7 +7,7 @@
 **Publication-grade cartography — without leaving QGIS.**
 
 [![Release](https://img.shields.io/github/v/release/YusufEminoglu/zero2cartolab?color=3b4994&label=release)](https://gitlab.com/geophilo1/zero2cartolab/-/releases)
-[![License: GPL v3](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
+[![License: GPL v3 or later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)](LICENSE)
 [![Documentation](https://img.shields.io/badge/📖_Reference_Manual-13a0a0)](https://geophilo.com/zero2cartolab/)
 [![QGIS](https://img.shields.io/badge/QGIS-3.28%20LTR%20%E2%86%92%204.x-589632?logo=qgis&logoColor=white)](https://qgis.org)
 [![Showcase](https://img.shields.io/badge/showcase-GitHub%20Pages-be64ac)](docs/index.html)
@@ -122,7 +122,7 @@ More: [Documentation index](docs/README.md) · [Feature showcase](docs/SHOWCASE.
 | QGIS | **3.28 LTR → 4.x** |
 | Python | 3.9+ |
 | External dependencies | None — pure QGIS for all core operation |
-| License | [GPL-3.0](LICENSE) |
+| License | [GPL-3.0-or-later](LICENSE) |
 
 ```text
 zero2cartolab/
