@@ -502,7 +502,7 @@ def _render(layers, extent, size, background="#ffffff"):
     QGIS draws the *first* entry of QgsMapSettings.setLayers() on top, so the
     list is reversed here to keep every call site in natural map order.
     """
-    valid = [l for l in layers if l is not None and l.isValid()]
+    valid = [lay for lay in layers if lay is not None and lay.isValid()]
     if not valid or extent is None or extent.isEmpty():
         return QImage()
     settings = QgsMapSettings()
