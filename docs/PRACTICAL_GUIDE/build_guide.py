@@ -22,10 +22,14 @@ from __future__ import annotations
 
 import html
 import json
+import os
 import re
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+# The public manual lives in the portal repository (geophilo_project), not
+# in this plugin repository or its Hub zip. GEOPHILO_MANUALS overrides it.
+MANUALS = Path(os.environ.get("GEOPHILO_MANUALS") or HERE.parents[1].parents[1] / "geophilo_project" / "_manual_sources") / "zero2cartolab" / "PRACTICAL_GUIDE"
 MANIFEST = HERE / "manifest"
 
 GROUP_ORDER = [
@@ -783,22 +787,23 @@ def main() -> int:
         print("guide_content.json missing or empty", flush=True)
         return 2
 
-    inter = HERE / "practical_guide.html"
+    MANUALS.mkdir(parents=True, exist_ok=True)
+    inter = MANUALS / "practical_guide.html"
     html = build_interactive(g)
     inter.write_text(html, encoding="utf-8")
     print(f"wrote {inter.name} ({inter.stat().st_size // 1024} KB)", flush=True)
 
     # The directory URL (/<plugin>/PRACTICAL_GUIDE/) must open the guide
     # instead of a 404, so the folder carries the guide as its index.
-    index = HERE / "index.html"
+    index = MANUALS / "index.html"
     index.write_text(html, encoding="utf-8")
     print(f"wrote {index.name} ({index.stat().st_size // 1024} KB)", flush=True)
 
-    tr = HERE / "practical_guide_static.html"
+    tr = MANUALS / "practical_guide_static.html"
     tr.write_text(build_static(g, "tr"), encoding="utf-8")
     print(f"wrote {tr.name} ({tr.stat().st_size // 1024} KB)", flush=True)
 
-    en = HERE / "practical_guide_static_en.html"
+    en = MANUALS / "practical_guide_static_en.html"
     en.write_text(build_static(g, "en"), encoding="utf-8")
     print(f"wrote {en.name} ({en.stat().st_size // 1024} KB)", flush=True)
 
