@@ -4,10 +4,12 @@ version=1.5.2
 hasProcessingProvider=yes
 
 category=Vector
-tags=cartography, thematic map, choropleth, flow map, origin-destination, od matrix, dorling, monochrome, hatching, black and white, layout, print layout, atlas, map book, bivariate, 2.5d, buildings, cartogram, dot-density, hexbin, value-by-alpha, ridge-maps, legend, north arrow, scale bar, graticule, palettes, accessibility, cvd, colorbrewer, export, zero2
+tags=cartography,thematic map,choropleth,flow map,origin-destination,od matrix,dorling,monochrome,hatching,black and white,layout,print layout,atlas,map book,bivariate,2.5d,buildings,cartogram,dot-density,hexbin,value-by-alpha,ridge-maps,legend,north arrow,scale bar,graticule,palettes,accessibility,cvd,colorbrewer,export,geophilo
 
-description=Unified cartographic studio and print layout automation for QGIS: publication-grade thematic styling, bivariate maps, 2.5D extrusion, and one-click layout generation with template gallery, custom graticules, and map book atlas automation.
-about=02CartoLab is a unified thematic mapping and print layout automation studio for QGIS. It bridges map symbology and publication print layouts in one cohesive workflow: builds publication-ready choropleths (including bivariate and Value-by-Alpha), continuous-area cartograms, ridge-line relief maps, dot-density and Flannery proportional-symbol maps, hexbin aggregation, and native 2.5D building styling - then assembles complete print layouts (with template gallery, legend, scale bar, north arrow, coordinate graticules, and credits) in one click. Includes an embedded Layout Designer studio dock, automated multi-page map book atlas engine, CVD accessibility inspector, and a comprehensive Processing provider. No external dependencies - pure QGIS. Online Documentation: https://geophilo.com/zero2cartolab/ | Repository: https://gitlab.com/geophilo1/zero2cartolab (mirror: https://github.com/YusufEminoglu/zero2cartolab)
+description=Thematic maps and print layouts in one workflow: choropleth, bivariate, flow, Dorling, dot-density and 2.5D maps, then a finished layout with legend, scale, graticule and map-book atlas in one click.
+about=02CartoLab takes a layer from raw attributes to a printed map without leaving QGIS. Style it as a choropleth, bivariate or value-by-alpha map, a continuous-area or Dorling cartogram, a flow map from an origin-destination table, dot density, proportional symbols, hexbins, ridge-line relief, black-and-white hatching or 2.5D buildings.
+    One click then builds the print layout from a template gallery with legend, scale bar, north arrow, coordinate graticule and credits. The Layout Designer dock refines it, the atlas engine turns it into a multi-page map book, and a colour-vision inspector checks the palette for readers with colour-vision deficiency. 16 Processing tools repeat the same styling in models and batches.
+    Manual: https://geophilo.com/zero2cartolab/manual.html
 
 homepage=https://geophilo.com/zero2cartolab/
 repository=https://gitlab.com/geophilo1/zero2cartolab
