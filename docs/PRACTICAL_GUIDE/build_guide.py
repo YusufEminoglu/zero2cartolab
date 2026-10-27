@@ -662,7 +662,7 @@ def build_static(g: Guide, lang: str) -> str:
 <p><strong>Version:</strong> {esc(meta.get('version',''))} |
 <strong>Companion:</strong> <a href="../CARTOLAB_REFERENCE_MANUAL.html">
 {"Referans Kılavuzu" if is_tr else "Reference Manual"}</a> |
-<strong>Author:</strong> Yusuf Eminoğlu</p>
+<strong>Author:</strong> Geophilo</p>
 <div class="note">{esc(subtitle)}</div>
 <div class="warn">{esc(labels['print'])}</div>
 """]

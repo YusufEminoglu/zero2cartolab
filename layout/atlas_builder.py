@@ -6,7 +6,7 @@ Configures QGIS Print Layout Atlas engine for automatic serial map sheet product
 coverage layer binding, dynamic title expressions, page counters, auto-centering map frames,
 custom header banners, configurable page margins, and overview locator inset maps.
 
-Author: Yusuf Eminoğlu
+Author: Geophilo
 """
 from __future__ import annotations
 

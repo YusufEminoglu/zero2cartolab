@@ -836,7 +836,7 @@ def create_map_sheet(
             crs=crs,
             title=title or "CartoLab Map Sheet",
             subtitle=subtitle,
-            credits=credits or "Cartography: Yusuf Eminoğlu · PlanX CartoLab",
+            credits=credits or "Cartography: Geophilo · PlanX CartoLab",
             layout_name=layout_name,
             project=project,
         )

@@ -1,5 +1,5 @@
 [general]
-name=02CartoLab
+name=02CartoLab - Thematic Map and Layout Studio
 version=1.5.2
 hasProcessingProvider=yes
 
@@ -13,7 +13,7 @@ homepage=https://geophilo.com/zero2cartolab/
 repository=https://gitlab.com/geophilo1/zero2cartolab
 tracker=https://gitlab.com/geophilo1/zero2cartolab/-/issues
 
-author=Yusuf Eminoglu
+author=Geophilo
 email=yusuf.eminoglu@deu.edu.tr
 
 icon=icons/icon.png

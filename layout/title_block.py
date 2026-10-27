@@ -34,7 +34,7 @@ def add_publication_title_block(
     layout: QgsLayout,
     title: str = "URBAN ANALYTICS STUDIO",
     subtitle: str = "Spatial Dynamics & Cartographic Synthesis",
-    author: str = "Yusuf Eminoğlu",
+    author: str = "Geophilo",
     position: tuple = (15.0, 15.0),
     width_mm: float = 120.0,
 ) -> Optional[QgsLayoutItemGroup]:

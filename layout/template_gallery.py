@@ -14,7 +14,7 @@ Provides distinct, publication-grade print layout templates:
   - "atlas_production": standardized map-book production page.
   - "emergency_brief": high-clarity operational situation map.
 
-Author: Yusuf Eminoğlu
+Author: Geophilo
 """
 from __future__ import annotations
 
@@ -343,7 +343,7 @@ def create_report_figure_layout(
     crs=None,
     title: str = "Figure 1.0 — Spatial Distribution Analysis",
     subtitle: str = "Widescreen executive summary and geographic pattern synthesis",
-    credits: str = "Cartography: Yusuf Eminoğlu · PlanX CartoLab",
+    credits: str = "Cartography: Geophilo · PlanX CartoLab",
     page_size: str = "16:9",
     landscape: bool = True,
     theme: str = "swiss_modern",
@@ -456,7 +456,7 @@ def create_academic_journal_layout(
     crs=None,
     title: str = "Fig. 1. Spatial morphology and accessibility patterns in the study area.",
     subtitle: str = "Analysis of urban form, network centrality, and spatial variance.",
-    credits: str = "Sources: Municipal Open Data & OpenStreetMap contributors. Cartography: Yusuf Eminoğlu.",
+    credits: str = "Sources: Municipal Open Data & OpenStreetMap contributors. Cartography: Geophilo.",
     citation: str = "Eminoğlu, Y. (2026). Spatial Morphology Synthesis. PlanX CartoLab Academic Series, 4(2), 112–128.",
     page_size: str = "A4",
     landscape: bool = False,
@@ -558,7 +558,7 @@ def create_poster_exhibition_layout(
     crs=None,
     title: str = "METROPOLITAN SPATIAL RESILIENCE & MORPHOLOGY",
     subtitle: str = "Comprehensive Cartographic & Urban Analytics Exhibition Masterplan",
-    credits: str = "PlanX CartoLab Studio · Yusuf Eminoğlu",
+    credits: str = "PlanX CartoLab Studio · Geophilo",
     page_size: str = "A1",
     landscape: bool = True,
     theme: str = "swiss_modern",
@@ -681,7 +681,7 @@ def create_fact_sheet_layout(
     crs=None,
     title: str = "Urban Resilience & Spatial Analytics",
     subtitle: str = "Executive Briefing & Strategic Spatial Indicator Summary",
-    credits: str = "PlanX CartoLab · Yusuf Eminoğlu",
+    credits: str = "PlanX CartoLab · Geophilo",
     page_size: str = "A4",
     landscape: bool = False,
     theme: str = "swiss_modern",
@@ -817,7 +817,7 @@ def create_side_by_side_diptych_layout(
     subtitle: str = "Side-by-side spatial comparison: Baseline (Left) vs. Proposed Intervention (Right)",
     label_a: str = "SCENARIO A — BASELINE",
     label_b: str = "SCENARIO B — PROPOSED PLAN",
-    credits: str = "PlanX CartoLab · Yusuf Eminoğlu",
+    credits: str = "PlanX CartoLab · Geophilo",
     page_size: str = "A4",
     landscape: bool = True,
     theme: str = "swiss_modern",

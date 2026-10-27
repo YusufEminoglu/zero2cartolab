@@ -174,8 +174,7 @@ This plugin is part of an open-source QGIS plugin ecosystem for urban planning b
 
 ## 👤 Author
 
-**Yusuf Eminoğlu** — urban planner & developer
-Department of City and Regional Planning, Dokuz Eylül University
+**Geophilo**
 [GitHub](https://github.com/YusufEminoglu) · yusuf.eminoglu@deu.edu.tr
 
 <div align="center">
