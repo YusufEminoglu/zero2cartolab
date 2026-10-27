@@ -1,6 +1,6 @@
 [general]
 name=02CartoLab - Thematic Map and Layout Studio
-version=1.5.2
+version=1.5.3
 hasProcessingProvider=yes
 
 category=Vector
