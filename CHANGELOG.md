@@ -1,5 +1,26 @@
 # Changelog - 02CartoLab
 
+## [1.6.0] - 2026-11-02
+
+### Added
+
+- **Print Layout Validation & 1-Click Auto-Fix (`layout/preflight.py`):**
+  - Added `validate_label_expressions` to detect unbalanced QGIS expression delimiters, empty expression blocks, and `QgsExpression` parser errors in layout labels.
+  - Extended `preflight_layout` with checks for broken expressions (`broken_expression`), low WCAG label contrast (`low_label_contrast`), legend box overflow (`legend_overflow`), cartographic furniture overlap (`furniture_overlap`), and Atlas readiness (`atlas_no_coverage`, `atlas_empty_coverage`, `atlas_invalid_filter`, `atlas_no_driven_map`).
+  - Added `autofix_layout` for 1-click automatic repair of duplicate item IDs, zero-size items, off-page items, unlinked or oversized scale bars, unlinked or overflowing legends, invalid or overly dense/sparse coordinate grid intervals, empty labels, low-contrast label text, and unlinked Atlas map frames.
+- **HTML Display Cards & Tables (`core/html_graph_factory.py`, `layout/html_cards.py`):**
+  - Added 4 publication card themes (`swiss_light`, `dark_slate`, `academic_warm`, `blueprint`) and pure-Python HTML generators (`build_kpi_summary_html`, `build_attribute_table_html`, `build_atlas_profile_html`, `build_metadata_badge_html`) preserving live QGIS expressions.
+  - Added `add_html_kpi_card`, `add_html_attribute_table`, `add_html_atlas_profile_card`, and `add_html_metadata_card` to place rich HTML cards on Print Layouts with smart non-overlapping positioning and paper-theme protection.
+- **Smart Cartographic Labeling & Callout Badges (`layout/smart_labels.py`):**
+  - Added `detect_best_label_field`, `SMART_LABEL_PRESETS` (`swiss_halo`, `dark_glow`, `academic_serif`, `technical_badge`, `callout_leader`), and `apply_smart_layer_labels` with interior polygon anchoring (`centroidInside`) and `QgsSimpleLineCallout` leader lines.
+  - Added `add_layout_callout_badge` to place numbered HTML callout cards with leader lines and focal target markers directly on Print Layouts.
+- **Atlas Rules, Active Feature Highlight & Batch Export (`layout/atlas_builder.py`):**
+  - Added `validate_atlas_rules` for preflight filter validation, feature counting, and page name previews.
+  - Added `apply_atlas_highlight_rule` for non-destructive data-defined stroke highlighting of the active Atlas feature (`$id = @atlas_featureid`) across QGIS 3 and QGIS 4.
+  - Upgraded `setup_layout_atlas` with scaling modes (`auto`, `predefined`, `fixed`), active feature highlighting, and dynamic HTML feature dossiers, plus `export_atlas_series` with per-page render cache clearing.
+- **Print Layout Designer Dock & Dashboard Studio GUI (`layout/designer_integration.py`, `ui/cartolab_dashboard.py`):**
+  - Exposed all 10 publication templates in the Layout Designer dock and quick launchers, added live Preflight Readiness & Auto-Fix controls, HTML Display & KPI Card builders, Smart Label & Callout Badge tools, and full Atlas rule configuration in both the Print Layout Designer dock and the main dashboard Map Sheet Studio.
+
 ## [1.5.3] - 2026-10-27
 
 - Hub listing text rewritten; author Geophilo; university affiliation removed; documentation links use the standard geophilo.com pages (manual.html, guide/); manual HTML no longer ships in the plugin package.

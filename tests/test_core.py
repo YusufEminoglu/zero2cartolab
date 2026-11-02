@@ -1498,6 +1498,76 @@ finally:
     ce.QgsGeometry = _orig_geom2
 
 # ===================================================================
+# 27. HTML DISPLAY CARDS, ATLAS RULES, PREFLIGHT AUTO-FIX & SMART LABELS
+# ===================================================================
+section("HTML Display Cards, Atlas Rules, Preflight Auto-Fix & Smart Labels")
+from zero2cartolab.core import html_graph_factory as hgf
+from zero2cartolab.layout import html_cards as hc
+from zero2cartolab.layout import smart_labels as slbl
+from zero2cartolab.layout import preflight as pf
+
+_kpi_html = hgf.build_kpi_summary_html(
+    "URBAN INDICATORS",
+    [
+        {"label": "Population", "value": "125,400", "unit": "inh", "pct": 78.0},
+        {"label": "Active Sheet", "value": "[% @atlas_pagename %]"},
+    ],
+    subtitle="District Overview",
+    theme="swiss_modern",
+)
+check("KPI HTML contains title and preserved expression",
+      "URBAN INDICATORS" in _kpi_html and "[% @atlas_pagename %]" in _kpi_html)
+check("KPI HTML renders progress bar table", "width='78%'" in _kpi_html)
+
+_tbl_html = hgf.build_attribute_table_html(
+    "TOP DISTRICTS",
+    ["#", "District", "Score"],
+    [["1", "Konak", "94.2"], ["2", "Bornova", "88.5"]],
+    theme="dark_matter",
+)
+check("Attribute table HTML contains headers and rows",
+      "Konak" in _tbl_html and "Bornova" in _tbl_html and "<table" in _tbl_html)
+
+_atlas_html = hgf.build_atlas_profile_html(
+    title_expr="[% @atlas_pagename %]",
+    fields=[("District", "name"), ("Area", "[% round($area, 1) %]")],
+    theme="blueprint",
+)
+check("Atlas profile HTML wraps plain field in QGIS expression",
+      '[% "name" %]' in _atlas_html and "[% round($area, 1) %]" in _atlas_html)
+
+_meta_html = hgf.build_metadata_badge_html(author="Yusuf Eminoğlu", crs_authid="EPSG:5637")
+check("Metadata badge HTML includes author and CRS",
+      "Yusuf Eminoğlu" in _meta_html and "EPSG:5637" in _meta_html)
+
+check("validate_label_expressions catches unbalanced delimiters",
+      len(pf.validate_label_expressions("Sheet [% @atlas_pagename")) > 0)
+check("validate_label_expressions catches empty expression block",
+      len(pf.validate_label_expressions("Value: [%   %]")) > 0)
+check("validate_label_expressions accepts valid block",
+      pf.validate_label_expressions("Sheet [% @atlas_pagename %]") == [])
+check("autofix_layout is callable", callable(pf.autofix_layout))
+
+check("ATLAS_SCALING_MODES has auto, predefined, fixed",
+      set(ab.ATLAS_SCALING_MODES.keys()) == {"auto", "predefined", "fixed"})
+check("validate_atlas_rules rejects None layer",
+      ab.validate_atlas_rules(None)["valid"] is False)
+check("apply_atlas_highlight_rule is callable", callable(ab.apply_atlas_highlight_rule))
+check("export_atlas_series is callable", callable(ab.export_atlas_series))
+
+check("html_cards builders are callable",
+      all(callable(fn) for fn in (
+          hc.add_html_kpi_card,
+          hc.add_html_attribute_table,
+          hc.add_html_atlas_profile_card,
+          hc.add_html_metadata_card,
+      )))
+check("SMART_LABEL_PRESETS has 5 presets including callout_leader",
+      len(slbl.SMART_LABEL_PRESETS) == 5 and "callout_leader" in slbl.SMART_LABEL_PRESETS)
+check("smart_labels functions are callable",
+      callable(slbl.apply_smart_layer_labels) and callable(slbl.add_layout_callout_badge))
+
+# ===================================================================
 # SUMMARY
 # ===================================================================
 section("RESULTS")

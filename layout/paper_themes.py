@@ -114,6 +114,17 @@ def apply_paper_theme(layout: QgsLayout, theme_key: str = "blueprint") -> bool:
             continue
         with suppress(Exception):
             if isinstance(item, QgsLayoutItemLabel) and text_qcolor:
+                is_html_card = bool(
+                    hasattr(item, "customProperty")
+                    and item.customProperty("cartolab/is_html_card")
+                )
+                if is_html_card:
+                    if bg_qcolor:
+                        item.setBackgroundEnabled(True)
+                        item.setBackgroundColor(bg_qcolor)
+                    if frame_qcolor and hasattr(item, "setFrameStrokeColor"):
+                        item.setFrameStrokeColor(frame_qcolor)
+                    continue
                 item.setFontColor(text_qcolor)
                 f_lbl = item.font()
                 f_lbl.setFamily("Segoe UI")

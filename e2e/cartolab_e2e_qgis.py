@@ -1543,6 +1543,103 @@ for _arch in ("editorial_bottom", "sidebar_right", "sidebar_left"):
     ok(f"auto-balance {_arch} leaves no overlaps", not _overlaps and not _bal_errors,
        str(_overlaps) + str(_bal_errors))
 
+# 14. HTML Display Cards, Smart Labels, Atlas Rules & Preflight Auto-Fix
+from zero2cartolab.layout.html_cards import (
+    add_html_atlas_profile_card,
+    add_html_attribute_table,
+    add_html_kpi_card,
+    add_html_metadata_card,
+)
+from zero2cartolab.layout.smart_labels import (
+    add_layout_callout_badge,
+    apply_smart_layer_labels,
+)
+from zero2cartolab.layout.atlas_builder import (
+    export_atlas_series,
+    setup_layout_atlas,
+    validate_atlas_rules,
+)
+from zero2cartolab.layout.preflight import autofix_layout
+
+_html_sheet = create_map_sheet(iface=None, layers=[polys], title="HTML Studio", subtitle="KPI & Table Test")
+_kpi_item = add_html_kpi_card(_html_sheet, layer=polys, value_field="pop", position=(15.0, 25.0))
+_tbl_item = add_html_attribute_table(_html_sheet, layer=polys, category_field="name", value_field="pop", position=(15.0, 75.0))
+_meta_item = add_html_metadata_card(_html_sheet, position=(15.0, 130.0))
+ok("HTML KPI, Table, and Metadata cards added to layout",
+   _kpi_item is not None and _tbl_item is not None and _meta_item is not None
+   and bool(_kpi_item.customProperty("cartolab/is_html_card")))
+ok("HTML cards pass preflight with zero errors",
+   not [i for i in preflight_layout(_html_sheet) if i["severity"] == "error"])
+
+ok("apply_smart_layer_labels configures PAL labeling with callout leaders",
+   apply_smart_layer_labels(polys, field_name="name", preset="callout_leader", use_callouts=True)
+   and polys.labelsEnabled() and polys.labeling() is not None)
+
+_callout_item = add_layout_callout_badge(_html_sheet, text="Core Urban District", subtitle="Priority Zone", position=(110.0, 28.0))
+ok("add_layout_callout_badge creates card, leader line, and dot",
+   _callout_item is not None
+   and _html_sheet.itemById("cartolab_callout_badge_line") is not None
+   and _html_sheet.itemById("cartolab_callout_badge_dot") is not None)
+
+_atlas_val = validate_atlas_rules(polys, filter_expression='"pop" > 0', name_field="name", sort_field="pop")
+ok("validate_atlas_rules validates expression and counts features",
+   _atlas_val["valid"] is True and 0 < _atlas_val["matching_count"] <= polys.featureCount(),
+   str(_atlas_val))
+
+_atlas_sheet = create_map_sheet(iface=None, layers=[polys], title="Atlas Rules Sheet")
+ok("setup_layout_atlas supports scaling_mode, highlight_active_feature, and add_html_profile",
+   setup_layout_atlas(
+       _atlas_sheet,
+       polys,
+       name_field="name",
+       sort_field="pop",
+       scaling_mode="predefined",
+       highlight_active_feature=True,
+       add_html_profile=True,
+   )
+   and _atlas_sheet.itemById("cartolab_atlas_html_profile") is not None
+   and bool(polys.customProperty("cartolab/atlas_highlight_enabled")))
+
+_atlas_out_dir = tempfile.mkdtemp(prefix="cartolab_atlas_e2e_")
+_atlas_exp = export_atlas_series(_atlas_sheet, _atlas_out_dir, dpi=96, max_pages=2)
+ok("export_atlas_series exports multi-page PNGs with cache cleanup",
+   _atlas_exp["exported_count"] == 2 and all(os.path.exists(p) for p in _atlas_exp["files"]),
+   str(_atlas_exp))
+for _f in _atlas_exp.get("files", []):
+    with suppress(OSError):
+        os.remove(_f)
+with suppress(OSError):
+    os.rmdir(_atlas_out_dir)
+
+# Preflight new detections & autofix_layout verification
+_fix_sheet = create_map_sheet(iface=None, layers=[polys], title="Autofix Sheet")
+_bad_lbl = QgsLayoutItemLabel(_fix_sheet)
+_bad_lbl.setId("cartolab_title")  # intentional duplicate ID
+_bad_lbl.setText("Bad [% invalid_syntax( %] label")
+_bad_lbl.setBackgroundEnabled(True)
+_bad_lbl.setBackgroundColor(QColor("#ffffff"))
+_bad_lbl.setFontColor(QColor("#f1f5f9"))  # low contrast
+_bad_lbl.attemptMove(QgsLayoutPoint(-35.0, -20.0, _QgsUnitTypes.LayoutUnit.LayoutMillimeters))
+_bad_lbl.attemptResize(QgsLayoutSize(50.0, 12.0, _QgsUnitTypes.LayoutUnit.LayoutMillimeters))
+_fix_sheet.addLayoutItem(_bad_lbl)
+
+_pre_issues = preflight_layout(_fix_sheet)
+_pre_codes = {i["code"] for i in _pre_issues}
+ok("preflight detects duplicate_id, outside_page, broken_expression, and low_label_contrast",
+   {"duplicate_id", "outside_page", "broken_expression", "low_label_contrast"}.issubset(_pre_codes),
+   str(_pre_codes))
+
+_bad_lbl.setText("Fixed Expression Label")
+_fix_res = autofix_layout(_fix_sheet)
+_post_codes = {i["code"] for i in _fix_res["issues"]}
+ok("autofix_layout repairs duplicate_id, outside_page, and low_label_contrast",
+   _fix_res["fixed_count"] >= 3
+   and "duplicate_id" not in _post_codes
+   and "outside_page" not in _post_codes
+   and "low_label_contrast" not in _post_codes,
+   str(_fix_res))
+
+
 # ===========================================================================
 # REAL DATASET E2E (geostats_Sample_Dataset.gpkg)
 # ===========================================================================

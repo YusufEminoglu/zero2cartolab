@@ -344,6 +344,11 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
     tpl_combo.addItem("Exhibition Poster (A1/A2 Large-Format)", "poster_exhibition")
     tpl_combo.addItem("Executive Fact Sheet (A4 Portrait)", "fact_sheet")
     tpl_combo.addItem("Side-by-Side Diptych (A4/A3 Comparative)", "side_by_side_diptych")
+    tpl_combo.addItem("UTM / MGRS Field Sheet (A3 Tactical)", "utm_field_sheet")
+    tpl_combo.addItem("Urban Planning Board (A2 Multi-View)", "planning_board")
+    tpl_combo.addItem("Editorial Data Story (A3 Narrative)", "data_story")
+    tpl_combo.addItem("Atlas Series Production Sheet (A3)", "atlas_production")
+    tpl_combo.addItem("Emergency Operations Brief (A4 Landscape)", "emergency_brief")
     fl_arch.addRow("Archetype:", tpl_combo)
 
     tpl_desc_lbl = QLabel("Widescreen 16:9 layout with prominent figure title, hero map frame, and compact right HUD card.")
@@ -361,14 +366,12 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
 
     def _on_tpl_combo_changed():
         tid = tpl_combo.currentData()
-        descs = {
-            "report_figure": "Widescreen 16:9 layout with prominent figure title, hero map frame, and compact right HUD card.",
-            "academic_journal": "Formal 2-column scientific layout with double-column map, caption box, formal citation, and methodology block.",
-            "poster_exhibition": "Large-format presentation poster with bold banner, hero map frame, regional locator map, and thematic legend cards.",
-            "fact_sheet": "Executive summary with top KPI metric cards, central thematic map, and bottom analytical narrative block.",
-            "side_by_side_diptych": "Comparative dual-map layout with paired synchronized map frames for before/after or scenario comparison.",
-        }
-        tpl_desc_lbl.setText(descs.get(tid, ""))
+        from .template_gallery import get_template_info
+        info = get_template_info(tid) if tid else None
+        if info and info.get("description"):
+            tpl_desc_lbl.setText(str(info["description"]))
+        else:
+            tpl_desc_lbl.setText("")
 
     tpl_combo.currentIndexChanged.connect(_on_tpl_combo_changed)
 
@@ -408,6 +411,11 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
         ("Exhibition Poster (A1)", "poster_exhibition"),
         ("Executive Fact Sheet (A4)", "fact_sheet"),
         ("Side-by-Side Diptych (A4)", "side_by_side_diptych"),
+        ("UTM Field Sheet (A3)", "utm_field_sheet"),
+        ("Urban Planning Board (A2)", "planning_board"),
+        ("Editorial Data Story (A3)", "data_story"),
+        ("Atlas Production Sheet (A3)", "atlas_production"),
+        ("Emergency Brief (A4)", "emergency_brief"),
     ]:
         btn_q = QPushButton(f"+ New {q_name}")
         btn_q.setObjectName("ghost")
@@ -535,6 +543,30 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
     btn_dock_balance.clicked.connect(_dock_balance)
     fl_typo.addRow(btn_dock_balance)
 
+    preflight_status = QLabel("Preflight QA · click to inspect or auto-fix")
+    preflight_status.setWordWrap(True)
+    preflight_status.setStyleSheet(
+        "background:#f8fafc;color:#334155;border:1px solid #cbd5e1;"
+        "border-radius:6px;padding:6px;font-weight:600;font-size:10.5px;"
+    )
+    fl_typo.addRow(preflight_status)
+
+    def _update_preflight_badge(issues):
+        from .preflight import summarize_preflight
+        summary = summarize_preflight(issues)
+        score = summary["score"]
+        errs = summary["errors"]
+        warns = summary["warnings"]
+        preflight_status.setText(
+            f"Preflight Readiness: {score}/100 · {errs} error(s), {warns} warning(s)"
+        )
+        preflight_status.setStyleSheet(
+            ("background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;" if errs > 0
+             else "background:#fef3c7;color:#92400e;border:1px solid #fcd34d;" if warns > 0
+             else "background:#dcfce7;color:#166534;border:1px solid #86efac;")
+            + "border-radius:6px;padding:6px;font-weight:700;font-size:10.5px;"
+        )
+
     btn_dock_preflight = QPushButton("Run Print Preflight")
     btn_dock_preflight.setObjectName("ghost")
     btn_dock_preflight.setIcon(_get_cartolab_icon("layout.png"))
@@ -546,6 +578,7 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
         try:
             from .preflight import format_preflight_report, preflight_layout
             issues = preflight_layout(layout)
+            _update_preflight_badge(issues)
             report = format_preflight_report(layout, issues)
             if any(issue["severity"] == "error" for issue in issues):
                 QMessageBox.warning(parent_win, "Print Preflight", report)
@@ -556,6 +589,30 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
 
     btn_dock_preflight.clicked.connect(_dock_preflight)
     fl_typo.addRow(btn_dock_preflight)
+
+    btn_dock_autofix = QPushButton("Auto-Fix Preflight Issues ⚡")
+    btn_dock_autofix.setIcon(_get_cartolab_icon("layout.png"))
+
+    def _dock_autofix():
+        layout = _get_designer_layout(designer)
+        if not layout:
+            return
+        try:
+            from .preflight import autofix_layout
+            res = autofix_layout(layout)
+            _update_preflight_badge(res.get("issues", []))
+            fixed_n = res.get("fixed_count", 0)
+            after_sc = res.get("after", {}).get("score", 100)
+            if hasattr(iface, "messageBar"):
+                iface.messageBar().pushSuccess(
+                    "CartoLab",
+                    f"Auto-Fix applied {fixed_n} repair(s). Readiness: {after_sc}/100.",
+                )
+        except Exception as exc:
+            QMessageBox.critical(parent_win, "Auto-Fix Error", str(exc))
+
+    btn_dock_autofix.clicked.connect(_dock_autofix)
+    fl_typo.addRow(btn_dock_autofix)
 
     pixel_status = QLabel("Pixel QA · export not checked yet")
     pixel_status.setWordWrap(True)
@@ -939,6 +996,151 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
 
     lyt_dec.addWidget(gb_grid)
 
+    # HTML Display & KPI Cards
+    gb_html_cards = QGroupBox("HTML Display & KPI Cards")
+    fl_html = QFormLayout(gb_html_cards)
+
+    html_card_type_combo = QComboBox()
+    html_card_type_combo.addItem("Executive KPI Summary Card", "kpi_summary")
+    html_card_type_combo.addItem("Top-N Attribute HTML Table", "attribute_table")
+    html_card_type_combo.addItem("Dynamic Atlas Feature Dossier", "atlas_profile")
+    html_card_type_combo.addItem("Cartographic Metadata Badge", "metadata_badge")
+    fl_html.addRow("HTML Element:", html_card_type_combo)
+
+    html_layer_combo = QComboBox()
+    if QgsProject and QgsProject.instance():
+        for lyr in QgsProject.instance().mapLayers().values():
+            if hasattr(lyr, "geometryType"):
+                html_layer_combo.addItem(lyr.name(), lyr)
+    fl_html.addRow("Source Layer:", html_layer_combo)
+
+    html_title_input = QLineEdit()
+    html_title_input.setPlaceholderText("Custom Card Title (optional)")
+    fl_html.addRow("Card Title:", html_title_input)
+
+    btn_insert_html_card = QPushButton("Insert HTML Card / Table ⚡")
+    btn_insert_html_card.setIcon(_get_cartolab_icon("layout.png"))
+
+    def _dock_insert_html_card():
+        layout = _get_designer_layout(designer)
+        if not layout:
+            return
+        ctype = html_card_type_combo.currentData() or "kpi_summary"
+        src_layer = html_layer_combo.currentData()
+        custom_title = html_title_input.text().strip()
+        active_theme = theme_combo.currentData() or "swiss_modern"
+        try:
+            from .html_cards import (
+                add_html_atlas_profile_card,
+                add_html_attribute_table,
+                add_html_kpi_card,
+                add_html_metadata_card,
+            )
+            if ctype == "attribute_table":
+                item = add_html_attribute_table(
+                    layout, layer=src_layer, title=custom_title, theme=active_theme
+                )
+            elif ctype == "atlas_profile":
+                item = add_html_atlas_profile_card(
+                    layout, coverage_layer=src_layer, theme=active_theme
+                )
+            elif ctype == "metadata_badge":
+                item = add_html_metadata_card(
+                    layout, title=custom_title or "CARTOGRAPHIC METADATA", theme=active_theme
+                )
+            else:
+                item = add_html_kpi_card(
+                    layout, layer=src_layer, title=custom_title, theme=active_theme
+                )
+            if item is not None and hasattr(iface, "messageBar"):
+                iface.messageBar().pushSuccess(
+                    "CartoLab", f"Inserted '{html_card_type_combo.currentText()}' into layout."
+                )
+        except Exception as exc:
+            QMessageBox.critical(parent_win, "HTML Card Error", str(exc))
+
+    btn_insert_html_card.clicked.connect(_dock_insert_html_card)
+    fl_html.addRow(btn_insert_html_card)
+    lyt_dec.addWidget(gb_html_cards)
+
+    # Smart Labels & Callout Badges
+    gb_smart_lbl = QGroupBox("Smart Labels & Callout Badges")
+    fl_smart_lbl = QFormLayout(gb_smart_lbl)
+
+    smart_lbl_preset_combo = QComboBox()
+    smart_lbl_preset_combo.addItem("Swiss Modern Halo", "swiss_halo")
+    smart_lbl_preset_combo.addItem("Dark Matter / Obsidian Glow", "dark_glow")
+    smart_lbl_preset_combo.addItem("Academic Classical Serif", "academic_serif")
+    smart_lbl_preset_combo.addItem("Technical Code Pill Badge", "technical_badge")
+    smart_lbl_preset_combo.addItem("Leader-Line Callout Label", "callout_leader")
+    fl_smart_lbl.addRow("Label Preset:", smart_lbl_preset_combo)
+
+    smart_lbl_callout_chk = QCheckBox("Enable Callout Leader Lines")
+    smart_lbl_callout_chk.setChecked(False)
+    fl_smart_lbl.addRow(smart_lbl_callout_chk)
+
+    smart_lbl_poly_chk = QCheckBox("Anchor Inside Polygons (Polylabel)")
+    smart_lbl_poly_chk.setChecked(True)
+    fl_smart_lbl.addRow(smart_lbl_poly_chk)
+
+    btn_apply_smart_lbl = QPushButton("Apply Smart Layer Labels")
+    btn_apply_smart_lbl.setIcon(_get_cartolab_icon("style.png"))
+
+    def _dock_apply_smart_labels():
+        target_lyr = html_layer_combo.currentData()
+        if target_lyr is None and hasattr(iface, "activeLayer"):
+            target_lyr = iface.activeLayer()
+        if target_lyr is None:
+            QMessageBox.warning(parent_win, "Smart Labels", "Select a vector layer first.")
+            return
+        try:
+            from .smart_labels import apply_smart_layer_labels
+            preset_id = smart_lbl_preset_combo.currentData() or "swiss_halo"
+            if apply_smart_layer_labels(
+                target_lyr,
+                preset=preset_id,
+                use_callouts=smart_lbl_callout_chk.isChecked(),
+                use_polylabel=smart_lbl_poly_chk.isChecked(),
+            ):
+                layout = _get_designer_layout(designer)
+                if layout is not None:
+                    layout.refresh()
+                if hasattr(iface, "messageBar"):
+                    iface.messageBar().pushSuccess(
+                        "CartoLab", f"Applied smart labels to '{target_lyr.name()}'."
+                    )
+        except Exception as exc:
+            QMessageBox.critical(parent_win, "Smart Labels Error", str(exc))
+
+    btn_apply_smart_lbl.clicked.connect(_dock_apply_smart_labels)
+    fl_smart_lbl.addRow(btn_apply_smart_lbl)
+
+    callout_badge_input = QLineEdit()
+    callout_badge_input.setPlaceholderText("Callout Note (e.g. Primary Intervention Zone)")
+    fl_smart_lbl.addRow("Callout Text:", callout_badge_input)
+
+    btn_add_callout_badge = QPushButton("Add Layout Callout Badge")
+    btn_add_callout_badge.setObjectName("ghost")
+    btn_add_callout_badge.setIcon(_get_cartolab_icon("layout.png"))
+
+    def _dock_add_callout_badge():
+        layout = _get_designer_layout(designer)
+        if not layout:
+            return
+        note = callout_badge_input.text().strip() or "Focal Study Area"
+        active_theme = theme_combo.currentData() or "swiss_modern"
+        try:
+            from .smart_labels import add_layout_callout_badge
+            add_layout_callout_badge(layout, text=note, theme=active_theme)
+            if hasattr(iface, "messageBar"):
+                iface.messageBar().pushSuccess("CartoLab", f"Added callout badge '{note}'.")
+        except Exception as exc:
+            QMessageBox.critical(parent_win, "Callout Badge Error", str(exc))
+
+    btn_add_callout_badge.clicked.connect(_dock_add_callout_badge)
+    fl_smart_lbl.addRow(btn_add_callout_badge)
+    lyt_dec.addWidget(gb_smart_lbl)
+
     # Smart Map Utilities
     gb_smart = QGroupBox("Smart Map Tools")
     fl_smart = QFormLayout(gb_smart)
@@ -1016,7 +1218,7 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
     fl_iso.addRow(btn_apply_iso)
     lyt_exp.addWidget(gb_iso)
 
-    gb_atlas = QGroupBox("Map Book & Atlas Automation")
+    gb_atlas = QGroupBox("Map Book & Atlas Rules")
     fl_atlas = QFormLayout(gb_atlas)
 
     atlas_layer_combo = QComboBox()
@@ -1026,6 +1228,47 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
                 atlas_layer_combo.addItem(lyr.name(), lyr)
     fl_atlas.addRow("Coverage Layer:", atlas_layer_combo)
 
+    atlas_name_field_combo = QComboBox()
+    fl_atlas.addRow("Page Name Field:", atlas_name_field_combo)
+
+    atlas_sort_field_combo = QComboBox()
+    fl_atlas.addRow("Sort By Field:", atlas_sort_field_combo)
+
+    atlas_sort_asc_check = QCheckBox("Sort Ascending (A → Z / 0 → 9)")
+    atlas_sort_asc_check.setChecked(True)
+    fl_atlas.addRow(atlas_sort_asc_check)
+
+    def _populate_atlas_field_combos():
+        atlas_name_field_combo.clear()
+        atlas_sort_field_combo.clear()
+        atlas_name_field_combo.addItem("(Auto Sheet Number)", "")
+        atlas_sort_field_combo.addItem("(No Sorting)", "")
+        cov = atlas_layer_combo.currentData()
+        if cov is not None and hasattr(cov, "fields"):
+            for fld in cov.fields():
+                fname = fld.name()
+                atlas_name_field_combo.addItem(fname, fname)
+                atlas_sort_field_combo.addItem(fname, fname)
+
+    atlas_layer_combo.currentIndexChanged.connect(_populate_atlas_field_combos)
+    _populate_atlas_field_combos()
+
+    atlas_filter_input = QLineEdit()
+    atlas_filter_input.setPlaceholderText('Filter rule, e.g. "pop" > 1000')
+    fl_atlas.addRow("Filter Rule:", atlas_filter_input)
+
+    atlas_scaling_combo = QComboBox()
+    atlas_scaling_combo.addItem("Auto Margin (% around feature)", "auto")
+    atlas_scaling_combo.addItem("Predefined Standard Scales", "predefined")
+    atlas_scaling_combo.addItem("Fixed Scale (Keep Map Scale)", "fixed")
+    fl_atlas.addRow("Scaling Rule:", atlas_scaling_combo)
+
+    atlas_feat_margin_spin = QDoubleSpinBox()
+    atlas_feat_margin_spin.setRange(0.0, 100.0)
+    atlas_feat_margin_spin.setValue(10.0)
+    atlas_feat_margin_spin.setSuffix(" %")
+    fl_atlas.addRow("Feature Margin:", atlas_feat_margin_spin)
+
     atlas_banner_check = QCheckBox("Add Styled Header Banner")
     atlas_banner_check.setChecked(True)
     fl_atlas.addRow(atlas_banner_check)
@@ -1034,11 +1277,49 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
     atlas_locator_check.setChecked(False)
     fl_atlas.addRow(atlas_locator_check)
 
+    atlas_highlight_check = QCheckBox("Highlight Active Atlas Feature (@atlas_featureid)")
+    atlas_highlight_check.setChecked(True)
+    fl_atlas.addRow(atlas_highlight_check)
+
+    atlas_html_profile_check = QCheckBox("Add Dynamic HTML Feature Dossier Card")
+    atlas_html_profile_check.setChecked(False)
+    fl_atlas.addRow(atlas_html_profile_check)
+
     atlas_margin_spin = QDoubleSpinBox()
     atlas_margin_spin.setRange(4.0, 50.0)
     atlas_margin_spin.setValue(12.0)
     atlas_margin_spin.setSuffix(" mm")
     fl_atlas.addRow("Page Margin:", atlas_margin_spin)
+
+    atlas_rule_status = QLabel("Atlas rules ready to validate.")
+    atlas_rule_status.setWordWrap(True)
+    atlas_rule_status.setStyleSheet("color:#475569;font-size:10px;padding:2px;")
+    fl_atlas.addRow(atlas_rule_status)
+
+    btn_validate_atlas = QPushButton("Validate Atlas Rules & Count Pages")
+    btn_validate_atlas.setObjectName("ghost")
+
+    def _dock_validate_atlas():
+        cov_layer = atlas_layer_combo.currentData()
+        from .atlas_builder import validate_atlas_rules
+        info = validate_atlas_rules(
+            cov_layer,
+            filter_expression=atlas_filter_input.text().strip(),
+            name_field=atlas_name_field_combo.currentData() or "",
+            sort_field=atlas_sort_field_combo.currentData() or "",
+        )
+        if info["valid"]:
+            prev = ", ".join(info["preview_names"][:3])
+            atlas_rule_status.setText(
+                f"✓ Valid: {info['matching_count']}/{info['total_count']} pages ({prev})"
+            )
+            atlas_rule_status.setStyleSheet("color:#166534;font-weight:700;font-size:10px;")
+        else:
+            atlas_rule_status.setText(f"✕ {info['error']}")
+            atlas_rule_status.setStyleSheet("color:#991b1b;font-weight:700;font-size:10px;")
+
+    btn_validate_atlas.clicked.connect(_dock_validate_atlas)
+    fl_atlas.addRow(btn_validate_atlas)
 
     btn_setup_atlas = QPushButton("Configure Map Book Atlas (1-Click)")
     btn_setup_atlas.setIcon(_get_cartolab_icon("layout.png"))
@@ -1056,10 +1337,19 @@ def create_cartolab_layout_dock(iface, designer, parent_win) -> QDockWidget:
             if setup_layout_atlas(
                 layout,
                 cov_layer,
+                name_field=atlas_name_field_combo.currentData() or "",
+                margin_percent=atlas_feat_margin_spin.value(),
                 page_margin_mm=atlas_margin_spin.value(),
                 add_header_banner=atlas_banner_check.isChecked(),
                 add_overview_locator=atlas_locator_check.isChecked(),
+                filter_expression=atlas_filter_input.text().strip(),
+                sort_field=atlas_sort_field_combo.currentData() or "",
+                sort_ascending=atlas_sort_asc_check.isChecked(),
+                scaling_mode=atlas_scaling_combo.currentData() or "auto",
+                highlight_active_feature=atlas_highlight_check.isChecked(),
+                add_html_profile=atlas_html_profile_check.isChecked(),
             ):
+                _dock_validate_atlas()
                 if hasattr(iface, "messageBar"):
                     iface.messageBar().pushSuccess("CartoLab", f"Map Book Atlas configured for '{cov_layer.name()}'.")
             else:

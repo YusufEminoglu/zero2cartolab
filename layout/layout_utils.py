@@ -35,6 +35,20 @@ def unique_layout_name(project: QgsProject, base: str) -> str:
     return unique_name(existing, base)
 
 
+def layout_page_size_mm(layout: QgsLayout) -> tuple[float, float]:
+    """Return ``(width_mm, height_mm)`` of the layout's first page, defaulting to A4 landscape."""
+    if layout is not None and hasattr(layout, "pageCollection") and layout.pageCollection():
+        with suppress(Exception):
+            pages = list(layout.pageCollection().pages())
+            if pages:
+                sz = pages[0].pageSize()
+                w = float(sz.width())
+                h = float(sz.height())
+                if w > 0 and h > 0:
+                    return w, h
+    return 297.0, 210.0
+
+
 _LOCATOR_MAP_IDS = ("cartolab_locator_inset",)
 
 

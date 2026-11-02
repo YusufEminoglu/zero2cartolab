@@ -2758,14 +2758,97 @@ class CartoLabDashboard(_QDialogBase):
         deco_row.addWidget(btn_grid)
         deco_row.addWidget(btn_balance)
         gd.addLayout(deco_row)
+        qa_row = QHBoxLayout()
         btn_preflight = QPushButton("Run Print Preflight")
         btn_preflight.setIcon(_cartolab_icon("layout.png"))
-        btn_preflight.setToolTip("Check page bounds, map extents, linked furniture, and duplicate item IDs")
+        btn_preflight.setToolTip("Check page bounds, map extents, linked furniture, expressions, and overlaps")
         btn_preflight.clicked.connect(self._on_preflight_layout)
-        gd.addWidget(btn_preflight)
+        btn_autofix = QPushButton("Auto-Fix Preflight Issues ⚡")
+        btn_autofix.setIcon(_cartolab_icon("layout.png"))
+        btn_autofix.setToolTip("Automatically repair unlinked items, off-page placement, grid intervals, and contrast")
+        btn_autofix.clicked.connect(self._on_autofix_layout)
+        qa_row.addWidget(btn_preflight)
+        qa_row.addWidget(btn_autofix)
+        gd.addLayout(qa_row)
         lyt.addWidget(gb_dec)
 
-        for button in (btn_sheet, btn_legend, btn_typo, btn_grid, btn_balance, btn_preflight):
+        # ── Group 4: HTML Display Cards & Smart Labeling ─────────────
+        gb_html_lbl = self._make_group("HTML Display Cards & Smart Labeling")
+        ghl = QGridLayout(gb_html_lbl)
+        ghl.setHorizontalSpacing(10)
+        ghl.setVerticalSpacing(6)
+
+        ghl.addWidget(QLabel("HTML Display Block:"), 0, 0)
+        self.dash_html_type_combo = QComboBox()
+        self.dash_html_type_combo.addItem("Executive KPI Summary Card", "kpi_summary")
+        self.dash_html_type_combo.addItem("Top-N Attribute HTML Table", "attribute_table")
+        self.dash_html_type_combo.addItem("Dynamic Atlas Feature Dossier", "atlas_profile")
+        self.dash_html_type_combo.addItem("Cartographic Metadata Badge", "metadata_badge")
+        ghl.addWidget(self.dash_html_type_combo, 0, 1)
+
+        btn_dash_html = QPushButton("Insert HTML Card / Table ⚡")
+        btn_dash_html.setIcon(_cartolab_icon("layout.png"))
+        btn_dash_html.clicked.connect(self._on_insert_html_card)
+        ghl.addWidget(btn_dash_html, 0, 2)
+
+        ghl.addWidget(QLabel("Smart Label Preset:"), 1, 0)
+        self.dash_smart_lbl_combo = QComboBox()
+        self.dash_smart_lbl_combo.addItem("Swiss Modern Halo", "swiss_halo")
+        self.dash_smart_lbl_combo.addItem("Dark Matter / Obsidian Glow", "dark_glow")
+        self.dash_smart_lbl_combo.addItem("Academic Classical Serif", "academic_serif")
+        self.dash_smart_lbl_combo.addItem("Technical Code Pill Badge", "technical_badge")
+        self.dash_smart_lbl_combo.addItem("Leader-Line Callout Label", "callout_leader")
+        ghl.addWidget(self.dash_smart_lbl_combo, 1, 1)
+
+        btn_dash_smart_lbl = QPushButton("Apply Smart Layer Labels")
+        btn_dash_smart_lbl.setIcon(_cartolab_icon("style.png"))
+        btn_dash_smart_lbl.clicked.connect(self._on_apply_smart_labels)
+        ghl.addWidget(btn_dash_smart_lbl, 1, 2)
+
+        ghl.addWidget(QLabel("Callout Annotation:"), 2, 0)
+        self.dash_callout_text = QLineEdit()
+        self.dash_callout_text.setPlaceholderText("Callout badge note (e.g. Core Study Zone)…")
+        ghl.addWidget(self.dash_callout_text, 2, 1)
+
+        btn_dash_callout = QPushButton("Add Layout Callout Badge")
+        btn_dash_callout.setObjectName("ghost")
+        btn_dash_callout.setIcon(_cartolab_icon("layout.png"))
+        btn_dash_callout.clicked.connect(self._on_add_callout_badge)
+        ghl.addWidget(btn_dash_callout, 2, 2)
+        lyt.addWidget(gb_html_lbl)
+
+        # ── Group 5: Map Book & Atlas Rules ──────────────────────────
+        gb_atlas_rules = self._make_group("Map Book & Atlas Automation Rules")
+        gar = QGridLayout(gb_atlas_rules)
+        gar.setHorizontalSpacing(10)
+        gar.setVerticalSpacing(6)
+
+        gar.addWidget(QLabel("Scaling Mode:"), 0, 0)
+        self.dash_atlas_scaling_combo = QComboBox()
+        self.dash_atlas_scaling_combo.addItem("Auto Margin (10% around feature)", "auto")
+        self.dash_atlas_scaling_combo.addItem("Predefined Standard Scales", "predefined")
+        self.dash_atlas_scaling_combo.addItem("Fixed Scale (Keep Map Scale)", "fixed")
+        gar.addWidget(self.dash_atlas_scaling_combo, 0, 1)
+
+        gar.addWidget(QLabel("Filter Rule:"), 0, 2)
+        self.dash_atlas_filter_edit = QLineEdit()
+        self.dash_atlas_filter_edit.setPlaceholderText('Optional filter, e.g. "pop" > 1000')
+        gar.addWidget(self.dash_atlas_filter_edit, 0, 3)
+
+        self.dash_atlas_highlight_cb = QCheckBox("Highlight Active Feature ($id = @atlas_featureid)")
+        self.dash_atlas_highlight_cb.setChecked(True)
+        self.dash_atlas_html_cb = QCheckBox("Add Dynamic HTML Feature Dossier Card")
+        self.dash_atlas_html_cb.setChecked(True)
+        gar.addWidget(self.dash_atlas_highlight_cb, 1, 0, 1, 2)
+        gar.addWidget(self.dash_atlas_html_cb, 1, 2, 1, 2)
+
+        btn_dash_atlas = QPushButton("Configure Atlas & Rules on Selected Layout ⚡")
+        btn_dash_atlas.setIcon(_cartolab_icon("layout.png"))
+        btn_dash_atlas.clicked.connect(self._on_configure_atlas_dashboard)
+        gar.addWidget(btn_dash_atlas, 2, 0, 1, 4)
+        lyt.addWidget(gb_atlas_rules)
+
+        for button in (btn_sheet, btn_legend, btn_typo, btn_grid, btn_balance, btn_preflight, btn_autofix):
             button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
         lyt.addStretch()
@@ -3204,6 +3287,120 @@ class CartoLabDashboard(_QDialogBase):
                 QMessageBox.information(self, "Print Preflight", report)
         except Exception as exc:
             QMessageBox.critical(self, "Print Preflight Error", str(exc))
+
+    def _on_autofix_layout(self) -> None:
+        layout = self._require_layout("Auto-Fix Preflight Issues")
+        if layout is None:
+            return
+        try:
+            from ..layout.preflight import autofix_layout
+            res = autofix_layout(layout)
+            fixed_n = res.get("fixed_count", 0)
+            after_sc = res.get("after", {}).get("score", 100)
+            self.iface.messageBar().pushSuccess(
+                "CartoLab",
+                f"Auto-Fix applied {fixed_n} repair(s) on '{layout.name()}'. Readiness: {after_sc}/100.",
+            )
+        except Exception as exc:
+            QMessageBox.critical(self, "Auto-Fix Error", str(exc))
+
+    def _on_insert_html_card(self) -> None:
+        layout = self._require_layout("Insert HTML Card")
+        if layout is None:
+            return
+        ctype = self.dash_html_type_combo.currentData() if hasattr(self, "dash_html_type_combo") else "kpi_summary"
+        layers = self._vector_layers()
+        src_layer = self.iface.activeLayer() if hasattr(self.iface, "activeLayer") else None
+        if src_layer is None and layers:
+            src_layer = layers[0]
+        try:
+            from ..layout.html_cards import (
+                add_html_atlas_profile_card,
+                add_html_attribute_table,
+                add_html_kpi_card,
+                add_html_metadata_card,
+            )
+            if ctype == "attribute_table":
+                add_html_attribute_table(layout, layer=src_layer)
+            elif ctype == "atlas_profile":
+                add_html_atlas_profile_card(layout, coverage_layer=src_layer)
+            elif ctype == "metadata_badge":
+                add_html_metadata_card(layout)
+            else:
+                add_html_kpi_card(layout, layer=src_layer)
+            self.iface.messageBar().pushSuccess(
+                "CartoLab", f"Inserted HTML card ({ctype}) into '{layout.name()}'."
+            )
+        except Exception as exc:
+            QMessageBox.critical(self, "HTML Card Error", str(exc))
+
+    def _on_apply_smart_labels(self) -> None:
+        layers = self._vector_layers()
+        target_lyr = self.iface.activeLayer() if hasattr(self.iface, "activeLayer") else None
+        if target_lyr is None and layers:
+            target_lyr = layers[0]
+        if target_lyr is None:
+            QMessageBox.information(self, "Smart Labels", "Load or select a vector layer first.")
+            return
+        preset = self.dash_smart_lbl_combo.currentData() if hasattr(self, "dash_smart_lbl_combo") else "swiss_halo"
+        try:
+            from ..layout.smart_labels import apply_smart_layer_labels
+            if apply_smart_layer_labels(target_lyr, preset=preset, use_callouts=(preset == "callout_leader")):
+                self.iface.messageBar().pushSuccess(
+                    "CartoLab", f"Smart labels ('{preset}') applied to '{target_lyr.name()}'."
+                )
+        except Exception as exc:
+            QMessageBox.critical(self, "Smart Labels Error", str(exc))
+
+    def _on_add_callout_badge(self) -> None:
+        layout = self._require_layout("Add Callout Badge")
+        if layout is None:
+            return
+        note = self.dash_callout_text.text().strip() if hasattr(self, "dash_callout_text") else ""
+        try:
+            from ..layout.smart_labels import add_layout_callout_badge
+            add_layout_callout_badge(layout, text=note or "Focal Intervention Zone")
+            self.iface.messageBar().pushSuccess(
+                "CartoLab", f"Callout badge added to '{layout.name()}'."
+            )
+        except Exception as exc:
+            QMessageBox.critical(self, "Callout Badge Error", str(exc))
+
+    def _on_configure_atlas_dashboard(self) -> None:
+        layout = self._require_layout("Configure Atlas")
+        if layout is None:
+            return
+        layers = self._vector_layers()
+        cov_layer = self.iface.activeLayer() if hasattr(self.iface, "activeLayer") else None
+        if cov_layer is None and layers:
+            cov_layer = layers[0]
+        if cov_layer is None:
+            QMessageBox.information(self, "Configure Atlas", "Load a vector coverage layer first.")
+            return
+        scaling = self.dash_atlas_scaling_combo.currentData() if hasattr(self, "dash_atlas_scaling_combo") else "auto"
+        filt = self.dash_atlas_filter_edit.text().strip() if hasattr(self, "dash_atlas_filter_edit") else ""
+        hi = self.dash_atlas_highlight_cb.isChecked() if hasattr(self, "dash_atlas_highlight_cb") else True
+        add_html = self.dash_atlas_html_cb.isChecked() if hasattr(self, "dash_atlas_html_cb") else False
+        try:
+            from ..layout.atlas_builder import setup_layout_atlas
+            if setup_layout_atlas(
+                layout,
+                cov_layer,
+                filter_expression=filt,
+                scaling_mode=scaling,
+                highlight_active_feature=hi,
+                add_html_profile=add_html,
+            ):
+                self.iface.messageBar().pushSuccess(
+                    "CartoLab", f"Atlas configured on '{layout.name()}' using '{cov_layer.name()}'."
+                )
+            else:
+                QMessageBox.warning(
+                    self, "Configure Atlas",
+                    "Could not configure Atlas. Check that the coverage layer is non-empty and the filter expression is valid.",
+                )
+        except Exception as exc:
+            QMessageBox.critical(self, "Configure Atlas Error", str(exc))
 
     def _on_grid_preset_changed(self, _index: int = -1) -> None:
         from ..layout.grid_presets import GRID_PRESETS

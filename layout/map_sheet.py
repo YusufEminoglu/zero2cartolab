@@ -750,14 +750,16 @@ def _dataset_summary_metrics(layers, extent, crs, project: Optional[QgsProject] 
 def _configure_scalebar(
     bar: QgsLayoutItemScaleBar,
     map_item: QgsLayoutItemMap,
-    project: QgsProject,
+    project: Optional[QgsProject] = None,
     *,
-    max_width_mm: float,
+    max_width_mm: float = 55.0,
     target_segments: int = 3,
 ) -> bool:
     """Configure a metric scale bar that stays inside its layout budget."""
     if bar is None or map_item is None:
         return False
+    if project is None and QgsProject is not None:
+        project = QgsProject.instance()
     map_w_km = _map_extent_width_km(map_item, project)
     if map_w_km <= 0:
         return False
@@ -836,7 +838,7 @@ def create_map_sheet(
             crs=crs,
             title=title or "CartoLab Map Sheet",
             subtitle=subtitle,
-            credits=credits or "Cartography: Geophilo · PlanX CartoLab",
+            credits=credits or "Cartography: Yusuf Eminoğlu · PlanX CartoLab",
             layout_name=layout_name,
             project=project,
         )

@@ -14,7 +14,7 @@ Provides distinct, publication-grade print layout templates:
   - "atlas_production": standardized map-book production page.
   - "emergency_brief": high-clarity operational situation map.
 
-Author: Geophilo
+Author: Yusuf Eminoğlu
 """
 from __future__ import annotations
 

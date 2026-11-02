@@ -4,20 +4,26 @@ PlanX CartoLab — Automated Multi-Page Map Book & Atlas Builder.
 
 Configures QGIS Print Layout Atlas engine for automatic serial map sheet production:
 coverage layer binding, dynamic title expressions, page counters, auto-centering map frames,
-custom header banners, configurable page margins, and overview locator inset maps.
+scaling modes (Auto margin, Predefined scales, Fixed scale), active feature highlight rules,
+dynamic HTML feature dossiers, rule validation, and memory-safe batch export.
 
-Author: Geophilo
+Author: Yusuf Eminoğlu
 """
 from __future__ import annotations
 
 from contextlib import suppress
-from typing import Optional, Tuple
+import os
+import re
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 try:
     from qgis.core import (
-        QgsFillSymbol,
         QgsExpression,
+        QgsExpressionContext,
+        QgsExpressionContextUtils,
+        QgsFillSymbol,
         QgsLayout,
+        QgsLayoutExporter,
         QgsLayoutItemLabel,
         QgsLayoutItemLegend,
         QgsLayoutItemMap,
@@ -28,6 +34,8 @@ try:
         QgsLayoutSize,
         QgsPrintLayout,
         QgsProject,
+        QgsProperty,
+        QgsSymbolLayer,
         QgsUnitTypes,
         QgsVectorLayer,
     )
@@ -40,11 +48,173 @@ try:
 except ImportError:
     QgsLayout = QgsLayoutItemLabel = QgsLayoutItemLegend = QgsLayoutItemMap = QgsLayoutItemShape = QgsLayoutItemScaleBar = None
     QgsLayoutMeasurement = QgsLayoutPoint = QgsLayoutSize = QgsPrintLayout = QgsProject = QgsUnitTypes = QgsVectorLayer = None
-    QgsFillSymbol = QgsExpression = QFont = QColor = None
+    QgsFillSymbol = QgsExpression = QgsExpressionContext = QgsExpressionContextUtils = None
+    QgsLayoutExporter = QgsProperty = QgsSymbolLayer = QFont = QColor = None
     _MM = 0
 
-from .layout_utils import main_map_item
+from .html_cards import add_html_atlas_profile_card
+from .layout_utils import clear_layout_render_cache, main_map_item
 from .locator_map import add_locator_inset_map
+
+
+ATLAS_SCALING_MODES: Dict[str, str] = {
+    "auto": "Auto Margin (% around feature)",
+    "predefined": "Predefined Standard Scales (1:1k, 1:5k, 1:10k...)",
+    "fixed": "Fixed Map Scale (Keep current scale)",
+}
+
+
+def validate_atlas_rules(
+    coverage_layer: Any,
+    filter_expression: str = "",
+    name_field: str = "",
+    sort_field: str = "",
+) -> Dict[str, Any]:
+    """
+    Validate Atlas coverage layer, filter expression, and naming/sorting rules.
+    Returns live feature counts and preview page names for GUI feedback.
+    """
+    if coverage_layer is None or (hasattr(coverage_layer, "isValid") and not coverage_layer.isValid()):
+        return {
+            "valid": False,
+            "total_count": 0,
+            "matching_count": 0,
+            "error": "No valid coverage vector layer selected.",
+            "preview_names": [],
+        }
+
+    total_count = int(coverage_layer.featureCount()) if hasattr(coverage_layer, "featureCount") else 0
+    if total_count <= 0:
+        return {
+            "valid": False,
+            "total_count": 0,
+            "matching_count": 0,
+            "error": "Coverage layer contains 0 features.",
+            "preview_names": [],
+        }
+
+    field_names = [f.name() for f in coverage_layer.fields()] if hasattr(coverage_layer, "fields") else []
+    clean_filter = (filter_expression or "").strip()
+    exp = None
+    if clean_filter and QgsExpression is not None:
+        exp = QgsExpression(clean_filter)
+        if exp.hasParserError():
+            return {
+                "valid": False,
+                "total_count": total_count,
+                "matching_count": 0,
+                "error": f"Filter syntax error: {exp.parserErrorString()}",
+                "preview_names": [],
+            }
+
+    ctx = None
+    if exp is not None and QgsExpressionContext is not None:
+        ctx = QgsExpressionContext()
+        if QgsExpressionContextUtils is not None and hasattr(QgsExpressionContextUtils, "createFeatureBasedContext"):
+            with suppress(Exception):
+                ctx.appendScopes(QgsExpressionContextUtils.globalProjectLayerScopes(coverage_layer))
+        with suppress(Exception):
+            exp.prepare(ctx)
+
+    matching = 0
+    preview: List[str] = []
+    use_name = name_field if name_field in field_names else ""
+    with suppress(Exception):
+        for idx, feat in enumerate(coverage_layer.getFeatures()):
+            if exp is not None and ctx is not None:
+                ctx.setFeature(feat)
+                res = exp.evaluate(ctx)
+                if not res:
+                    continue
+            matching += 1
+            if len(preview) < 5:
+                if use_name and feat[use_name] is not None:
+                    preview.append(str(feat[use_name]))
+                else:
+                    preview.append(f"Sheet {matching}")
+
+    if matching == 0:
+        return {
+            "valid": False,
+            "total_count": total_count,
+            "matching_count": 0,
+            "error": "Filter expression matched 0 features.",
+            "preview_names": [],
+        }
+
+    return {
+        "valid": True,
+        "total_count": total_count,
+        "matching_count": matching,
+        "error": "",
+        "preview_names": preview,
+        "sort_field": sort_field if sort_field in field_names else "",
+    }
+
+
+def apply_atlas_highlight_rule(
+    coverage_layer: Any,
+    accent_color: str = "#e11d48",
+    stroke_width_mm: float = 0.85,
+) -> bool:
+    """
+    Apply a non-destructive data-defined stroke highlight (`$id = @atlas_featureid`)
+    onto the coverage layer's symbol layers so the active Atlas feature stands out.
+    """
+    if (
+        coverage_layer is None
+        or QgsProperty is None
+        or QgsSymbolLayer is None
+        or not hasattr(coverage_layer, "renderer")
+    ):
+        return False
+
+    renderer = coverage_layer.renderer()
+    if renderer is None:
+        return False
+
+    prop_enum = getattr(QgsSymbolLayer, "Property", QgsSymbolLayer)
+    stroke_col_key = getattr(
+        prop_enum,
+        "StrokeColor",
+        getattr(prop_enum, "PropertyStrokeColor", getattr(QgsSymbolLayer, "PropertyStrokeColor", None)),
+    )
+    stroke_w_key = getattr(
+        prop_enum,
+        "StrokeWidth",
+        getattr(prop_enum, "PropertyStrokeWidth", getattr(QgsSymbolLayer, "PropertyStrokeWidth", None)),
+    )
+    if stroke_col_key is None or stroke_w_key is None:
+        return False
+
+    safe_accent = accent_color if isinstance(accent_color, str) and accent_color.startswith("#") else "#e11d48"
+    col_expr = f"CASE WHEN $id = @atlas_featureid THEN '{safe_accent}' ELSE '#334155' END"
+    width_expr = f"CASE WHEN $id = @atlas_featureid THEN {float(stroke_width_mm):.2f} ELSE 0.25 END"
+
+    symbols = []
+    with suppress(Exception):
+        if hasattr(renderer, "symbol") and callable(renderer.symbol) and renderer.symbol() is not None:
+            symbols = [renderer.symbol()]
+        elif hasattr(renderer, "symbols") and QgsExpressionContext is not None:
+            symbols = list(renderer.symbols(QgsExpressionContext()))
+
+    applied = False
+    for sym in symbols:
+        if sym is None or not hasattr(sym, "symbolLayers"):
+            continue
+        for sl in sym.symbolLayers():
+            with suppress(Exception):
+                sl.setDataDefinedProperty(stroke_col_key, QgsProperty.fromExpression(col_expr))
+                sl.setDataDefinedProperty(stroke_w_key, QgsProperty.fromExpression(width_expr))
+                applied = True
+
+    with suppress(Exception):
+        coverage_layer.setCustomProperty("cartolab/atlas_highlight_enabled", "1")
+        coverage_layer.setCustomProperty("cartolab/atlas_highlight_color", safe_accent)
+        coverage_layer.triggerRepaint()
+        applied = True
+    return applied
+
 
 
 def setup_layout_atlas(
@@ -65,15 +235,15 @@ def setup_layout_atlas(
     filter_expression: str = "",
     sort_field: str = "",
     sort_ascending: bool = True,
+    scaling_mode: str = "auto",
+    highlight_active_feature: bool = False,
+    highlight_color: str = "#e11d48",
+    add_html_profile: bool = False,
+    profile_fields: Optional[Sequence[Tuple[str, str]]] = None,
 ) -> bool:
     """
-    Configure the layout's Atlas engine with dynamic titles, page counters, and auto-framing.
-
-    Enhancements:
-      - Custom styled top header banner card with dynamic title and subtitle.
-      - Adaptive page margins and map frame positioning.
-      - Overview locator inset map linked to atlas coverage features.
-      - Filter and sort expressions for ordered atlas generation.
+    Configure the layout's Atlas engine with dynamic titles, page counters, scaling modes,
+    active feature highlighting, dynamic HTML dossiers, and auto-framing.
     """
     if layout is None or coverage_layer is None or QgsLayoutItemMap is None:
         return False
@@ -157,13 +327,16 @@ def setup_layout_atlas(
 
     if main_map is not None:
         main_map.setAtlasDriven(True)
-        _AutoScaling = getattr(
-            getattr(QgsLayoutItemMap, "AtlasScalingMode", QgsLayoutItemMap),
-            "Auto",
-            getattr(QgsLayoutItemMap, "Auto", 0),
-        )
-        main_map.setAtlasScalingMode(_AutoScaling)
-        main_map.setAtlasMargin(margin_percent / 100.0)
+        mode_ns = getattr(QgsLayoutItemMap, "AtlasScalingMode", QgsLayoutItemMap)
+        mode_key = (scaling_mode or "auto").strip().lower()
+        if mode_key == "fixed":
+            resolved_mode = getattr(mode_ns, "Fixed", getattr(QgsLayoutItemMap, "Fixed", 0))
+        elif mode_key == "predefined":
+            resolved_mode = getattr(mode_ns, "Predefined", getattr(QgsLayoutItemMap, "Predefined", 1))
+        else:
+            resolved_mode = getattr(mode_ns, "Auto", getattr(QgsLayoutItemMap, "Auto", 2))
+        main_map.setAtlasScalingMode(resolved_mode)
+        main_map.setAtlasMargin(max(0.0, float(margin_percent)) / 100.0)
 
         # Apply page margins if banner or custom margins requested
         if add_header_banner:
@@ -336,5 +509,84 @@ def setup_layout_atlas(
             add_header=True,
         )
 
+    # 6. Active Feature Highlight Rule (Optional)
+    if highlight_active_feature:
+        apply_atlas_highlight_rule(coverage_layer, accent_color=highlight_color)
+
+    # 7. Dynamic HTML Feature Profile Card (Optional)
+    if add_html_profile:
+        add_html_atlas_profile_card(
+            layout,
+            coverage_layer=coverage_layer,
+            fields=profile_fields,
+            title_expr=atlas_title_expr,
+            item_id="cartolab_atlas_html_profile",
+        )
+
     layout.refresh()
     return True
+
+
+def export_atlas_series(
+    layout: QgsLayout,
+    output_dir: str,
+    dpi: int = 300,
+    max_pages: int = 0,
+    file_prefix: str = "atlas_sheet",
+) -> Dict[str, Any]:
+    """
+    Export each page of a configured Print Layout Atlas to PNG images while
+    flushing the render cache between pages (`clear_layout_render_cache`) to
+    prevent memory bloat across multi-page exports.
+    """
+    if layout is None or QgsLayoutExporter is None or not hasattr(layout, "atlas"):
+        return {"exported_count": 0, "files": [], "error": "Atlas layout or exporter unavailable."}
+
+    atlas = layout.atlas()
+    if atlas is None or not atlas.enabled():
+        return {"exported_count": 0, "files": [], "error": "Atlas is not enabled on this layout."}
+
+    os.makedirs(output_dir, exist_ok=True)
+    total = int(atlas.updateFeatures())
+    if total <= 0:
+        return {"exported_count": 0, "files": [], "error": "Atlas matched 0 features."}
+
+    limit = min(total, int(max_pages)) if max_pages and int(max_pages) > 0 else total
+    exported_files: List[str] = []
+    exporter = QgsLayoutExporter(layout)
+    settings = QgsLayoutExporter.ImageExportSettings()
+    settings.dpi = max(72, int(dpi))
+
+    if not atlas.beginRender():
+        return {"exported_count": 0, "files": [], "error": "Atlas beginRender() failed."}
+
+    try:
+        for idx in range(limit):
+            if not atlas.seekTo(idx):
+                continue
+            raw_name = ""
+            if hasattr(atlas, "nameForPage"):
+                with suppress(Exception):
+                    raw_name = str(atlas.nameForPage(idx) or "")
+            safe_slug = re.sub(r"[^A-Za-z0-9_-]+", "_", raw_name).strip("_") or f"p{idx + 1:02d}"
+            out_path = os.path.join(output_dir, f"{file_prefix}_{idx + 1:02d}_{safe_slug}.png")
+            res = exporter.exportToImage(out_path, settings)
+            ok_code = getattr(
+                getattr(QgsLayoutExporter, "ExportResult", QgsLayoutExporter),
+                "Success",
+                0,
+            )
+            if res == ok_code and os.path.exists(out_path):
+                exported_files.append(out_path)
+            clear_layout_render_cache(layout)
+    finally:
+        with suppress(Exception):
+            atlas.endRender()
+
+    return {
+        "exported_count": len(exported_files),
+        "total_features": total,
+        "files": exported_files,
+        "error": "",
+    }
+
