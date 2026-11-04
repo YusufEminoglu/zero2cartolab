@@ -620,10 +620,10 @@ def compose_4panel(module_id, display, panel_inputs, panel_params, panel_result,
                    panel_context, param_text, out_path, subtitle="", notes="",
                    extent=None):
     """Compose the standard 4-panel practical-guide composite."""
-    img = QImage(QSize(PANEL_W * 2, PANEL_H * 2 + HEADER_H), QImage.Format_ARGB32_Premultiplied)
+    img = QImage(QSize(PANEL_W * 2, PANEL_H * 2 + HEADER_H), QImage.Format.Format_ARGB32_Premultiplied)
     img.fill(QColor(PAPER))
     p = QPainter(img)
-    p.setRenderHint(QPainter.Antialiasing)
+    p.setRenderHint(QPainter.RenderHint.Antialiasing)
 
     if extent is None:
         extent = _extent_of(panel_inputs + panel_result + panel_context, 1.08)
@@ -654,10 +654,10 @@ def compose_4panel(module_id, display, panel_inputs, panel_params, panel_result,
 def compose_single(module_id, display, layers, extent, out_path, caption="", footer=""):
     """Compose a single wide render panel (used for print-layout modules)."""
     W, H = 1800, 1150
-    img = QImage(QSize(W, H + 78), QImage.Format_ARGB32_Premultiplied)
+    img = QImage(QSize(W, H + 78), QImage.Format.Format_ARGB32_Premultiplied)
     img.fill(QColor(PAPER))
     p = QPainter(img)
-    p.setRenderHint(QPainter.Antialiasing)
+    p.setRenderHint(QPainter.RenderHint.Antialiasing)
     rendered = _render(layers, extent, QSize(W, H))
     if not rendered.isNull():
         p.drawImage(0, 0, rendered)
@@ -1397,7 +1397,7 @@ def _export_layout_png(layout, out_png, dpi=120):
     out_png.parent.mkdir(parents=True, exist_ok=True)
     try:
         result = exporter.exportToImage(str(out_png), settings)
-        ok = result == QgsLayoutExporter.Success
+        ok = result == QgsLayoutExporter.ExportResult.Success
     except Exception:
         ok = False
     return bool(ok and out_png.exists() and out_png.stat().st_size > 0)

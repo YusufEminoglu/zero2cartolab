@@ -195,7 +195,7 @@ class QuickStyleAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
         else:
             target_mode = mode
 
-        if monochrome and layer.geometryType() != QgsWkbTypes.PolygonGeometry:
+        if monochrome and layer.geometryType() != QgsWkbTypes.GeometryType.PolygonGeometry:
             feedback.pushWarning(
                 "Monochrome patterns need a polygon layer; using the 'Greys' palette instead.")
             monochrome, palette = False, "Greys"

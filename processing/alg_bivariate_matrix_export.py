@@ -46,7 +46,7 @@ from ._styling import style_output
 # QgsWkbTypes.GeometryType.Polygon (QGIS 3.30+, 4.x) was PolygonGeometry before.
 _POLYGON_GEOMETRY = getattr(QgsWkbTypes.GeometryType, "Polygon", None)
 if _POLYGON_GEOMETRY is None:
-    _POLYGON_GEOMETRY = QgsWkbTypes.PolygonGeometry
+    _POLYGON_GEOMETRY = QgsWkbTypes.GeometryType.PolygonGeometry
 
 
 class BivariateMatrixExportAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):

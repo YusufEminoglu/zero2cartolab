@@ -1276,7 +1276,7 @@ for chart_type in (
     removed = remove_chart(chart_layout, chart_root)
     ok(f"{chart_type} chart removal is complete", removed == len(chart_items))
 
-blank_image = QImage(400, 300, QImage.Format.Format_RGB32 if hasattr(QImage.Format, "Format_RGB32") else QImage.Format_RGB32)
+blank_image = QImage(400, 300, QImage.Format.Format_RGB32)
 blank_image.fill(QColor("#ffffff"))
 blank_metrics = analyze_export(blank_image, dpi=150, sample_step=2)
 ok(
@@ -1512,11 +1512,11 @@ ok("atlas whose filter matches nothing reports failure",
 # 11. QPT inspector item type ids match the registry
 from zero2cartolab.layout.qpt_inspector import _TYPE_NAMES
 _registry_ids = {
-    "map": QgsLayoutItemRegistry.LayoutMap, "label": QgsLayoutItemRegistry.LayoutLabel,
-    "legend": QgsLayoutItemRegistry.LayoutLegend, "shape": QgsLayoutItemRegistry.LayoutShape,
-    "polygon": QgsLayoutItemRegistry.LayoutPolygon, "polyline": QgsLayoutItemRegistry.LayoutPolyline,
-    "scale_bar": QgsLayoutItemRegistry.LayoutScaleBar, "picture": QgsLayoutItemRegistry.LayoutPicture,
-    "page": QgsLayoutItemRegistry.LayoutPage,
+    "map": QgsLayoutItemRegistry.ItemType.LayoutMap, "label": QgsLayoutItemRegistry.ItemType.LayoutLabel,
+    "legend": QgsLayoutItemRegistry.ItemType.LayoutLegend, "shape": QgsLayoutItemRegistry.ItemType.LayoutShape,
+    "polygon": QgsLayoutItemRegistry.ItemType.LayoutPolygon, "polyline": QgsLayoutItemRegistry.ItemType.LayoutPolyline,
+    "scale_bar": QgsLayoutItemRegistry.ItemType.LayoutScaleBar, "picture": QgsLayoutItemRegistry.ItemType.LayoutPicture,
+    "page": QgsLayoutItemRegistry.ItemType.LayoutPage,
 }
 ok("qpt inspector type ids match QgsLayoutItemRegistry",
    all(_TYPE_NAMES.get(int(getattr(v, "value", v))) == k for k, v in _registry_ids.items()),

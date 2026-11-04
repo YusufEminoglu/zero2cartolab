@@ -198,7 +198,7 @@ class FlowMapAlgorithm(CartoLabHelpMixin, QgsProcessingAlgorithm):
             geom = feat.geometry()
             if geom is None or geom.isEmpty():
                 continue
-            pt = geom.centroid() if geom.type() == QgsWkbTypes.PointGeometry \
+            pt = geom.centroid() if geom.type() == QgsWkbTypes.GeometryType.PointGeometry \
                 else geom.pointOnSurface()
             if pt is None or pt.isEmpty():
                 continue

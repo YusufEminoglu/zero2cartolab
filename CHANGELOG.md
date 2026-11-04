@@ -1,5 +1,9 @@
 # Changelog - 02CartoLab
 
+## [1.6.1] - 2026-11-04
+
+- Qt6/QGIS 4 compatibility: enum names scoped as the QGIS Hub Qt6 check asks (geometry types in three algorithms; also in the e2e and practical-guide scripts); works on QGIS 3 and 4, no change in behaviour.
+
 ## [1.6.0] - 2026-11-02
 
 ### Added
